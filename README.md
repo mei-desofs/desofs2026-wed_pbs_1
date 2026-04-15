@@ -13,4 +13,11 @@ O sistema foi desenvolvido com um forte foco em **segurança**, assegurando:
 - controlo de acessos
 - rastreabilidade das ações
 
+## Objetivos da Aplicação
+
+- Garantir o anonimato dos utilizadores
+- Proteger a integridade das denúncias 
+- Permitir auditoria e rastreabilidade
+- Facilitar deteção de incidentes de segurança
+
 > Este projeto foi desenvolvido no âmbito da unidade curricular de Desenvolvimento de Software Seguro (DESOFS).
