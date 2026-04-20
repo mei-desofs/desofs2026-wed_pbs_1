@@ -1,12 +1,15 @@
 package com.ghostreport.service;
 
 import com.ghostreport.dto.CreateReportRequest;
+import com.ghostreport.dto.CreateReportResponse;
 import com.ghostreport.dto.ReportResponse;
 import com.ghostreport.model.Report;
 import com.ghostreport.model.ReportStatus;
 import com.ghostreport.repository.ReportRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
 
@@ -15,6 +18,7 @@ public class ReportService {
 
     private final ReportRepository reportRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -22,7 +26,7 @@ public class ReportService {
         this.reportRepository = reportRepository;
     }
 
-    public ReportResponse createReport(CreateReportRequest request) {
+    public CreateReportResponse createReport(CreateReportRequest request) {
         String trackingCode = generateTrackingCode();
         String trackingCodeHash = passwordEncoder.encode(trackingCode);
 
@@ -34,7 +38,41 @@ public class ReportService {
 
         Report saved = reportRepository.save(report);
 
-        return new ReportResponse(saved.getId(), saved.getStatus().name(), trackingCode);
+        return new CreateReportResponse(
+                saved.getId(),
+                saved.getStatus().name(),
+                trackingCode
+        );
+    }
+
+    public ReportResponse getReport(Long id) {
+        Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
+
+        return new ReportResponse(
+                report.getId(),
+                report.getDescription(),
+                report.getCategory(),
+                report.getStatus().name()
+        );
+    }
+
+    public ReportResponse verifyTrackingCode(Long id, String trackingCode) {
+        Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
+
+        boolean matches = passwordEncoder.matches(trackingCode, report.getTrackingCodeHash());
+
+        if (!matches) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid tracking code");
+        }
+
+        return new ReportResponse(
+                report.getId(),
+                report.getDescription(),
+                report.getCategory(),
+                report.getStatus().name()
+        );
     }
 
     private String generateTrackingCode() {

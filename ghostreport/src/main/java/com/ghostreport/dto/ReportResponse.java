@@ -3,39 +3,49 @@ package com.ghostreport.dto;
 public class ReportResponse {
 
     private Long id;
+    private String description;
+    private String category;
     private String status;
-    private String trackingCode;
 
     public ReportResponse() {
     }
 
-    public ReportResponse(Long id, String status, String trackingCode) {
+    public ReportResponse(Long id, String description, String category, String status) {
         this.id = id;
+        this.description = description;
+        this.category = category;
         this.status = status;
-        this.trackingCode = trackingCode;
     }
 
     public Long getId() {
         return id;
     }
 
-    public String getStatus() {
-        return status;
+    public String getDescription() {
+        return description;
     }
 
-    public String getTrackingCode() {
-        return trackingCode;
+    public String getCategory() {
+        return category;
+    }
+
+    public String getStatus() {
+        return status;
     }
 
     public void setId(Long id) {
         this.id = id;
     }
 
-    public void setStatus(String status) {
-        this.status = status;
+    public void setDescription(String description) {
+        this.description = description;
     }
 
-    public void setTrackingCode(String trackingCode) {
-        this.trackingCode = trackingCode;
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }
