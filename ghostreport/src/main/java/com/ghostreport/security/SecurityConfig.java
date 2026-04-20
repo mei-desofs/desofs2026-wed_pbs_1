@@ -16,6 +16,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/reports").permitAll()
                         .requestMatchers(HttpMethod.POST, "/reports/*/verify").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/reports/*/attachments").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .anyRequest().authenticated()
                 )
