@@ -4,13 +4,14 @@ import com.ghostreport.dto.AttachmentResponse;
 import com.ghostreport.dto.CreateReportRequest;
 import com.ghostreport.dto.CreateReportResponse;
 import com.ghostreport.dto.ReportResponse;
+import com.ghostreport.dto.UpdateReportStatusRequest;
 import com.ghostreport.model.Attachment;
 import com.ghostreport.model.Report;
 import com.ghostreport.model.ReportStatus;
 import com.ghostreport.repository.AttachmentRepository;
 import com.ghostreport.repository.ReportRepository;
-import com.ghostreport.dto.UpdateReportStatusRequest;
-import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,17 +19,20 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
+import java.util.List;
 
 @Service
 public class ReportService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ReportService.class);
+
+    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final ReportRepository reportRepository;
     private final AttachmentRepository attachmentRepository;
     private final FileStorageService fileStorageService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-
-    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    private static final SecureRandom RANDOM = new SecureRandom();
 
     public ReportService(
             ReportRepository reportRepository,
@@ -51,6 +55,8 @@ public class ReportService {
         report.setTrackingCodeHash(trackingCodeHash);
 
         Report saved = reportRepository.save(report);
+
+        logger.info("Report created with id={}", saved.getId());
 
         return new CreateReportResponse(
                 saved.getId(),
@@ -78,8 +84,11 @@ public class ReportService {
         boolean matches = passwordEncoder.matches(trackingCode, report.getTrackingCodeHash());
 
         if (!matches) {
+            logger.warn("Invalid tracking code attempt for report id={}", id);
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid tracking code");
         }
+
+        logger.info("Tracking code verified successfully for report id={}", report.getId());
 
         return new ReportResponse(
                 report.getId(),
@@ -104,6 +113,8 @@ public class ReportService {
         attachment.setReport(report);
 
         Attachment saved = attachmentRepository.save(attachment);
+
+        logger.info("Attachment uploaded for report id={}, attachment id={}", reportId, saved.getId());
 
         return new AttachmentResponse(
                 saved.getId(),
@@ -136,6 +147,8 @@ public class ReportService {
         }
 
         Report saved = reportRepository.save(report);
+
+        logger.info("Report id={} status updated to {}", saved.getId(), saved.getStatus());
 
         return new ReportResponse(
                 saved.getId(),

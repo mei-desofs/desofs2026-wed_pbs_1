@@ -5,6 +5,8 @@ import com.ghostreport.dto.UserResponse;
 import com.ghostreport.model.User;
 import com.ghostreport.model.UserRole;
 import com.ghostreport.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,8 @@ import java.util.List;
 
 @Service
 public class UserService {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -59,6 +63,13 @@ public class UserService {
         user.setActive(true);
 
         User saved = userRepository.save(user);
+
+        logger.info(
+                "User created with id={}, username={}, role={}",
+                saved.getId(),
+                saved.getUsername(),
+                saved.getRole()
+        );
 
         return new UserResponse(
                 saved.getId(),
