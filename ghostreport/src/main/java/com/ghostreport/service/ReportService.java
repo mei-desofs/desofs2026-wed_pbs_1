@@ -9,6 +9,8 @@ import com.ghostreport.model.Report;
 import com.ghostreport.model.ReportStatus;
 import com.ghostreport.repository.AttachmentRepository;
 import com.ghostreport.repository.ReportRepository;
+import com.ghostreport.dto.UpdateReportStatusRequest;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -108,6 +110,38 @@ public class ReportService {
                 saved.getOriginalName(),
                 saved.getMimeType(),
                 saved.getSize()
+        );
+    }
+
+    public List<ReportResponse> getAllReports() {
+        return reportRepository.findAll().stream()
+                .map(report -> new ReportResponse(
+                        report.getId(),
+                        report.getDescription(),
+                        report.getCategory(),
+                        report.getStatus().name()
+                ))
+                .toList();
+    }
+
+    public ReportResponse updateReportStatus(Long id, UpdateReportStatusRequest request) {
+        Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
+
+        try {
+            ReportStatus newStatus = ReportStatus.valueOf(request.getStatus().toUpperCase());
+            report.setStatus(newStatus);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid status");
+        }
+
+        Report saved = reportRepository.save(report);
+
+        return new ReportResponse(
+                saved.getId(),
+                saved.getDescription(),
+                saved.getCategory(),
+                saved.getStatus().name()
         );
     }
 
