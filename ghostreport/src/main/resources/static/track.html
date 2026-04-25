@@ -28,9 +28,11 @@
 <script src="/js/api.js"></script>
 <script>
 
+    // 🔹 Preenche automaticamente se vier do index.html
     const params = new URLSearchParams(window.location.search);
     document.getElementById("trackingCode").value = params.get("code") || "";
 
+    // 🔹 CONSULTAR DENÚNCIA
     document.getElementById("verifyForm").addEventListener("submit", async (e) => {
         e.preventDefault();
 
@@ -48,11 +50,11 @@
 
             const data = await handleJsonResponse(response);
 
+            // 🔥 Card com anexo integrado (SEM ID visível)
             resultDiv.innerHTML = `
             <div class="result">
                 <strong>Denúncia encontrada</strong><br><br>
 
-                <b>ID:</b> ${data.id}<br>
                 <b>Categoria:</b> ${data.category}<br>
                 <b>Estado:</b> ${data.status}<br>
                 <b>Descrição:</b> ${data.description}
@@ -70,6 +72,7 @@
             </div>
         `;
 
+            // 🔥 Evento do upload (usa ID internamente)
             document.getElementById("attachmentForm").addEventListener("submit", async (e) => {
                 e.preventDefault();
 
@@ -89,7 +92,7 @@
 
                     attachmentResult.innerHTML = `
                     <div class="result">
-                        Anexo enviado com sucesso<br>
+                        ✔ Anexo enviado com sucesso<br>
                         Nome: ${attachData.originalName}
                     </div>
                 `;
