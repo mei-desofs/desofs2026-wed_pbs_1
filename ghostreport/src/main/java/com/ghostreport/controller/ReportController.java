@@ -1,7 +1,6 @@
 package com.ghostreport.controller;
 
-import com.ghostreport.dto.CreateReportRequest;
-import com.ghostreport.dto.CreateReportResponse;
+import com.ghostreport.dto.*;
 import com.ghostreport.service.ReportService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -21,5 +20,10 @@ public class ReportController {
     @ResponseStatus(HttpStatus.CREATED)
     public CreateReportResponse createReport(@Valid @RequestBody CreateReportRequest request) {
         return reportService.createReport(request);
+    }
+
+    @PostMapping("/verify")
+    public ReportResponse verifyTrackingCodeOnly(@Valid @RequestBody VerifyTrackingCodeRequest request) {
+        return reportService.verifyTrackingCodeOnly(request.getTrackingCode());
     }
 }

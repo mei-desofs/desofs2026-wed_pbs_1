@@ -7,9 +7,6 @@ public class VerifyTrackingCodeRequest {
     @NotBlank
     private String trackingCode;
 
-    public VerifyTrackingCodeRequest() {
-    }
-
     public String getTrackingCode() {
         return trackingCode;
     }

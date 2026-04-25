@@ -17,9 +17,6 @@
     <h1>Acompanhar Denúncia</h1>
 
     <form id="verifyForm">
-        <label for="reportId">ID da denúncia</label>
-        <input id="reportId" type="number" required>
-
         <label for="trackingCode">Código de acompanhamento</label>
         <input id="trackingCode" type="text" required>
 
@@ -34,12 +31,11 @@
     document.getElementById("verifyForm").addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        const reportId = document.getElementById("reportId").value;
         const trackingCode = document.getElementById("trackingCode").value;
         const resultDiv = document.getElementById("result");
 
         try {
-            const response = await fetch(`${API_BASE}/reports/${reportId}/verify`, {
+             const response = await fetch(`${API_BASE}/reports/verify`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -52,7 +48,6 @@
             resultDiv.innerHTML = `
                 <div class="result">
                     <strong>Denúncia encontrada.</strong><br>
-                    ID: ${data.id}<br>
                     Categoria: ${data.category}<br>
                     Estado: ${data.status}<br>
                     Descrição: ${data.description}

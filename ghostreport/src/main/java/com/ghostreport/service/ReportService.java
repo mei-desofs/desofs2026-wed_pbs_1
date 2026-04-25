@@ -78,19 +78,36 @@ public class ReportService {
         );
     }
 
-    public ReportResponse verifyTrackingCode(Long id, String trackingCode) {
+    public ReportResponse verifyTrackingCodeOnly(String trackingCode) {
 
-        Report report = reportRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
+        trackingCode = trackingCode.trim();
 
-        boolean matches = passwordEncoder.matches(trackingCode, report.getTrackingCodeHash());
+        List<Report> reports = reportRepository.findAll();
 
-        if (!matches) {
-            securityMonitoringService.recordFailedTrackingCode(id);
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid tracking code");
+        for (Report report : reports) {
+
+            String stored = report.getTrackingCodeHash();
+
+            boolean matches;
+
+            if (stored.startsWith("$2a$")) {
+                matches = passwordEncoder.matches(trackingCode, stored);
+            }
+
+            else {
+                matches = stored.equals(trackingCode);
+            }
+
+            System.out.println("INPUT: " + trackingCode);
+            System.out.println("STORED: " + stored);
+            System.out.println("MATCH: " + matches);
+
+            if (matches) {
+                return toReportResponse(report);
+            }
         }
 
-        return toReportResponse(report);
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Denúncia não encontrada");
     }
 
     public List<ReportResponse> getAllReports() {
@@ -192,9 +209,9 @@ public class ReportService {
     private ReportResponse toReportResponse(Report report) {
         return new ReportResponse(
                 report.getId(),
-                report.getDescription(),
+                report.getStatus().name(),
                 report.getCategory(),
-                report.getStatus().name()
+                report.getDescription()
         );
     }
 
