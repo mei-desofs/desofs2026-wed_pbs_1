@@ -17,7 +17,6 @@
 <div class="container">
     <h1>Painel do Admin</h1>
 
-    <!-- LOGIN -->
     <div id="loginSection">
         <label>Utilizador</label>
         <input id="username" type="text">
@@ -30,12 +29,23 @@
         <div id="loginError" class="error"></div>
     </div>
 
-    <!-- PAINEL ADMIN -->
     <div id="adminPanel" style="display:none;">
 
         <h2>Utilizadores</h2>
         <button onclick="loadUsers()">Listar utilizadores</button>
         <div id="users"></div>
+
+        <hr>
+
+        <h2>Audit Logs</h2>
+        <button onclick="loadAuditLogs()">Carregar Audit Logs</button>
+        <div id="auditLogs"></div>
+
+        <hr>
+
+        <h2>Security Alerts</h2>
+        <button onclick="loadSecurityAlerts()">Carregar Security Alerts</button>
+        <div id="securityAlerts"></div>
 
         <hr>
 
@@ -57,6 +67,85 @@
 </div>
 
 <script src="/js/api.js"></script>
+
+<script>
+    async function loadAuditLogs() {
+        const logsDiv = document.getElementById("auditLogs");
+
+        if (!adminAuth) {
+            logsDiv.innerHTML = `<div class="error">Faz login como admin primeiro.</div>`;
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE}/admin/audit-logs`, {
+                method: "GET",
+                headers: {
+                    "Authorization": adminAuth
+                }
+            });
+
+            const data = await handleJsonResponse(response);
+
+            if (!data.length) {
+                logsDiv.innerHTML = `<div class="result">Sem audit logs.</div>`;
+                return;
+            }
+
+            logsDiv.innerHTML = data.map(log => `
+                <div class="card">
+                    <strong>ID:</strong> ${log.id}<br>
+                    <strong>Data:</strong> ${log.timestamp}<br>
+                    <strong>Ator:</strong> ${log.actor}<br>
+                    <strong>Ação:</strong> ${log.action}<br>
+                    <strong>Alvo:</strong> ${log.targetType || "-"} ${log.targetId || ""}<br>
+                    <strong>Detalhes:</strong> ${log.details || "-"}
+                </div>
+            `).join("");
+        } catch (error) {
+            logsDiv.innerHTML = `<div class="error">${error.message}</div>`;
+        }
+    }
+
+    async function loadSecurityAlerts() {
+        const alertsDiv = document.getElementById("securityAlerts");
+
+        if (!adminAuth) {
+            alertsDiv.innerHTML = `<div class="error">Faz login como admin primeiro.</div>`;
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE}/admin/security-alerts`, {
+                method: "GET",
+                headers: {
+                    "Authorization": adminAuth
+                }
+            });
+
+            const data = await handleJsonResponse(response);
+
+            if (!data.length) {
+                alertsDiv.innerHTML = `<div class="result">Sem security alerts.</div>`;
+                return;
+            }
+
+            alertsDiv.innerHTML = data.map(alert => `
+                <div class="card">
+                    <strong>ID:</strong> ${alert.id}<br>
+                    <strong>Data:</strong> ${alert.timestamp}<br>
+                    <strong>Tipo:</strong> ${alert.alertType}<br>
+                    <strong>Severidade:</strong> ${alert.severity}<br>
+                    <strong>Ator:</strong> ${alert.actor || "-"}<br>
+                    <strong>Alvo:</strong> ${alert.targetType || "-"} ${alert.targetId || ""}<br>
+                    <strong>Descrição:</strong> ${alert.description || "-"}
+                </div>
+            `).join("");
+        } catch (error) {
+            alertsDiv.innerHTML = `<div class="error">${error.message}</div>`;
+        }
+    }
+</script>
 
 </body>
 </html>
