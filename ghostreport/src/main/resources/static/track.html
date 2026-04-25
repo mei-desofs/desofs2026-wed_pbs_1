@@ -19,7 +19,6 @@
     <form id="verifyForm">
         <label for="trackingCode">Código de acompanhamento</label>
         <input id="trackingCode" type="text" required>
-
         <button type="submit">Consultar</button>
     </form>
 
@@ -28,6 +27,10 @@
 
 <script src="/js/api.js"></script>
 <script>
+
+    const params = new URLSearchParams(window.location.search);
+    document.getElementById("trackingCode").value = params.get("code") || "";
+
     document.getElementById("verifyForm").addEventListener("submit", async (e) => {
         e.preventDefault();
 
@@ -35,7 +38,7 @@
         const resultDiv = document.getElementById("result");
 
         try {
-             const response = await fetch(`${API_BASE}/reports/verify`, {
+            const response = await fetch(`${API_BASE}/reports/verify`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -46,13 +49,55 @@
             const data = await handleJsonResponse(response);
 
             resultDiv.innerHTML = `
-                <div class="result">
-                    <strong>Denúncia encontrada.</strong><br>
-                    Categoria: ${data.category}<br>
-                    Estado: ${data.status}<br>
-                    Descrição: ${data.description}
-                </div>
-            `;
+            <div class="result">
+                <strong>Denúncia encontrada</strong><br><br>
+
+                <b>ID:</b> ${data.id}<br>
+                <b>Categoria:</b> ${data.category}<br>
+                <b>Estado:</b> ${data.status}<br>
+                <b>Descrição:</b> ${data.description}
+
+                <hr>
+
+                <h3>Anexar ficheiro a esta denúncia</h3>
+
+                <form id="attachmentForm">
+                    <input type="file" id="file" required>
+                    <button type="submit">Enviar anexo</button>
+                </form>
+
+                <div id="attachmentResult"></div>
+            </div>
+        `;
+
+            document.getElementById("attachmentForm").addEventListener("submit", async (e) => {
+                e.preventDefault();
+
+                const fileInput = document.getElementById("file");
+                const attachmentResult = document.getElementById("attachmentResult");
+
+                const formData = new FormData();
+                formData.append("file", fileInput.files[0]);
+
+                try {
+                    const response = await fetch(`${API_BASE}/reports/${data.id}/attachments`, {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    const attachData = await handleJsonResponse(response);
+
+                    attachmentResult.innerHTML = `
+                    <div class="result">
+                        Anexo enviado com sucesso<br>
+                        Nome: ${attachData.originalName}
+                    </div>
+                `;
+                } catch (error) {
+                    attachmentResult.innerHTML = `<div class="error">${error.message}</div>`;
+                }
+            });
+
         } catch (error) {
             resultDiv.innerHTML = `<div class="error">${error.message}</div>`;
         }

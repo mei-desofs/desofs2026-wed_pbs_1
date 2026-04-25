@@ -27,21 +27,6 @@
     </form>
 
     <div id="result"></div>
-
-    <hr>
-
-    <h2>Anexar ficheiro a uma denúncia</h2>
-    <form id="attachmentForm">
-        <label for="reportId">ID da denúncia</label>
-        <input id="reportId" type="number" required>
-
-        <label for="file">Ficheiro</label>
-        <input id="file" type="file" required>
-
-        <button type="submit">Enviar anexo</button>
-    </form>
-
-    <div id="attachmentResult"></div>
 </div>
 
 <script src="/js/api.js"></script>
@@ -65,45 +50,19 @@
             const data = await handleJsonResponse(response);
 
             resultDiv.innerHTML = `
-                <div class="result">
-                    <strong>Denúncia criada com sucesso.</strong><br>
-                    ID: ${data.id}<br>
-                    Estado: ${data.status}<br>
-                    Código de acompanhamento: <strong>${data.trackingCode}</strong>
-                </div>
-            `;
-        } catch (error) {
-            resultDiv.innerHTML = `<div class="error">${error.message}</div>`;
-        }
-    });
+            <div class="result">
+                <strong>Denúncia criada com sucesso.</strong><br>
+                ID: ${data.id}<br>
+                Estado: ${data.status}<br>
+                Código: <strong>${data.trackingCode}</strong><br><br>
+                A redirecionar...
+            </div>
+        `;
 
-    document.getElementById("attachmentForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
+            setTimeout(() => {
+                window.location.href = `/track.html?code=${data.trackingCode}&id=${data.id}`;
+            }, 1500);
 
-        const reportId = document.getElementById("reportId").value;
-        const fileInput = document.getElementById("file");
-        const resultDiv = document.getElementById("attachmentResult");
-
-        const formData = new FormData();
-        formData.append("file", fileInput.files[0]);
-
-        try {
-            const response = await fetch(`${API_BASE}/reports/${reportId}/attachments`, {
-                method: "POST",
-                body: formData
-            });
-
-            const data = await handleJsonResponse(response);
-
-            resultDiv.innerHTML = `
-                <div class="result">
-                    <strong>Anexo enviado com sucesso.</strong><br>
-                    ID do anexo: ${data.id}<br>
-                    Nome original: ${data.originalName}<br>
-                    Tipo: ${data.mimeType}<br>
-                    Tamanho: ${data.size} bytes
-                </div>
-            `;
         } catch (error) {
             resultDiv.innerHTML = `<div class="error">${error.message}</div>`;
         }
