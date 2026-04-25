@@ -29,6 +29,12 @@ public class Attachment {
     @JoinColumn(name = "report_id", nullable = false)
     private Report report;
 
+    @Column(nullable = false, length = 500)
+    private String storagePath;
+
+    @Column(nullable = false, length = 100)
+    private String fileReference;
+
     public Attachment() {
     }
 
@@ -86,5 +92,21 @@ public class Attachment {
 
     public void setReport(Report report) {
         this.report = report;
+    }
+
+    public String getStoragePath() {
+        return storagePath;
+    }
+
+    public void setStoragePath(String storagePath) {
+        this.storagePath = storagePath;
+    }
+
+    public String getFileReference() {
+        return fileReference;
+    }
+
+    public void setFileReference(String fileReference) {
+        this.fileReference = fileReference;
     }
 }

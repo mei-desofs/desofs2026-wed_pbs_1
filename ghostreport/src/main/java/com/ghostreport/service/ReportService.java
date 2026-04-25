@@ -61,6 +61,13 @@ public class ReportService {
 
         Report saved = reportRepository.save(report);
 
+        fileStorageService.generateReportDocument(
+                saved.getId(),
+                saved.getDescription(),
+                saved.getCategory(),
+                saved.getStatus().name()
+        );
+
         logger.info("Report created with id={}", saved.getId());
 
         return new CreateReportResponse(
@@ -107,11 +114,13 @@ public class ReportService {
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
 
-        FileStorageService.StoredFileInfo stored = fileStorageService.storeFile(file);
+        FileStorageService.StoredFileInfo stored = fileStorageService.storeAttachment(reportId, file);
 
         Attachment attachment = new Attachment();
         attachment.setOriginalName(stored.originalName());
         attachment.setStoredName(stored.storedName());
+        attachment.setFileReference(stored.fileReference());
+        attachment.setStoragePath(stored.storagePath());
         attachment.setMimeType(stored.mimeType());
         attachment.setSize(stored.size());
         attachment.setHash(stored.hash());
