@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>GhostReport - Painel Analista</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="topnav">
+    <a href="/index.html">Submeter denúncia</a>
+    <a href="/track.html">Acompanhar denúncia</a>
+    <a href="/analyst.html">Painel Analista</a>
+    <a href="/admin.html">Painel Admin</a>
+</div>
+
+<div class="container">
+    <h1>Painel do Analista</h1>
+
+    <form id="loginForm">
+        <label for="username">Utilizador</label>
+        <input id="username" type="text" required>
+
+        <label for="password">Password</label>
+        <input id="password" type="password" required>
+
+        <button type="submit">Carregar os meus casos</button>
+    </form>
+
+    <div id="cases"></div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+        const casesDiv = document.getElementById("cases");
+
+        try {
+            const response = await fetch(`${API_BASE}/analyst/my-cases`, {
+                method: "GET",
+                headers: {
+                    "Authorization": basicAuthHeader(username, password)
+                }
+            });
+
+            const data = await handleJsonResponse(response);
+
+            if (!data.length) {
+                casesDiv.innerHTML = `<div class="result">Não tens casos atribuídos.</div>`;
+                return;
+            }
+
+            casesDiv.innerHTML = data.map(c => `
+                <div class="card">
+                    <strong>Report ID:</strong> ${c.reportId}<br>
+                    <strong>CaseReview ID:</strong> ${c.caseReviewId}<br>
+                    <strong>Analista:</strong> ${c.assignedAnalystUsername}<br>
+                    <strong>Prioridade:</strong> ${c.priority}<br>
+                    <strong>Notas:</strong> ${c.notes || "-"}<br>
+                    <strong>Estado:</strong> ${c.reportStatus}
+                </div>
+            `).join("");
+        } catch (error) {
+            casesDiv.innerHTML = `<div class="error">${error.message}</div>`;
+        }
+    });
+</script>
+</body>
+</html>

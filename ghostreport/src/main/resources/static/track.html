@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>GhostReport - Acompanhar Denúncia</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="topnav">
+    <a href="/index.html">Submeter denúncia</a>
+    <a href="/track.html">Acompanhar denúncia</a>
+    <a href="/analyst.html">Painel Analista</a>
+    <a href="/admin.html">Painel Admin</a>
+</div>
+
+<div class="container">
+    <h1>Acompanhar Denúncia</h1>
+
+    <form id="verifyForm">
+        <label for="reportId">ID da denúncia</label>
+        <input id="reportId" type="number" required>
+
+        <label for="trackingCode">Código de acompanhamento</label>
+        <input id="trackingCode" type="text" required>
+
+        <button type="submit">Consultar</button>
+    </form>
+
+    <div id="result"></div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+    document.getElementById("verifyForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const reportId = document.getElementById("reportId").value;
+        const trackingCode = document.getElementById("trackingCode").value;
+        const resultDiv = document.getElementById("result");
+
+        try {
+            const response = await fetch(`${API_BASE}/reports/${reportId}/verify`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ trackingCode })
+            });
+
+            const data = await handleJsonResponse(response);
+
+            resultDiv.innerHTML = `
+                <div class="result">
+                    <strong>Denúncia encontrada.</strong><br>
+                    ID: ${data.id}<br>
+                    Categoria: ${data.category}<br>
+                    Estado: ${data.status}<br>
+                    Descrição: ${data.description}
+                </div>
+            `;
+        } catch (error) {
+            resultDiv.innerHTML = `<div class="error">${error.message}</div>`;
+        }
+    });
+</script>
+</body>
+</html>

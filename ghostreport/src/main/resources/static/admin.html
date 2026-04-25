@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>GhostReport - Painel Admin</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="topnav">
+    <a href="/index.html">Submeter denúncia</a>
+    <a href="/track.html">Acompanhar denúncia</a>
+    <a href="/analyst.html">Painel Analista</a>
+    <a href="/admin.html">Painel Admin</a>
+</div>
+
+<div class="container">
+    <h1>Painel do Admin</h1>
+
+    <form id="loginForm">
+        <label for="username">Utilizador</label>
+        <input id="username" type="text" required>
+
+        <label for="password">Password</label>
+        <input id="password" type="password" required>
+
+        <button type="submit">Listar utilizadores</button>
+    </form>
+
+    <div id="users"></div>
+
+    <hr>
+
+    <h2>Criar utilizador</h2>
+    <form id="createUserForm">
+        <label for="newUsername">Username</label>
+        <input id="newUsername" type="text" required>
+
+        <label for="newEmail">Email</label>
+        <input id="newEmail" type="email" required>
+
+        <label for="newPassword">Password</label>
+        <input id="newPassword" type="text" required>
+
+        <label for="newRole">Role</label>
+        <select id="newRole">
+            <option value="ANALYST">ANALYST</option>
+            <option value="ADMIN">ADMIN</option>
+        </select>
+
+        <button type="submit">Criar utilizador</button>
+    </form>
+
+    <div id="createUserResult"></div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+    let adminAuth = null;
+
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+        const usersDiv = document.getElementById("users");
+
+        adminAuth = basicAuthHeader(username, password);
+
+        try {
+            const response = await fetch(`${API_BASE}/admin/users`, {
+                method: "GET",
+                headers: {
+                    "Authorization": adminAuth
+                }
+            });
+
+            const data = await handleJsonResponse(response);
+
+            usersDiv.innerHTML = data.map(u => `
+                <div class="card">
+                    <strong>ID:</strong> ${u.id}<br>
+                    <strong>Username:</strong> ${u.username}<br>
+                    <strong>Email:</strong> ${u.email}<br>
+                    <strong>Role:</strong> ${u.role}<br>
+                    <strong>Ativo:</strong> ${u.active}
+                </div>
+            `).join("");
+        } catch (error) {
+            usersDiv.innerHTML = `<div class="error">${error.message}</div>`;
+        }
+    });
+
+    document.getElementById("createUserForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const resultDiv = document.getElementById("createUserResult");
+
+        if (!adminAuth) {
+            resultDiv.innerHTML = `<div class="error">Faz login como admin primeiro.</div>`;
+            return;
+        }
+
+        const payload = {
+            username: document.getElementById("newUsername").value,
+            email: document.getElementById("newEmail").value,
+            password: document.getElementById("newPassword").value,
+            role: document.getElementById("newRole").value
+        };
+
+        try {
+            const response = await fetch(`${API_BASE}/admin/users`, {
+                method: "POST",
+                headers: {
+                    "Authorization": adminAuth,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await handleJsonResponse(response);
+
+            resultDiv.innerHTML = `
+                <div class="result">
+                    Utilizador criado com sucesso.<br>
+                    ID: ${data.id}<br>
+                    Username: ${data.username}<br>
+                    Role: ${data.role}
+                </div>
+            `;
+        } catch (error) {
+            resultDiv.innerHTML = `<div class="error">${error.message}</div>`;
+        }
+    });
+</script>
+</body>
+</html>

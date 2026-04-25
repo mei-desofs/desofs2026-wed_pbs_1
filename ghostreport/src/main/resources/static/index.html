@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>GhostReport - Submeter Denúncia</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="topnav">
+    <a href="/index.html">Submeter denúncia</a>
+    <a href="/track.html">Acompanhar denúncia</a>
+    <a href="/analyst.html">Painel Analista</a>
+    <a href="/admin.html">Painel Admin</a>
+</div>
+
+<div class="container">
+    <h1>Submeter Denúncia</h1>
+
+    <form id="reportForm">
+        <label for="description">Descrição</label>
+        <textarea id="description" rows="5" required></textarea>
+
+        <label for="category">Categoria</label>
+        <input id="category" type="text" required>
+
+        <button type="submit">Submeter denúncia</button>
+    </form>
+
+    <div id="result"></div>
+
+    <hr>
+
+    <h2>Anexar ficheiro a uma denúncia</h2>
+    <form id="attachmentForm">
+        <label for="reportId">ID da denúncia</label>
+        <input id="reportId" type="number" required>
+
+        <label for="file">Ficheiro</label>
+        <input id="file" type="file" required>
+
+        <button type="submit">Enviar anexo</button>
+    </form>
+
+    <div id="attachmentResult"></div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+    document.getElementById("reportForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const description = document.getElementById("description").value;
+        const category = document.getElementById("category").value;
+        const resultDiv = document.getElementById("result");
+
+        try {
+            const response = await fetch(`${API_BASE}/reports`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ description, category })
+            });
+
+            const data = await handleJsonResponse(response);
+
+            resultDiv.innerHTML = `
+                <div class="result">
+                    <strong>Denúncia criada com sucesso.</strong><br>
+                    ID: ${data.id}<br>
+                    Estado: ${data.status}<br>
+                    Código de acompanhamento: <strong>${data.trackingCode}</strong>
+                </div>
+            `;
+        } catch (error) {
+            resultDiv.innerHTML = `<div class="error">${error.message}</div>`;
+        }
+    });
+
+    document.getElementById("attachmentForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const reportId = document.getElementById("reportId").value;
+        const fileInput = document.getElementById("file");
+        const resultDiv = document.getElementById("attachmentResult");
+
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+
+        try {
+            const response = await fetch(`${API_BASE}/reports/${reportId}/attachments`, {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await handleJsonResponse(response);
+
+            resultDiv.innerHTML = `
+                <div class="result">
+                    <strong>Anexo enviado com sucesso.</strong><br>
+                    ID do anexo: ${data.id}<br>
+                    Nome original: ${data.originalName}<br>
+                    Tipo: ${data.mimeType}<br>
+                    Tamanho: ${data.size} bytes
+                </div>
+            `;
+        } catch (error) {
+            resultDiv.innerHTML = `<div class="error">${error.message}</div>`;
+        }
+    });
+</script>
+</body>
+</html>

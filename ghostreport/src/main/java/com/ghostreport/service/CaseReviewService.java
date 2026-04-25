@@ -12,11 +12,14 @@ import com.ghostreport.model.UserRole;
 import com.ghostreport.repository.CaseReviewRepository;
 import com.ghostreport.repository.ReportRepository;
 import com.ghostreport.repository.UserRepository;
+import com.ghostreport.security.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 @Service
 public class CaseReviewService {
@@ -69,8 +72,7 @@ public class CaseReviewService {
     }
 
     public CaseReviewResponse updatePriority(Long reportId, UpdatePriorityRequest request) {
-        CaseReview caseReview = caseReviewRepository.findByReportId(reportId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case review not found"));
+        CaseReview caseReview = getAccessibleCaseReview(reportId);
 
         try {
             CasePriority priority = CasePriority.valueOf(request.getPriority().toUpperCase());
@@ -87,8 +89,7 @@ public class CaseReviewService {
     }
 
     public CaseReviewResponse updateNotes(Long reportId, UpdateNotesRequest request) {
-        CaseReview caseReview = caseReviewRepository.findByReportId(reportId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case review not found"));
+        CaseReview caseReview = getAccessibleCaseReview(reportId);
 
         caseReview.setNotes(request.getNotes());
 
@@ -100,10 +101,34 @@ public class CaseReviewService {
     }
 
     public CaseReviewResponse getCaseReview(Long reportId) {
+        CaseReview caseReview = getAccessibleCaseReview(reportId);
+        return toResponse(caseReview);
+    }
+
+    public List<CaseReviewResponse> getMyAssignedCases() {
+        String username = SecurityUtils.getCurrentUsername();
+
+        return caseReviewRepository.findByAssignedAnalystUsername(username).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private CaseReview getAccessibleCaseReview(Long reportId) {
         CaseReview caseReview = caseReviewRepository.findByReportId(reportId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case review not found"));
 
-        return toResponse(caseReview);
+        if (SecurityUtils.hasRole("ADMIN")) {
+            return caseReview;
+        }
+
+        String currentUsername = SecurityUtils.getCurrentUsername();
+
+        if (caseReview.getAssignedAnalyst() == null ||
+                !caseReview.getAssignedAnalyst().getUsername().equals(currentUsername)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this case");
+        }
+
+        return caseReview;
     }
 
     private CaseReviewResponse toResponse(CaseReview caseReview) {

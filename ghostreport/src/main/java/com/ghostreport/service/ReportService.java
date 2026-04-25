@@ -17,6 +17,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import com.ghostreport.model.CaseReview;
+import com.ghostreport.repository.CaseReviewRepository;
+import com.ghostreport.security.SecurityUtils;
 
 import java.security.SecureRandom;
 import java.util.List;
@@ -32,18 +35,20 @@ public class ReportService {
     private final ReportRepository reportRepository;
     private final AttachmentRepository attachmentRepository;
     private final FileStorageService fileStorageService;
+    private final CaseReviewRepository caseReviewRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public ReportService(
             ReportRepository reportRepository,
             AttachmentRepository attachmentRepository,
-            FileStorageService fileStorageService
+            FileStorageService fileStorageService,
+            CaseReviewRepository caseReviewRepository
     ) {
         this.reportRepository = reportRepository;
         this.attachmentRepository = attachmentRepository;
         this.fileStorageService = fileStorageService;
+        this.caseReviewRepository = caseReviewRepository;
     }
-
     public CreateReportResponse createReport(CreateReportRequest request) {
         String trackingCode = generateTrackingCode();
         String trackingCodeHash = passwordEncoder.encode(trackingCode);
@@ -138,6 +143,18 @@ public class ReportService {
     public ReportResponse updateReportStatus(Long id, UpdateReportStatusRequest request) {
         Report report = reportRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
+
+        if (!SecurityUtils.hasRole("ADMIN")) {
+            CaseReview caseReview = caseReviewRepository.findByReportId(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "No case review assigned"));
+
+            String currentUsername = SecurityUtils.getCurrentUsername();
+
+            if (caseReview.getAssignedAnalyst() == null ||
+                    !caseReview.getAssignedAnalyst().getUsername().equals(currentUsername)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this case");
+            }
+        }
 
         try {
             ReportStatus newStatus = ReportStatus.valueOf(request.getStatus().toUpperCase());

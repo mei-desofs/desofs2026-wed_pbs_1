@@ -71,4 +71,9 @@ public class AnalystController {
     public CaseReviewResponse getCaseReview(@PathVariable Long id) {
         return caseReviewService.getCaseReview(id);
     }
+
+    @GetMapping("/my-cases")
+    public List<CaseReviewResponse> getMyAssignedCases() {
+        return caseReviewService.getMyAssignedCases();
+    }
 }
