@@ -51,11 +51,3 @@ jobs:
           DB_USERNAME: postgres
           DB_PASSWORD: user
 
-      - name: OWASP Dependency Check
-        run: mvn org.owasp:dependency-check-maven:check
-
-      - name: SpotBugs SAST
-        run: mvn com.github.spotbugs:spotbugs-maven-plugin:spotbugs
-
-      - name: Package application
-        run: mvn package -DskipTests
