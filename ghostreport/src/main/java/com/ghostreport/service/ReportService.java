@@ -68,7 +68,6 @@ public class ReportService {
         Report saved = reportRepository.save(report);
 
         logger.info("Report created with id={}", saved.getId());
-
         auditLogService.log("REPORT_CREATED", "REPORT", saved.getId(), "Anonymous report created");
 
         return new CreateReportResponse(
@@ -88,19 +87,7 @@ public class ReportService {
 
             String stored = report.getTrackingCodeHash();
 
-            boolean matches;
-
-            if (stored.startsWith("$2a$")) {
-                matches = passwordEncoder.matches(trackingCode, stored);
-            }
-
-            else {
-                matches = stored.equals(trackingCode);
-            }
-
-            System.out.println("INPUT: " + trackingCode);
-            System.out.println("STORED: " + stored);
-            System.out.println("MATCH: " + matches);
+            boolean matches = passwordEncoder.matches(trackingCode, stored);
 
             if (matches) {
                 return toReportResponse(report);
@@ -130,7 +117,6 @@ public class ReportService {
         }
 
         Report saved = reportRepository.save(report);
-
         return toReportResponse(saved);
     }
 
@@ -139,26 +125,34 @@ public class ReportService {
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
 
-        FileStorageService.StoredFileInfo stored = fileStorageService.storeAttachment(reportId, file);
+        try {
+            FileStorageService.StoredFileInfo stored = fileStorageService.storeAttachment(reportId, file);
 
-        Attachment attachment = new Attachment();
-        attachment.setOriginalName(stored.originalName());
-        attachment.setStoredName(stored.storedName());
-        attachment.setFileReference(stored.fileReference());
-        attachment.setStoragePath(stored.storagePath());
-        attachment.setMimeType(stored.mimeType());
-        attachment.setSize(stored.size());
-        attachment.setHash(stored.hash());
-        attachment.setReport(report);
+            Attachment attachment = new Attachment();
+            attachment.setOriginalName(stored.originalName());
+            attachment.setStoredName(stored.storedName());
+            attachment.setFileReference(stored.fileReference());
+            attachment.setStoragePath(stored.storagePath());
+            attachment.setMimeType(stored.mimeType());
+            attachment.setSize(stored.size());
+            attachment.setHash(stored.hash());
+            attachment.setReport(report);
 
-        Attachment saved = attachmentRepository.save(attachment);
+            Attachment saved = attachmentRepository.save(attachment);
 
-        return new AttachmentResponse(
-                saved.getId(),
-                saved.getOriginalName(),
-                saved.getMimeType(),
-                saved.getSize()
-        );
+            logger.info("Attachment saved id={} for report={}", saved.getId(), reportId);
+
+            return new AttachmentResponse(
+                    saved.getId(),
+                    saved.getOriginalName(),
+                    saved.getMimeType(),
+                    saved.getSize()
+            );
+
+        } catch (Exception e) {
+            e.printStackTrace(); // 🔥 MOSTRA ERRO REAL
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro ao guardar ficheiro");
+        }
     }
 
     public List<AttachmentListResponse> listAttachments(Long reportId) {
