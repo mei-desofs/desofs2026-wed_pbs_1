@@ -13,22 +13,11 @@ public class CreateReportRequest {
     @Size(max = 100)
     private String category;
 
-    public CreateReportRequest() {
-    }
+    public CreateReportRequest() {}
 
-    public String getDescription() {
-        return description;
-    }
+    public String getDescription() { return description; }
+    public String getCategory() { return category; }
 
-    public String getCategory() {
-        return category;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
-    }
+    public void setDescription(String description) { this.description = description; }
+    public void setCategory(String category) { this.category = category; }
 }

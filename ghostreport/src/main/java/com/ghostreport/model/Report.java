@@ -23,7 +23,7 @@ public class Report {
     @Column(nullable = false, length = 30)
     private ReportStatus status;
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(name = "tracking_code_hash", nullable = false, unique = true, length = 255)
     private String trackingCodeHash;
 
     @Column(nullable = false, updatable = false)
@@ -35,88 +35,36 @@ public class Report {
     @OneToOne(mappedBy = "report", cascade = CascadeType.ALL, orphanRemoval = true)
     private CaseReview caseReview;
 
-    public Report() {
-    }
+    public Report() {}
 
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
+
         if (this.status == null) {
             this.status = ReportStatus.SUBMITTED;
         }
     }
 
-    public void addAttachment(Attachment attachment) {
-        attachments.add(attachment);
-        attachment.setReport(this);
-    }
+    // GETTERS
 
-    public void removeAttachment(Attachment attachment) {
-        attachments.remove(attachment);
-        attachment.setReport(null);
-    }
+    public Long getId() { return id; }
+    public String getDescription() { return description; }
+    public String getCategory() { return category; }
+    public ReportStatus getStatus() { return status; }
+    public String getTrackingCodeHash() { return trackingCodeHash; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public List<Attachment> getAttachments() { return attachments; }
+    public CaseReview getCaseReview() { return caseReview; }
 
-    public Long getId() {
-        return id;
-    }
+    // SETTERS
 
-    public String getDescription() {
-        return description;
-    }
-
-    public String getCategory() {
-        return category;
-    }
-
-    public ReportStatus getStatus() {
-        return status;
-    }
-
-    public String getTrackingCodeHash() {
-        return trackingCodeHash;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public List<Attachment> getAttachments() {
-        return attachments;
-    }
-
-    public CaseReview getCaseReview() {
-        return caseReview;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
-    }
-
-    public void setStatus(ReportStatus status) {
-        this.status = status;
-    }
-
-    public void setTrackingCodeHash(String trackingCodeHash) {
-        this.trackingCodeHash = trackingCodeHash;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public void setAttachments(List<Attachment> attachments) {
-        this.attachments = attachments;
-    }
-
-    public void setCaseReview(CaseReview caseReview) {
-        this.caseReview = caseReview;
-    }
+    public void setId(Long id) { this.id = id; }
+    public void setDescription(String description) { this.description = description; }
+    public void setCategory(String category) { this.category = category; }
+    public void setStatus(ReportStatus status) { this.status = status; }
+    public void setTrackingCodeHash(String trackingCodeHash) { this.trackingCodeHash = trackingCodeHash; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setAttachments(List<Attachment> attachments) { this.attachments = attachments; }
+    public void setCaseReview(CaseReview caseReview) { this.caseReview = caseReview; }
 }
