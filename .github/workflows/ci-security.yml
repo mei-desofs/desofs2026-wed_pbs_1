@@ -1,0 +1,56 @@
+name: CI Security Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-test-security:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ghostreport
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: user
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+
+      - name: Build project
+        run: mvn clean compile
+
+      - name: Run tests
+        run: mvn test
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/ghostreport
+          DB_USERNAME: postgres
+          DB_PASSWORD: user
+
+      - name: Dependency check with OWASP
+        run: mvn org.owasp:dependency-check-maven:check
+
+      - name: Run SpotBugs
+        run: mvn com.github.spotbugs:spotbugs-maven-plugin:spotbugs
+
+      - name: Package application
+        run: mvn package -DskipTests
