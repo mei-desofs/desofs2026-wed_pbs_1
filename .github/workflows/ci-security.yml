@@ -25,6 +25,10 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
+    defaults:
+      run:
+        working-directory: ./ghostreport
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -35,6 +39,7 @@ jobs:
           distribution: temurin
           java-version: 17
           cache: maven
+          cache-dependency-path: ghostreport/pom.xml
 
       - name: Build project
         run: mvn clean compile
@@ -46,10 +51,10 @@ jobs:
           DB_USERNAME: postgres
           DB_PASSWORD: user
 
-      - name: Dependency check with OWASP
+      - name: OWASP Dependency Check
         run: mvn org.owasp:dependency-check-maven:check
 
-      - name: Run SpotBugs
+      - name: SpotBugs SAST
         run: mvn com.github.spotbugs:spotbugs-maven-plugin:spotbugs
 
       - name: Package application
