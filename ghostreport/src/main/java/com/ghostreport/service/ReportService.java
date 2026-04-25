@@ -17,6 +17,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import com.ghostreport.dto.AttachmentListResponse;
+import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
 import com.ghostreport.model.CaseReview;
 import com.ghostreport.repository.CaseReviewRepository;
 import com.ghostreport.security.SecurityUtils;
@@ -182,6 +187,53 @@ public class ReportService {
                 saved.getCategory(),
                 saved.getStatus().name()
         );
+    }
+
+    public List<AttachmentListResponse> listAttachments(Long reportId) {
+        checkInternalAccessToReport(reportId);
+
+        return attachmentRepository.findByReportId(reportId).stream()
+                .map(attachment -> new AttachmentListResponse(
+                        attachment.getId(),
+                        attachment.getOriginalName(),
+                        attachment.getMimeType(),
+                        attachment.getSize()
+                ))
+                .toList();
+    }
+
+    public ResponseEntity<Resource> downloadAttachment(Long attachmentId) {
+        Attachment attachment = attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attachment not found"));
+
+        Long reportId = attachment.getReport().getId();
+
+        checkInternalAccessToReport(reportId);
+
+        Resource resource = fileStorageService.loadFileAsResource(attachment.getStoragePath());
+
+        logger.info("Attachment id={} downloaded for report id={}", attachmentId, reportId);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(attachment.getMimeType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + attachment.getOriginalName() + "\"")
+                .body(resource);
+    }
+
+    private void checkInternalAccessToReport(Long reportId) {
+        if (SecurityUtils.hasRole("ADMIN")) {
+            return;
+        }
+
+        CaseReview caseReview = caseReviewRepository.findByReportId(reportId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "No case review assigned"));
+
+        String currentUsername = SecurityUtils.getCurrentUsername();
+
+        if (caseReview.getAssignedAnalyst() == null ||
+                !caseReview.getAssignedAnalyst().getUsername().equals(currentUsername)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this case");
+        }
     }
 
     private String generateTrackingCode() {

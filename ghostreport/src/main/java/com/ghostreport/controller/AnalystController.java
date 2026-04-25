@@ -8,6 +8,9 @@ import com.ghostreport.dto.UpdatePriorityRequest;
 import com.ghostreport.dto.UpdateReportStatusRequest;
 import com.ghostreport.service.CaseReviewService;
 import com.ghostreport.service.ReportService;
+import com.ghostreport.dto.AttachmentListResponse;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -75,5 +78,15 @@ public class AnalystController {
     @GetMapping("/my-cases")
     public List<CaseReviewResponse> getMyAssignedCases() {
         return caseReviewService.getMyAssignedCases();
+    }
+
+    @GetMapping("/reports/{id}/attachments")
+    public List<AttachmentListResponse> listAttachments(@PathVariable Long id) {
+        return reportService.listAttachments(id);
+    }
+
+    @GetMapping("/attachments/{attachmentId}/download")
+    public ResponseEntity<Resource> downloadAttachment(@PathVariable Long attachmentId) {
+        return reportService.downloadAttachment(attachmentId);
     }
 }
