@@ -21,10 +21,16 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditLogService auditLogService;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            AuditLogService auditLogService
+    ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.auditLogService = auditLogService;
     }
 
     public List<UserResponse> getAllUsers() {
@@ -69,6 +75,13 @@ public class UserService {
                 saved.getId(),
                 saved.getUsername(),
                 saved.getRole()
+        );
+
+        auditLogService.log(
+                "USER_CREATED",
+                "USER",
+                saved.getId(),
+                "User created with role " + saved.getRole()
         );
 
         return new UserResponse(
