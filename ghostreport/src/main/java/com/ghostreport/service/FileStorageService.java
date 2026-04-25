@@ -29,13 +29,18 @@ public class FileStorageService {
     );
 
     private final Path baseStoragePath;
+    private final SecurityMonitoringService securityMonitoringService;
 
-    public FileStorageService(@Value("${app.upload-dir}") String uploadDir) {
+    public FileStorageService(
+            @Value("${app.upload-dir}") String uploadDir,
+            SecurityMonitoringService securityMonitoringService
+    ) {
         this.baseStoragePath = Paths.get(uploadDir).toAbsolutePath().normalize();
+        this.securityMonitoringService = securityMonitoringService;
     }
 
     public StoredFileInfo storeAttachment(Long reportId, MultipartFile file) {
-        validateFile(file);
+        validateFile(file, reportId);
 
         try {
             Path attachmentsDir = getSafeReportDirectory(reportId, "attachments");
@@ -134,6 +139,7 @@ public class FileStorageService {
         }
 
         if (!subDirectory.equals("attachments") && !subDirectory.equals("documents")) {
+            securityMonitoringService.recordPathTraversalAttempt(subDirectory);
             throw new RuntimeException("Invalid storage directory");
         }
 
@@ -152,23 +158,33 @@ public class FileStorageService {
         Path normalizedPath = path.toAbsolutePath().normalize();
 
         if (!normalizedPath.startsWith(normalizedBase)) {
+            securityMonitoringService.recordPathTraversalAttempt(normalizedPath.toString());
             throw new RuntimeException("Invalid file path");
         }
     }
 
-    private void validateFile(MultipartFile file) {
+    private void validateFile(MultipartFile file, Long reportId) {
         if (file.isEmpty()) {
+            securityMonitoringService.recordRejectedUpload(reportId, "Empty file");
             throw new RuntimeException("File is empty");
         }
 
         if (file.getSize() > MAX_FILE_SIZE) {
+            securityMonitoringService.recordRejectedUpload(reportId, "File exceeds maximum allowed size");
             throw new RuntimeException("File exceeds maximum allowed size");
         }
 
         String contentType = file.getContentType();
 
         if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {
+            securityMonitoringService.recordRejectedUpload(reportId, "File type not allowed");
             throw new RuntimeException("File type not allowed");
+        }
+
+        String originalName = file.getOriginalFilename();
+        if (originalName != null && (originalName.contains("..") || originalName.contains("/") || originalName.contains("\\"))) {
+            securityMonitoringService.recordPathTraversalAttempt(originalName);
+            throw new RuntimeException("Invalid file name");
         }
     }
 

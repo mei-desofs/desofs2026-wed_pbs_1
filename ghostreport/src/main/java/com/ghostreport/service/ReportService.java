@@ -43,6 +43,7 @@ public class ReportService {
     private final FileStorageService fileStorageService;
     private final CaseReviewRepository caseReviewRepository;
     private final AuditLogService auditLogService;
+    private final SecurityMonitoringService securityMonitoringService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public ReportService(
@@ -50,13 +51,15 @@ public class ReportService {
             AttachmentRepository attachmentRepository,
             FileStorageService fileStorageService,
             CaseReviewRepository caseReviewRepository,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            SecurityMonitoringService securityMonitoringService
     ) {
         this.reportRepository = reportRepository;
         this.attachmentRepository = attachmentRepository;
         this.fileStorageService = fileStorageService;
         this.caseReviewRepository = caseReviewRepository;
         this.auditLogService = auditLogService;
+        this.securityMonitoringService = securityMonitoringService;
     }
 
     public CreateReportResponse createReport(CreateReportRequest request) {
@@ -104,6 +107,7 @@ public class ReportService {
         if (!matches) {
             logger.warn("Invalid tracking code attempt for report id={}", id);
             auditLogService.log("TRACKING_CODE_FAILED", "REPORT", id, "Invalid tracking code attempt");
+            securityMonitoringService.recordFailedTrackingCode(id);
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid tracking code");
         }
 

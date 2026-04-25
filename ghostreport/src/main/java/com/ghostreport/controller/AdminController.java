@@ -6,6 +6,9 @@ import com.ghostreport.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import com.ghostreport.model.SecurityAlert;
+import com.ghostreport.repository.SecurityAlertRepository;
+import java.util.List;
 
 import java.util.List;
 
@@ -14,9 +17,11 @@ import java.util.List;
 public class AdminController {
 
     private final UserService userService;
+    private final SecurityAlertRepository securityAlertRepository;
 
-    public AdminController(UserService userService) {
+    public AdminController(UserService userService, SecurityAlertRepository securityAlertRepository) {
         this.userService = userService;
+        this.securityAlertRepository = securityAlertRepository;
     }
 
     @GetMapping("/panel")
@@ -27,6 +32,11 @@ public class AdminController {
     @GetMapping("/users")
     public List<UserResponse> getAllUsers() {
         return userService.getAllUsers();
+    }
+
+    @GetMapping("/security-alerts")
+    public List<SecurityAlert> getSecurityAlerts() {
+        return securityAlertRepository.findAll();
     }
 
     @PostMapping("/users")
