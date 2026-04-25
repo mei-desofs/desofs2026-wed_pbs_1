@@ -19,13 +19,14 @@ public class SecurityConfig {
                         .requestMatchers("/reports", "/reports/**").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/analyst/**").hasAnyRole("ANALYST", "ADMIN")
-                        // testes, depois deve-se tirar
-                        .anyRequest().permitAll()
+
+                        .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults());
 
         return http.build();
     }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

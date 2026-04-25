@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+
 <div class="topnav">
     <a href="/index.html">Submeter denúncia</a>
     <a href="/track.html">Acompanhar denúncia</a>
@@ -16,121 +17,46 @@
 <div class="container">
     <h1>Painel do Admin</h1>
 
-    <form id="loginForm">
-        <label for="username">Utilizador</label>
-        <input id="username" type="text" required>
+    <!-- LOGIN -->
+    <div id="loginSection">
+        <label>Utilizador</label>
+        <input id="username" type="text">
 
-        <label for="password">Password</label>
-        <input id="password" type="password" required>
+        <label>Password</label>
+        <input id="password" type="password">
 
-        <button type="submit">Listar utilizadores</button>
-    </form>
+        <button onclick="login()">Entrar</button>
 
-    <div id="users"></div>
+        <div id="loginError" class="error"></div>
+    </div>
 
-    <hr>
+    <!-- PAINEL ADMIN -->
+    <div id="adminPanel" style="display:none;">
 
-    <h2>Criar utilizador</h2>
-    <form id="createUserForm">
-        <label for="newUsername">Username</label>
-        <input id="newUsername" type="text" required>
+        <h2>Utilizadores</h2>
+        <button onclick="loadUsers()">Listar utilizadores</button>
+        <div id="users"></div>
 
-        <label for="newEmail">Email</label>
-        <input id="newEmail" type="email" required>
+        <hr>
 
-        <label for="newPassword">Password</label>
-        <input id="newPassword" type="text" required>
+        <h2>Criar utilizador</h2>
 
-        <label for="newRole">Role</label>
+        <input id="newUsername" placeholder="Username">
+        <input id="newEmail" placeholder="Email">
+        <input id="newPassword" placeholder="Password">
+
         <select id="newRole">
             <option value="ANALYST">ANALYST</option>
             <option value="ADMIN">ADMIN</option>
         </select>
 
-        <button type="submit">Criar utilizador</button>
-    </form>
+        <button onclick="createUser()">Criar utilizador</button>
 
-    <div id="createUserResult"></div>
+        <div id="createUserResult"></div>
+    </div>
 </div>
 
 <script src="/js/api.js"></script>
-<script>
-    let adminAuth = null;
 
-    document.getElementById("loginForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const username = document.getElementById("username").value;
-        const password = document.getElementById("password").value;
-        const usersDiv = document.getElementById("users");
-
-        adminAuth = basicAuthHeader(username, password);
-
-        try {
-            const response = await fetch(`${API_BASE}/admin/users`, {
-                method: "GET",
-                headers: {
-                    "Authorization": adminAuth
-                }
-            });
-
-            const data = await handleJsonResponse(response);
-
-            usersDiv.innerHTML = data.map(u => `
-                <div class="card">
-                    <strong>ID:</strong> ${u.id}<br>
-                    <strong>Username:</strong> ${u.username}<br>
-                    <strong>Email:</strong> ${u.email}<br>
-                    <strong>Role:</strong> ${u.role}<br>
-                    <strong>Ativo:</strong> ${u.active}
-                </div>
-            `).join("");
-        } catch (error) {
-            usersDiv.innerHTML = `<div class="error">${error.message}</div>`;
-        }
-    });
-
-    document.getElementById("createUserForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const resultDiv = document.getElementById("createUserResult");
-
-        if (!adminAuth) {
-            resultDiv.innerHTML = `<div class="error">Faz login como admin primeiro.</div>`;
-            return;
-        }
-
-        const payload = {
-            username: document.getElementById("newUsername").value,
-            email: document.getElementById("newEmail").value,
-            password: document.getElementById("newPassword").value,
-            role: document.getElementById("newRole").value
-        };
-
-        try {
-            const response = await fetch(`${API_BASE}/admin/users`, {
-                method: "POST",
-                headers: {
-                    "Authorization": adminAuth,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(payload)
-            });
-
-            const data = await handleJsonResponse(response);
-
-            resultDiv.innerHTML = `
-                <div class="result">
-                    Utilizador criado com sucesso.<br>
-                    ID: ${data.id}<br>
-                    Username: ${data.username}<br>
-                    Role: ${data.role}
-                </div>
-            `;
-        } catch (error) {
-            resultDiv.innerHTML = `<div class="error">${error.message}</div>`;
-        }
-    });
-</script>
 </body>
 </html>
