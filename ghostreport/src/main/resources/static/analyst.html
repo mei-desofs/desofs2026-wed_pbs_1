@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+
 <div class="topnav">
     <a href="/index.html">Submeter denúncia</a>
     <a href="/track.html">Acompanhar denúncia</a>
@@ -16,44 +17,78 @@
 <div class="container">
     <h1>Painel do Analista</h1>
 
-    <form id="loginForm">
-        <label for="username">Utilizador</label>
-        <input id="username" type="text" required>
+    <!-- 🔐 LOGIN -->
+    <div id="loginSection">
+        <label>Utilizador</label>
+        <input id="username" type="text">
 
-        <label for="password">Password</label>
-        <input id="password" type="password" required>
+        <label>Password</label>
+        <input id="password" type="password">
 
-        <button type="submit">Carregar os meus casos</button>
-    </form>
+        <button onclick="login()">Entrar</button>
 
-    <div id="cases"></div>
+        <div id="loginError" class="error"></div>
+    </div>
+
+    <!-- 📊 PAINEL -->
+    <div id="analystPanel" style="display:none;">
+        <h2>Os meus casos</h2>
+        <div id="cases"></div>
+    </div>
 </div>
 
 <script src="/js/api.js"></script>
-<script>
-    document.getElementById("loginForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
 
+<script>
+    let analystAuth = null;
+
+    function login() {
         const username = document.getElementById("username").value;
         const password = document.getElementById("password").value;
-        const casesDiv = document.getElementById("cases");
+        const errorDiv = document.getElementById("loginError");
 
-        try {
-            const response = await fetch(`${API_BASE}/analyst/my-cases`, {
-                method: "GET",
-                headers: {
-                    "Authorization": basicAuthHeader(username, password)
-                }
-            });
+        analystAuth = basicAuthHeader(username, password);
 
-            const data = await handleJsonResponse(response);
-
-            if (!data.length) {
-                casesDiv.innerHTML = `<div class="result">Não tens casos atribuídos.</div>`;
-                return;
+        fetch(`${API_BASE}/analyst/my-cases`, {
+            method: "GET",
+            headers: {
+                "Authorization": analystAuth
             }
+        })
+            .then(res => {
+                if (!res.ok) throw new Error("Login inválido");
+                return res.json();
+            })
+            .then(() => {
+                // esconder login
+                document.getElementById("loginSection").style.display = "none";
 
-            casesDiv.innerHTML = data.map(c => `
+                // mostrar painel
+                document.getElementById("analystPanel").style.display = "block";
+
+                loadCases();
+            })
+            .catch(err => {
+                errorDiv.innerText = err.message;
+            });
+    }
+
+    function loadCases() {
+        fetch(`${API_BASE}/analyst/my-cases`, {
+            headers: {
+                "Authorization": analystAuth
+            }
+        })
+            .then(res => res.json())
+            .then(data => {
+                const casesDiv = document.getElementById("cases");
+
+                if (!data.length) {
+                    casesDiv.innerHTML = "Não tens casos atribuídos.";
+                    return;
+                }
+
+                casesDiv.innerHTML = data.map(c => `
                 <div class="card">
                     <strong>Report ID:</strong> ${c.reportId}<br>
                     <strong>CaseReview ID:</strong> ${c.caseReviewId}<br>
@@ -63,10 +98,9 @@
                     <strong>Estado:</strong> ${c.reportStatus}
                 </div>
             `).join("");
-        } catch (error) {
-            casesDiv.innerHTML = `<div class="error">${error.message}</div>`;
-        }
-    });
+            });
+    }
 </script>
+
 </body>
 </html>
