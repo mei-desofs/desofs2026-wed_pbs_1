@@ -1,31 +1,33 @@
 package com.ghostreport.service;
 
+import com.ghostreport.dto.AttachmentListResponse;
 import com.ghostreport.dto.AttachmentResponse;
 import com.ghostreport.dto.CreateReportRequest;
 import com.ghostreport.dto.CreateReportResponse;
 import com.ghostreport.dto.ReportResponse;
 import com.ghostreport.dto.UpdateReportStatusRequest;
 import com.ghostreport.model.Attachment;
+import com.ghostreport.model.CaseReview;
 import com.ghostreport.model.Report;
 import com.ghostreport.model.ReportStatus;
 import com.ghostreport.repository.AttachmentRepository;
+import com.ghostreport.repository.CaseReviewRepository;
 import com.ghostreport.repository.ReportRepository;
+import com.ghostreport.security.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import com.ghostreport.dto.AttachmentListResponse;
-import org.springframework.core.io.Resource;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpHeaders;
-import com.ghostreport.model.CaseReview;
-import com.ghostreport.repository.CaseReviewRepository;
-import com.ghostreport.security.SecurityUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.List;
 
@@ -33,7 +35,6 @@ import java.util.List;
 public class ReportService {
 
     private static final Logger logger = LoggerFactory.getLogger(ReportService.class);
-
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -41,19 +42,23 @@ public class ReportService {
     private final AttachmentRepository attachmentRepository;
     private final FileStorageService fileStorageService;
     private final CaseReviewRepository caseReviewRepository;
+    private final AuditLogService auditLogService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public ReportService(
             ReportRepository reportRepository,
             AttachmentRepository attachmentRepository,
             FileStorageService fileStorageService,
-            CaseReviewRepository caseReviewRepository
+            CaseReviewRepository caseReviewRepository,
+            AuditLogService auditLogService
     ) {
         this.reportRepository = reportRepository;
         this.attachmentRepository = attachmentRepository;
         this.fileStorageService = fileStorageService;
         this.caseReviewRepository = caseReviewRepository;
+        this.auditLogService = auditLogService;
     }
+
     public CreateReportResponse createReport(CreateReportRequest request) {
         String trackingCode = generateTrackingCode();
         String trackingCodeHash = passwordEncoder.encode(trackingCode);
@@ -74,6 +79,7 @@ public class ReportService {
         );
 
         logger.info("Report created with id={}", saved.getId());
+        auditLogService.log("REPORT_CREATED", "REPORT", saved.getId(), "Anonymous report created");
 
         return new CreateReportResponse(
                 saved.getId(),
@@ -86,12 +92,7 @@ public class ReportService {
         Report report = reportRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
 
-        return new ReportResponse(
-                report.getId(),
-                report.getDescription(),
-                report.getCategory(),
-                report.getStatus().name()
-        );
+        return toReportResponse(report);
     }
 
     public ReportResponse verifyTrackingCode(Long id, String trackingCode) {
@@ -102,17 +103,14 @@ public class ReportService {
 
         if (!matches) {
             logger.warn("Invalid tracking code attempt for report id={}", id);
+            auditLogService.log("TRACKING_CODE_FAILED", "REPORT", id, "Invalid tracking code attempt");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid tracking code");
         }
 
         logger.info("Tracking code verified successfully for report id={}", report.getId());
+        auditLogService.log("TRACKING_CODE_VERIFIED", "REPORT", report.getId(), "Tracking code verified successfully");
 
-        return new ReportResponse(
-                report.getId(),
-                report.getDescription(),
-                report.getCategory(),
-                report.getStatus().name()
-        );
+        return toReportResponse(report);
     }
 
     public AttachmentResponse uploadAttachment(Long reportId, MultipartFile file) {
@@ -134,6 +132,7 @@ public class ReportService {
         Attachment saved = attachmentRepository.save(attachment);
 
         logger.info("Attachment uploaded for report id={}, attachment id={}", reportId, saved.getId());
+        auditLogService.log("ATTACHMENT_UPLOADED", "ATTACHMENT", saved.getId(), "Attachment uploaded for report " + reportId);
 
         return new AttachmentResponse(
                 saved.getId(),
@@ -145,12 +144,7 @@ public class ReportService {
 
     public List<ReportResponse> getAllReports() {
         return reportRepository.findAll().stream()
-                .map(report -> new ReportResponse(
-                        report.getId(),
-                        report.getDescription(),
-                        report.getCategory(),
-                        report.getStatus().name()
-                ))
+                .map(this::toReportResponse)
                 .toList();
     }
 
@@ -158,17 +152,7 @@ public class ReportService {
         Report report = reportRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
 
-        if (!SecurityUtils.hasRole("ADMIN")) {
-            CaseReview caseReview = caseReviewRepository.findByReportId(id)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "No case review assigned"));
-
-            String currentUsername = SecurityUtils.getCurrentUsername();
-
-            if (caseReview.getAssignedAnalyst() == null ||
-                    !caseReview.getAssignedAnalyst().getUsername().equals(currentUsername)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this case");
-            }
-        }
+        checkInternalAccessToReport(id);
 
         try {
             ReportStatus newStatus = ReportStatus.valueOf(request.getStatus().toUpperCase());
@@ -180,13 +164,9 @@ public class ReportService {
         Report saved = reportRepository.save(report);
 
         logger.info("Report id={} status updated to {}", saved.getId(), saved.getStatus());
+        auditLogService.log("REPORT_STATUS_UPDATED", "REPORT", saved.getId(), "Status updated to " + saved.getStatus());
 
-        return new ReportResponse(
-                saved.getId(),
-                saved.getDescription(),
-                saved.getCategory(),
-                saved.getStatus().name()
-        );
+        return toReportResponse(saved);
     }
 
     public List<AttachmentListResponse> listAttachments(Long reportId) {
@@ -213,10 +193,15 @@ public class ReportService {
         Resource resource = fileStorageService.loadFileAsResource(attachment.getStoragePath());
 
         logger.info("Attachment id={} downloaded for report id={}", attachmentId, reportId);
+        auditLogService.log("ATTACHMENT_DOWNLOADED", "ATTACHMENT", attachmentId, "Attachment downloaded for report " + reportId);
+
+        ContentDisposition contentDisposition = ContentDisposition.attachment()
+                .filename(attachment.getOriginalName(), StandardCharsets.UTF_8)
+                .build();
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(attachment.getMimeType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + attachment.getOriginalName() + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
                 .body(resource);
     }
 
@@ -234,6 +219,15 @@ public class ReportService {
                 !caseReview.getAssignedAnalyst().getUsername().equals(currentUsername)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this case");
         }
+    }
+
+    private ReportResponse toReportResponse(Report report) {
+        return new ReportResponse(
+                report.getId(),
+                report.getDescription(),
+                report.getCategory(),
+                report.getStatus().name()
+        );
     }
 
     private String generateTrackingCode() {
