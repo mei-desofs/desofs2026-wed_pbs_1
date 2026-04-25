@@ -29,15 +29,18 @@ public class CaseReviewService {
     private final CaseReviewRepository caseReviewRepository;
     private final ReportRepository reportRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     public CaseReviewService(
             CaseReviewRepository caseReviewRepository,
             ReportRepository reportRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            AuditLogService auditLogService
     ) {
         this.caseReviewRepository = caseReviewRepository;
         this.reportRepository = reportRepository;
         this.userRepository = userRepository;
+        this.auditLogService = auditLogService;
     }
 
     public CaseReviewResponse assignAnalyst(Long reportId, AssignAnalystRequest request) {
@@ -66,6 +69,13 @@ public class CaseReviewService {
 
         CaseReview saved = caseReviewRepository.save(caseReview);
 
+        auditLogService.log(
+                "REPORT_ASSIGNED",
+                "REPORT",
+                reportId,
+                "Assigned to analyst id " + analyst.getId()
+        );
+
         logger.info("Report id={} assigned to analyst id={}", reportId, analyst.getId());
 
         return toResponse(saved);
@@ -83,6 +93,13 @@ public class CaseReviewService {
 
         CaseReview saved = caseReviewRepository.save(caseReview);
 
+        auditLogService.log(
+                "CASE_PRIORITY_UPDATED",
+                "REPORT",
+                reportId,
+                "Priority updated to " + saved.getPriority()
+        );
+
         logger.info("Priority updated for report id={} to {}", reportId, saved.getPriority());
 
         return toResponse(saved);
@@ -94,6 +111,13 @@ public class CaseReviewService {
         caseReview.setNotes(request.getNotes());
 
         CaseReview saved = caseReviewRepository.save(caseReview);
+
+        auditLogService.log(
+                "CASE_NOTES_UPDATED",
+                "REPORT",
+                reportId,
+                "Internal notes updated"
+        );
 
         logger.info("Notes updated for report id={}", reportId);
 
