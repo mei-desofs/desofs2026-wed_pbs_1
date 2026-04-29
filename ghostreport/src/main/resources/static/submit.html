@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>GhostReport - Submeter Denúncia</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="topnav">
+    <a class="brand" href="/index.html">GhostReport</a>
+    <a href="/static/submit.html">Submeter denúncia</a>
+    <a href="/track.html">Acompanhar denúncia</a>
+    <a href="/analyst.html">Painel Analista</a>
+    <a href="/admin.html">Painel Admin</a>
+</div>
+
+<div class="container">
+    <h1>Submeter Denúncia</h1>
+
+    <form id="reportForm">
+        <label for="description">Descrição</label>
+        <textarea id="description" rows="5" required></textarea>
+
+        <label for="category">Categoria</label>
+        <input id="category" type="text" required>
+
+        <button type="submit">Submeter denúncia</button>
+    </form>
+
+    <div id="result"></div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+    document.getElementById("reportForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const description = document.getElementById("description").value;
+        const category = document.getElementById("category").value;
+        const resultDiv = document.getElementById("result");
+
+        try {
+            const response = await fetch(`${API_BASE}/reports`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ description, category })
+            });
+
+            const data = await handleJsonResponse(response);
+
+            resultDiv.innerHTML = `
+            <div class="result">
+                <strong>Denúncia criada com sucesso.</strong><br>
+                ID: ${data.id}<br>
+                Estado: ${data.status}<br>
+                Código: <strong>${data.trackingCode}</strong><br><br>
+                A redirecionar...
+            </div>
+        `;
+
+            setTimeout(() => {
+                window.location.href = `/track.html?code=${data.trackingCode}&id=${data.id}`;
+            }, 1500);
+
+        } catch (error) {
+            resultDiv.innerHTML = `<div class="error">${error.message}</div>`;
+        }
+    });
+</script>
+</body>
+</html>

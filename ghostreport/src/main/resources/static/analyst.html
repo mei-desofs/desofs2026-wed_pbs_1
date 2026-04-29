@@ -2,13 +2,15 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GhostReport - Painel Analista</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
 <div class="topnav">
-    <a href="/index.html">Submeter denúncia</a>
+    <a class="brand" href="/index.html">GhostReport</a>
+    <a href="/submit.html">Submeter denúncia</a>
     <a href="/track.html">Acompanhar denúncia</a>
     <a href="/analyst.html">Painel Analista</a>
     <a href="/admin.html">Painel Admin</a>
@@ -17,7 +19,6 @@
 <div class="container">
     <h1>Painel do Analista</h1>
 
-    <!-- 🔐 LOGIN -->
     <div id="loginSection">
         <label>Utilizador</label>
         <input id="username" type="text">
@@ -30,7 +31,6 @@
         <div id="loginError" class="error"></div>
     </div>
 
-    <!-- 📊 PAINEL -->
     <div id="analystPanel" style="display:none;">
         <h2>Os meus casos</h2>
         <div id="cases"></div>

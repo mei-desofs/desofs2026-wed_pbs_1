@@ -2,71 +2,60 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <title>GhostReport - Submeter Denúncia</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GhostReport - Plataforma de Denúncias Anónimas</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+
 <div class="topnav">
-    <a href="/index.html">Submeter denúncia</a>
+    <a class="brand" href="/index.html">GhostReport</a>
+    <a href="/submit.html">Submeter denúncia</a>
     <a href="/track.html">Acompanhar denúncia</a>
     <a href="/analyst.html">Painel Analista</a>
     <a href="/admin.html">Painel Admin</a>
 </div>
 
-<div class="container">
-    <h1>Submeter Denúncia</h1>
-
-    <form id="reportForm">
-        <label for="description">Descrição</label>
-        <textarea id="description" rows="5" required></textarea>
-
-        <label for="category">Categoria</label>
-        <input id="category" type="text" required>
-
-        <button type="submit">Submeter denúncia</button>
-    </form>
-
-    <div id="result"></div>
-</div>
-
-<script src="/js/api.js"></script>
-<script>
-    document.getElementById("reportForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const description = document.getElementById("description").value;
-        const category = document.getElementById("category").value;
-        const resultDiv = document.getElementById("result");
-
-        try {
-            const response = await fetch(`${API_BASE}/reports`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ description, category })
-            });
-
-            const data = await handleJsonResponse(response);
-
-            resultDiv.innerHTML = `
-            <div class="result">
-                <strong>Denúncia criada com sucesso.</strong><br>
-                ID: ${data.id}<br>
-                Estado: ${data.status}<br>
-                Código: <strong>${data.trackingCode}</strong><br><br>
-                A redirecionar...
+<main>
+    <section class="hero">
+        <div class="hero-content">
+            <span class="eyebrow">Canal seguro e confidencial</span>
+            <h1>Denúncias anónimas com acompanhamento seguro.</h1>
+            <p>
+                O GhostReport permite comunicar irregularidades, acompanhar o estado da denúncia
+                através de um código e proteger a identidade do denunciante durante todo o processo.
+            </p>
+            <div class="hero-actions">
+                <a class="button-link" href="/static/submit.html">Submeter denúncia</a>
+                <a class="button-link secondary" href="/track.html">Acompanhar denúncia</a>
             </div>
-        `;
+        </div>
 
-            setTimeout(() => {
-                window.location.href = `/track.html?code=${data.trackingCode}&id=${data.id}`;
-            }, 1500);
+        <div class="hero-card">
+            <h2>Como funciona?</h2>
+            <ol class="steps">
+                <li>Submete a denúncia sem autenticação.</li>
+                <li>Guarda o código de acompanhamento gerado.</li>
+                <li>Consulta o estado do processo quando precisares.</li>
+            </ol>
+        </div>
+    </section>
 
-        } catch (error) {
-            resultDiv.innerHTML = `<div class="error">${error.message}</div>`;
-        }
-    });
-</script>
+    <section class="features">
+        <article class="feature-card">
+            <h3>Anonimato</h3>
+            <p>Não é necessário login para submeter uma denúncia.</p>
+        </article>
+        <article class="feature-card">
+            <h3>Acesso controlado</h3>
+            <p>Analistas e administradores acedem apenas às áreas autorizadas.</p>
+        </article>
+        <article class="feature-card">
+            <h3>Evidências</h3>
+            <p>Permite anexar ficheiros associados à denúncia.</p>
+        </article>
+    </section>
+</main>
+
 </body>
 </html>

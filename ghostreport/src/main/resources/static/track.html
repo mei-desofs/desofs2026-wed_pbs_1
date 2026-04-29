@@ -2,13 +2,15 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GhostReport - Acompanhar Denúncia</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
 <div class="topnav">
-    <a href="/index.html">Submeter denúncia</a>
+    <a class="brand" href="/index.html">GhostReport</a>
+    <a href="/submit.html">Submeter denúncia</a>
     <a href="/track.html">Acompanhar denúncia</a>
     <a href="/analyst.html">Painel Analista</a>
     <a href="/admin.html">Painel Admin</a>
@@ -131,7 +133,7 @@
 
             listDiv.innerHTML = data.map(a => `
             <div class="card">
-                📎 ${a.originalName}
+                ${a.originalName}
                 <br>
                 <button onclick="downloadAttachment(${a.id})">
                     Download
