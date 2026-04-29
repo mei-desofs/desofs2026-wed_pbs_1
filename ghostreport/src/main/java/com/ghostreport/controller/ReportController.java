@@ -18,12 +18,12 @@ public class ReportController {
     }
 
     @PostMapping
-    public CreateReportResponse createReport(@RequestBody CreateReportRequest request) {
+    public CreateReportResponse createReport(@Valid @RequestBody CreateReportRequest request) {
         return reportService.createReport(request);
     }
 
     @PostMapping("/verify")
-    public ReportResponse verifyTrackingCodeOnly(@RequestBody VerifyTrackingCodeRequest request) {
+    public ReportResponse verifyTrackingCodeOnly(@Valid @RequestBody VerifyTrackingCodeRequest request) {
         return reportService.verifyTrackingCodeOnly(request.getTrackingCode());
     }
 

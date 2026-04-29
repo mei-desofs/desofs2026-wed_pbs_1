@@ -79,20 +79,32 @@ public class ReportService {
 
     public ReportResponse verifyTrackingCodeOnly(String trackingCode) {
 
+        if (trackingCode == null || trackingCode.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tracking code is required");
+        }
+
         trackingCode = trackingCode.trim();
 
         List<Report> reports = reportRepository.findAll();
 
         for (Report report : reports) {
-
             String stored = report.getTrackingCodeHash();
 
             boolean matches = passwordEncoder.matches(trackingCode, stored);
 
             if (matches) {
+                auditLogService.log(
+                        "TRACKING_CODE_VERIFIED",
+                        "REPORT",
+                        report.getId(),
+                        "Tracking code verified successfully"
+                );
+
                 return toReportResponse(report);
             }
         }
+
+        securityMonitoringService.recordFailedTrackingCode(null);
 
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Denúncia não encontrada");
     }

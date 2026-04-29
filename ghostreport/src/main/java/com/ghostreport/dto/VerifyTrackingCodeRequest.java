@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 
 public class VerifyTrackingCodeRequest {
 
-    @NotBlank
+    @NotBlank(message = "Tracking code is required")
     private String trackingCode;
 
     public String getTrackingCode() {
