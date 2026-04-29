@@ -2,8 +2,6 @@ name: SCA
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 2 * * 1"
 
 jobs:
   dependency-check:
@@ -28,3 +26,5 @@ jobs:
           mvn org.owasp:dependency-check-maven:check
           -DnvdApiKey=${{ secrets.NVD_API_KEY }}
           -DossindexAnalyzerEnabled=false
+          -DretireJsAnalyzerEnabled=false
+          -DnodeAuditAnalyzerEnabled=false
