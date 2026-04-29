@@ -46,8 +46,17 @@ public class Report {
         }
     }
 
-    // GETTERS
+    public void addAttachment(Attachment attachment) {
+        attachments.add(attachment);
+        attachment.setReport(this);
+    }
 
+    public void removeAttachment(Attachment attachment) {
+        attachments.remove(attachment);
+        attachment.setReport(null);
+    }
+
+    // GETTERS
     public Long getId() { return id; }
     public String getDescription() { return description; }
     public String getCategory() { return category; }
@@ -58,7 +67,6 @@ public class Report {
     public CaseReview getCaseReview() { return caseReview; }
 
     // SETTERS
-
     public void setId(Long id) { this.id = id; }
     public void setDescription(String description) { this.description = description; }
     public void setCategory(String category) { this.category = category; }

@@ -79,6 +79,10 @@ public class ReportService {
 
     public ReportResponse verifyTrackingCodeOnly(String trackingCode) {
 
+        if (trackingCode == null || trackingCode.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Código inválido");
+        }
+
         trackingCode = trackingCode.trim();
 
         List<Report> reports = reportRepository.findAll();
@@ -87,9 +91,7 @@ public class ReportService {
 
             String stored = report.getTrackingCodeHash();
 
-            boolean matches = passwordEncoder.matches(trackingCode, stored);
-
-            if (matches) {
+            if (stored != null && passwordEncoder.matches(trackingCode, stored)) {
                 return toReportResponse(report);
             }
         }
@@ -150,14 +152,15 @@ public class ReportService {
             );
 
         } catch (Exception e) {
-            e.printStackTrace(); // 🔥 MOSTRA ERRO REAL
+            e.printStackTrace();
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro ao guardar ficheiro");
         }
     }
 
-    public List<AttachmentListResponse> listAttachments(Long reportId) {
+    public List<AttachmentListResponse> listAttachmentsPublic(Long reportId) {
 
-        checkInternalAccessToReport(reportId);
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         return attachmentRepository.findByReportId(reportId).stream()
                 .map(a -> new AttachmentListResponse(
@@ -167,6 +170,13 @@ public class ReportService {
                         a.getSize()
                 ))
                 .toList();
+    }
+
+    public List<AttachmentListResponse> listAttachments(Long reportId) {
+
+        checkInternalAccessToReport(reportId);
+
+        return listAttachmentsPublic(reportId);
     }
 
     public ResponseEntity<Resource> downloadAttachment(Long attachmentId) {
