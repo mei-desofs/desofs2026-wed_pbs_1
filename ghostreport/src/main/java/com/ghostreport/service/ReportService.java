@@ -34,7 +34,6 @@ public class ReportService {
     private final FileStorageService fileStorageService;
     private final CaseReviewRepository caseReviewRepository;
     private final AuditLogService auditLogService;
-    private final SecurityMonitoringService securityMonitoringService;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -43,15 +42,13 @@ public class ReportService {
             AttachmentRepository attachmentRepository,
             FileStorageService fileStorageService,
             CaseReviewRepository caseReviewRepository,
-            AuditLogService auditLogService,
-            SecurityMonitoringService securityMonitoringService
+            AuditLogService auditLogService
     ) {
         this.reportRepository = reportRepository;
         this.attachmentRepository = attachmentRepository;
         this.fileStorageService = fileStorageService;
         this.caseReviewRepository = caseReviewRepository;
         this.auditLogService = auditLogService;
-        this.securityMonitoringService = securityMonitoringService;
     }
 
     public CreateReportResponse createReport(CreateReportRequest request) {
@@ -67,7 +64,13 @@ public class ReportService {
 
         Report saved = reportRepository.save(report);
 
-        logger.info("Report created with id={}", saved.getId());
+        fileStorageService.generateReportDocument(
+                saved.getId(),
+                saved.getDescription(),
+                saved.getCategory(),
+                saved.getStatus().name()
+        );
+
         auditLogService.log("REPORT_CREATED", "REPORT", saved.getId(), "Anonymous report created");
 
         return new CreateReportResponse(
@@ -85,9 +88,7 @@ public class ReportService {
 
         trackingCode = trackingCode.trim();
 
-        List<Report> reports = reportRepository.findAll();
-
-        for (Report report : reports) {
+        for (Report report : reportRepository.findAll()) {
             if (passwordEncoder.matches(trackingCode, report.getTrackingCodeHash())) {
                 return toReportResponse(report);
             }
@@ -97,7 +98,8 @@ public class ReportService {
     }
 
     public List<ReportResponse> getAllReports() {
-        return reportRepository.findAll().stream()
+        return reportRepository.findAll()
+                .stream()
                 .map(this::toReportResponse)
                 .toList();
     }
@@ -105,19 +107,13 @@ public class ReportService {
     public ReportResponse updateReportStatus(Long id, UpdateReportStatusRequest request) {
 
         Report report = reportRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         checkInternalAccessToReport(id);
 
-        try {
-            report.setStatus(ReportStatus.valueOf(request.getStatus().toUpperCase()));
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid status");
-        }
+        report.setStatus(ReportStatus.valueOf(request.getStatus().toUpperCase()));
 
         Report saved = reportRepository.save(report);
-
-        auditLogService.log("STATUS_UPDATED", "REPORT", id, "Updated to " + saved.getStatus());
 
         return toReportResponse(saved);
     }
@@ -125,7 +121,7 @@ public class ReportService {
     public AttachmentResponse uploadAttachment(Long reportId, MultipartFile file) {
 
         Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         try {
             FileStorageService.StoredFileInfo stored = fileStorageService.storeAttachment(reportId, file);
@@ -142,9 +138,6 @@ public class ReportService {
 
             Attachment saved = attachmentRepository.save(attachment);
 
-            logger.info("Attachment saved id={} for report={}", saved.getId(), reportId);
-            auditLogService.log("ATTACHMENT_UPLOADED", "REPORT", reportId, "File uploaded");
-
             return new AttachmentResponse(
                     saved.getId(),
                     saved.getOriginalName(),
@@ -153,8 +146,6 @@ public class ReportService {
             );
 
         } catch (Exception e) {
-            logger.error("Erro upload", e);
-            auditLogService.log("UPLOAD_FAILED", "REPORT", reportId, e.getMessage());
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro ao guardar ficheiro");
         }
     }
@@ -163,7 +154,8 @@ public class ReportService {
 
         checkInternalAccessToReport(reportId);
 
-        return attachmentRepository.findByReportId(reportId).stream()
+        return attachmentRepository.findByReportId(reportId)
+                .stream()
                 .map(a -> new AttachmentListResponse(
                         a.getId(),
                         a.getOriginalName(),
@@ -191,13 +183,15 @@ public class ReportService {
 
     public ResponseEntity<Resource> downloadAttachmentSecure(Long attachmentId, String trackingCode) {
 
+        if (trackingCode == null || trackingCode.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+
         Attachment attachment = attachmentRepository.findById(attachmentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        Report report = attachment.getReport();
-
-        if (!passwordEncoder.matches(trackingCode, report.getTrackingCodeHash())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso negado");
+        if (!passwordEncoder.matches(trackingCode, attachment.getReport().getTrackingCodeHash())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
         Resource resource = fileStorageService.loadFileAsResource(attachment.getStoragePath());
@@ -236,13 +230,10 @@ public class ReportService {
     }
 
     private String generateTrackingCode() {
-        int length = 16;
         StringBuilder code = new StringBuilder();
-
-        for (int i = 0; i < length; i++) {
+        for (int i = 0; i < 16; i++) {
             code.append(CHARACTERS.charAt(RANDOM.nextInt(CHARACTERS.length())));
         }
-
         return code.toString();
     }
 }

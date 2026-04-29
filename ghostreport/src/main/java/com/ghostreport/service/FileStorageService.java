@@ -11,7 +11,6 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.nio.file.*;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.Set;
 import java.util.UUID;
@@ -29,132 +28,129 @@ public class FileStorageService {
     );
 
     private final Path baseStoragePath;
-    private final SecurityMonitoringService securityMonitoringService;
 
-    public FileStorageService(
-            @Value("${app.upload-dir:uploads}") String uploadDir,
-            SecurityMonitoringService securityMonitoringService
-    ) {
+    public FileStorageService(@Value("${app.upload-dir:uploads}") String uploadDir) {
         this.baseStoragePath = Paths.get(uploadDir).toAbsolutePath().normalize();
-        this.securityMonitoringService = securityMonitoringService;
 
         try {
-            Files.createDirectories(this.baseStoragePath); // 🔥 garante pasta
+            Files.createDirectories(this.baseStoragePath);
         } catch (IOException e) {
-            throw new RuntimeException("Could not create upload directory", e);
+            throw new RuntimeException("Erro ao criar pasta uploads", e);
         }
     }
 
     public StoredFileInfo storeAttachment(Long reportId, MultipartFile file) {
 
-        validateFile(file, reportId);
+        validateFile(file);
 
         try {
-            Path attachmentsDir = getSafeReportDirectory(reportId, "attachments");
+            Path attachmentsDir = baseStoragePath
+                    .resolve("reports")
+                    .resolve(String.valueOf(reportId))
+                    .resolve("attachments");
+
             Files.createDirectories(attachmentsDir);
 
-            String originalName = sanitizeOriginalName(file.getOriginalFilename());
-            String extension = extractExtension(originalName);
+            String originalName = sanitize(file.getOriginalFilename());
+            String extension = getExtension(originalName);
 
-            String fileReference = UUID.randomUUID().toString();
-            String storedName = fileReference + extension;
+            String fileRef = UUID.randomUUID().toString();
+            String storedName = fileRef + extension;
 
-            Path targetLocation = attachmentsDir.resolve(storedName).normalize();
-            ensureInsideBasePath(targetLocation);
+            Path target = attachmentsDir.resolve(storedName);
 
-            System.out.println("Saving file to: " + targetLocation); // DEBUG
-
-            try (InputStream inputStream = file.getInputStream()) {
-                Files.copy(inputStream, targetLocation, StandardCopyOption.REPLACE_EXISTING);
+            try (InputStream input = file.getInputStream()) {
+                Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING);
             }
 
-            if (!Files.exists(targetLocation)) {
-                throw new RuntimeException("File was not saved!");
-            }
-
-            String hash = calculateSha256(targetLocation);
+            String hash = sha256(target);
 
             return new StoredFileInfo(
                     originalName,
                     storedName,
-                    fileReference,
-                    targetLocation.toString(),
+                    fileRef,
+                    target.toString(),
                     file.getContentType(),
                     file.getSize(),
                     hash
             );
 
         } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Failed to store file", e);
+            throw new RuntimeException("Erro ao guardar ficheiro", e);
         }
     }
 
-    public Resource loadFileAsResource(String storagePath) {
+    public void generateReportDocument(Long reportId, String description, String category, String status) {
+
         try {
-            Path filePath = Paths.get(storagePath).toAbsolutePath().normalize();
-            ensureInsideBasePath(filePath);
+            Path dir = baseStoragePath
+                    .resolve("reports")
+                    .resolve(String.valueOf(reportId))
+                    .resolve("documents");
 
-            Resource resource = new UrlResource(filePath.toUri());
+            Files.createDirectories(dir);
 
-            if (!resource.exists() || !resource.isReadable()) {
-                throw new RuntimeException("File not found");
-            }
+            Path file = dir.resolve("report_" + reportId + ".txt");
 
-            return resource;
+            String content = """
+                    === DENÚNCIA ===
 
+                    ID: %d
+                    Categoria: %s
+                    Estado: %s
+
+                    Descrição:
+                    %s
+                    """.formatted(reportId, category, status, description);
+
+            Files.writeString(file, content,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING);
+
+            System.out.println("Documento criado: " + file);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Erro ao gerar documento", e);
+        }
+    }
+
+    public Resource loadFileAsResource(String path) {
+        try {
+            Path file = Paths.get(path).toAbsolutePath();
+            return new UrlResource(file.toUri());
         } catch (MalformedURLException e) {
-            throw new RuntimeException("Invalid path", e);
+            throw new RuntimeException("Erro ao carregar ficheiro", e);
         }
     }
 
-    private Path getSafeReportDirectory(Long reportId, String subDirectory) {
-
-        Path directory = baseStoragePath
-                .resolve("reports")
-                .resolve(String.valueOf(reportId))
-                .resolve(subDirectory)
-                .normalize();
-
-        ensureInsideBasePath(directory);
-        return directory;
-    }
-
-    private void ensureInsideBasePath(Path path) {
-        if (!path.toAbsolutePath().normalize().startsWith(baseStoragePath)) {
-            throw new RuntimeException("Invalid path");
-        }
-    }
-
-    private void validateFile(MultipartFile file, Long reportId) {
+    private void validateFile(MultipartFile file) {
 
         if (file.isEmpty()) {
-            throw new RuntimeException("Empty file");
+            throw new RuntimeException("Ficheiro vazio");
         }
 
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new RuntimeException("File too large");
+            throw new RuntimeException("Ficheiro demasiado grande");
         }
 
-        String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {
-            throw new RuntimeException("Invalid file type");
+        if (!ALLOWED_TYPES.contains(file.getContentType())) {
+            throw new RuntimeException("Tipo de ficheiro inválido");
         }
     }
 
-    private String sanitizeOriginalName(String name) {
+    private String sanitize(String name) {
         return name == null ? "file" : name.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
 
-    private String extractExtension(String filename) {
-        int i = filename.lastIndexOf(".");
-        return (i != -1) ? filename.substring(i) : "";
+    private String getExtension(String name) {
+        int i = name.lastIndexOf(".");
+        return (i != -1) ? name.substring(i) : "";
     }
 
-    private String calculateSha256(Path filePath) {
+    private String sha256(Path file) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] bytes = Files.readAllBytes(filePath);
+            byte[] bytes = Files.readAllBytes(file);
             return HexFormat.of().formatHex(digest.digest(bytes));
         } catch (Exception e) {
             throw new RuntimeException(e);
