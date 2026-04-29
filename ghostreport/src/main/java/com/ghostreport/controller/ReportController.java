@@ -4,7 +4,8 @@ import com.ghostreport.dto.*;
 import com.ghostreport.service.ReportService;
 import com.ghostreport.service.RateLimiterService;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -33,7 +34,7 @@ public class ReportController {
     ) {
         String ip = httpRequest.getRemoteAddr();
 
-        rateLimiterService.checkLimit(ip);
+        rateLimiterService.checkLimit(ip + "_VERIFY");
 
         return reportService.verifyTrackingCodeOnly(request.getTrackingCode());
     }
@@ -46,8 +47,23 @@ public class ReportController {
     ) {
         String ip = httpRequest.getRemoteAddr();
 
-        rateLimiterService.checkLimit(ip);
+        rateLimiterService.checkLimit(ip + "_UPLOAD");
 
         return reportService.uploadAttachment(id, file);
+    }
+
+    @PostMapping("/download")
+    public ResponseEntity<Resource> downloadAttachment(
+            @RequestBody DownloadRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        String ip = httpRequest.getRemoteAddr();
+
+        rateLimiterService.checkLimit(ip + "_DOWNLOAD");
+
+        return reportService.downloadAttachmentSecure(
+                request.getAttachmentId(),
+                request.getTrackingCode()
+        );
     }
 }

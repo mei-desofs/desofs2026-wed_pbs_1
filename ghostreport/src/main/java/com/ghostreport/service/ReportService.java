@@ -88,10 +88,7 @@ public class ReportService {
         List<Report> reports = reportRepository.findAll();
 
         for (Report report : reports) {
-
-            String stored = report.getTrackingCodeHash();
-
-            if (stored != null && passwordEncoder.matches(trackingCode, stored)) {
+            if (passwordEncoder.matches(trackingCode, report.getTrackingCodeHash())) {
                 return toReportResponse(report);
             }
         }
@@ -119,6 +116,9 @@ public class ReportService {
         }
 
         Report saved = reportRepository.save(report);
+
+        auditLogService.log("STATUS_UPDATED", "REPORT", id, "Updated to " + saved.getStatus());
+
         return toReportResponse(saved);
     }
 
@@ -143,6 +143,7 @@ public class ReportService {
             Attachment saved = attachmentRepository.save(attachment);
 
             logger.info("Attachment saved id={} for report={}", saved.getId(), reportId);
+            auditLogService.log("ATTACHMENT_UPLOADED", "REPORT", reportId, "File uploaded");
 
             return new AttachmentResponse(
                     saved.getId(),
@@ -152,15 +153,15 @@ public class ReportService {
             );
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Erro upload", e);
+            auditLogService.log("UPLOAD_FAILED", "REPORT", reportId, e.getMessage());
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro ao guardar ficheiro");
         }
     }
 
-    public List<AttachmentListResponse> listAttachmentsPublic(Long reportId) {
+    public List<AttachmentListResponse> listAttachments(Long reportId) {
 
-        Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        checkInternalAccessToReport(reportId);
 
         return attachmentRepository.findByReportId(reportId).stream()
                 .map(a -> new AttachmentListResponse(
@@ -172,17 +173,32 @@ public class ReportService {
                 .toList();
     }
 
-    public List<AttachmentListResponse> listAttachments(Long reportId) {
-
-        checkInternalAccessToReport(reportId);
-
-        return listAttachmentsPublic(reportId);
-    }
-
     public ResponseEntity<Resource> downloadAttachment(Long attachmentId) {
 
         Attachment attachment = attachmentRepository.findById(attachmentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        Resource resource = fileStorageService.loadFileAsResource(attachment.getStoragePath());
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(attachment.getMimeType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment()
+                                .filename(attachment.getOriginalName(), StandardCharsets.UTF_8)
+                                .build().toString())
+                .body(resource);
+    }
+
+    public ResponseEntity<Resource> downloadAttachmentSecure(Long attachmentId, String trackingCode) {
+
+        Attachment attachment = attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        Report report = attachment.getReport();
+
+        if (!passwordEncoder.matches(trackingCode, report.getTrackingCodeHash())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso negado");
+        }
 
         Resource resource = fileStorageService.loadFileAsResource(attachment.getStoragePath());
 
