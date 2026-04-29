@@ -2,8 +2,9 @@ package com.ghostreport.controller;
 
 import com.ghostreport.dto.*;
 import com.ghostreport.service.ReportService;
+import com.ghostreport.service.RateLimiterService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,9 +13,12 @@ import org.springframework.web.multipart.MultipartFile;
 public class ReportController {
 
     private final ReportService reportService;
+    private final RateLimiterService rateLimiterService;
 
-    public ReportController(ReportService reportService) {
+    public ReportController(ReportService reportService,
+                            RateLimiterService rateLimiterService) {
         this.reportService = reportService;
+        this.rateLimiterService = rateLimiterService;
     }
 
     @PostMapping
@@ -23,15 +27,27 @@ public class ReportController {
     }
 
     @PostMapping("/verify")
-    public ReportResponse verifyTrackingCodeOnly(@RequestBody VerifyTrackingCodeRequest request) {
+    public ReportResponse verifyTrackingCodeOnly(
+            @RequestBody VerifyTrackingCodeRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        String ip = httpRequest.getRemoteAddr();
+
+        rateLimiterService.checkLimit(ip);
+
         return reportService.verifyTrackingCodeOnly(request.getTrackingCode());
     }
 
     @PostMapping("/{id}/attachments")
     public AttachmentResponse uploadAttachment(
             @PathVariable Long id,
-            @RequestParam("file") MultipartFile file
+            @RequestParam("file") MultipartFile file,
+            HttpServletRequest httpRequest
     ) {
+        String ip = httpRequest.getRemoteAddr();
+
+        rateLimiterService.checkLimit(ip);
+
         return reportService.uploadAttachment(id, file);
     }
 }
