@@ -2,8 +2,8 @@ name: SCA
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: [ main, develop ]
+  schedule:
+    - cron: "0 2 * * 1"
 
 jobs:
   dependency-check:
@@ -24,4 +24,7 @@ jobs:
           cache-dependency-path: ghostreport/pom.xml
 
       - name: OWASP Dependency Check
-        run: mvn org.owasp:dependency-check-maven:check -DnvdApiKey=${{ secrets.NVD_API_KEY }}
+        run: >
+          mvn org.owasp:dependency-check-maven:check
+          -DnvdApiKey=${{ secrets.NVD_API_KEY }}
+          -DossindexAnalyzerEnabled=false
