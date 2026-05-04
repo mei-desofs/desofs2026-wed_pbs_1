@@ -58,6 +58,9 @@ public class ReportService {
         String trackingCodeHash = passwordEncoder.encode(trackingCode);
 
         Report report = new Report();
+
+        report.setTitle(request.getTitle());
+
         report.setDescription(request.getDescription());
         report.setCategory(request.getCategory());
         report.setStatus(ReportStatus.SUBMITTED);
@@ -236,6 +239,7 @@ public class ReportService {
     private ReportResponse toReportResponse(Report report) {
         return new ReportResponse(
                 report.getId(),
+                report.getTitle(),
                 report.getStatus().name(),
                 report.getCategory(),
                 report.getDescription()

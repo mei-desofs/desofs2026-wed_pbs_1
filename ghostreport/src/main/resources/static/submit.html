@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+
 <div class="topnav">
     <a class="brand" href="/index.html">GhostReport</a>
     <a href="/static/submit.html">Submeter denúncia</a>
@@ -19,11 +20,22 @@
     <h1>Submeter Denúncia</h1>
 
     <form id="reportForm">
-        <label for="description">Descrição</label>
-        <textarea id="description" rows="5" required></textarea>
+
+        <label for="title">Título da denúncia</label>
+        <input id="title" type="text" required>
 
         <label for="category">Categoria</label>
-        <input id="category" type="text" required>
+        <select id="category" required>
+            <option value="">Selecionar categoria</option>
+            <option value="Fraude">Fraude</option>
+            <option value="Corrupção">Corrupção</option>
+            <option value="Assédio">Assédio</option>
+            <option value="Segurança">Segurança</option>
+            <option value="Outros">Outros</option>
+        </select>
+
+        <label for="description">Descrição</label>
+        <textarea id="description" rows="5" required></textarea>
 
         <button type="submit">Submeter denúncia</button>
     </form>
@@ -36,8 +48,10 @@
     document.getElementById("reportForm").addEventListener("submit", async (e) => {
         e.preventDefault();
 
+        const title = document.getElementById("title").value;
         const description = document.getElementById("description").value;
         const category = document.getElementById("category").value;
+
         const resultDiv = document.getElementById("result");
 
         try {
@@ -46,7 +60,11 @@
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ description, category })
+                body: JSON.stringify({
+                    title,
+                    description,
+                    category
+                })
             });
 
             const data = await handleJsonResponse(response);
@@ -70,5 +88,6 @@
         }
     });
 </script>
+
 </body>
 </html>

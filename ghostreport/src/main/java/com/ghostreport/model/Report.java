@@ -13,6 +13,10 @@ public class Report {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // 🔥 NOVO CAMPO
+    @Column(nullable = false, length = 200)
+    private String title;
+
     @Column(nullable = false, length = 4000)
     private String description;
 
@@ -58,6 +62,7 @@ public class Report {
 
     // GETTERS
     public Long getId() { return id; }
+    public String getTitle() { return title; }
     public String getDescription() { return description; }
     public String getCategory() { return category; }
     public ReportStatus getStatus() { return status; }
@@ -68,6 +73,7 @@ public class Report {
 
     // SETTERS
     public void setId(Long id) { this.id = id; }
+    public void setTitle(String title) { this.title = title; }
     public void setDescription(String description) { this.description = description; }
     public void setCategory(String category) { this.category = category; }
     public void setStatus(ReportStatus status) { this.status = status; }
