@@ -37,6 +37,9 @@
         <label for="description">Descrição</label>
         <textarea id="description" rows="5" required></textarea>
 
+        <label for="files">Anexos</label>
+        <input id="files" type="file" multiple>
+
         <button type="submit">Submeter denúncia</button>
     </form>
 
@@ -51,10 +54,12 @@
         const title = document.getElementById("title").value;
         const description = document.getElementById("description").value;
         const category = document.getElementById("category").value;
+        const files = document.getElementById("files").files;
 
         const resultDiv = document.getElementById("result");
 
         try {
+
             const response = await fetch(`${API_BASE}/reports`, {
                 method: "POST",
                 headers: {
@@ -69,11 +74,23 @@
 
             const data = await handleJsonResponse(response);
 
+            if (files.length > 0) {
+
+                const formData = new FormData();
+
+                for (let i = 0; i < files.length; i++) {
+                    formData.append("files", files[i]); /
+                }
+
+                await fetch(`${API_BASE}/reports/${data.id}/attachments`, {
+                    method: "POST",
+                    body: formData
+                });
+            }
+
             resultDiv.innerHTML = `
             <div class="result">
                 <strong>Denúncia criada com sucesso.</strong><br>
-                ID: ${data.id}<br>
-                Estado: ${data.status}<br>
                 Código: <strong>${data.trackingCode}</strong><br><br>
                 A redirecionar...
             </div>
