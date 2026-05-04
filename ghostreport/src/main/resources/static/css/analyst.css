@@ -1,0 +1,54 @@
+.analyst-layout {
+    width: min(1180px, calc(100% - 32px));
+    margin: 48px auto;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+}
+
+.dashboard-section {
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    border-radius: 24px;
+    padding: 28px;
+}
+
+.case-card {
+    margin-top: 14px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: white;
+    line-height: 1.6;
+}
+
+.case-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.case-actions button {
+    padding: 9px 13px;
+    font-size: 13px;
+}
+
+.selected-case {
+    border: 2px solid var(--primary);
+}
+
+.error:empty,
+.result:empty {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}

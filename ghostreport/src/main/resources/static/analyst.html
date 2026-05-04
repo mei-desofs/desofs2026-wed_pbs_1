@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GhostReport - Painel Analista</title>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/analyst.css">
 </head>
 <body>
 
@@ -16,89 +17,482 @@
     <a href="/admin.html">Painel Admin</a>
 </div>
 
-<div class="container">
-    <h1>Painel do Analista</h1>
+<div class="analyst-layout">
+    <div class="container">
+        <h1>Painel do Analista</h1>
 
-    <div id="loginSection">
-        <label>Utilizador</label>
-        <input id="username" type="text">
+        <div id="loginSection">
+            <label>Utilizador</label>
+            <input id="username" type="text" autocomplete="username">
 
-        <label>Password</label>
-        <input id="password" type="password">
+            <label>Password</label>
+            <input id="password" type="password" autocomplete="current-password">
 
-        <button onclick="login()">Entrar</button>
+            <button type="button" onclick="login()">Entrar</button>
+            <div id="loginError" class="error"></div>
+        </div>
 
-        <div id="loginError" class="error"></div>
+        <div id="analystPanel" style="display:none;">
+            <button type="button" onclick="logout()">Terminar sessão</button>
+            <div id="globalResult" class="result"></div>
+            <div id="globalError" class="error"></div>
+        </div>
     </div>
 
-    <div id="analystPanel" style="display:none;">
-        <h2>Os meus casos</h2>
-        <div id="cases"></div>
+    <div id="dashboard" class="dashboard-grid" style="display:none;">
+        <section class="dashboard-section">
+            <h2>Denúncias por analisar</h2>
+            <p>Denúncias com estado SUBMITTED disponíveis para atribuição.</p>
+            <button type="button" onclick="loadSubmittedReports()">Atualizar</button>
+            <div id="submittedReports"></div>
+        </section>
+
+        <section class="dashboard-section">
+            <h2>Os meus casos</h2>
+            <p>Casos atribuídos ao analista autenticado.</p>
+            <button type="button" onclick="loadMyCases()">Atualizar</button>
+            <div id="myCases"></div>
+        </section>
+
+        <section class="dashboard-section">
+            <h2>Gerir caso selecionado</h2>
+
+            <label>Report ID</label>
+            <input id="selectedReportId" type="number" readonly>
+
+            <label>Estado</label>
+            <select id="newStatus">
+                <option value="UNDER_REVIEW">UNDER_REVIEW</option>
+                <option value="MORE_INFO_REQUIRED">MORE_INFO_REQUIRED</option>
+                <option value="RESOLVED">RESOLVED</option>
+                <option value="REJECTED">REJECTED</option>
+            </select>
+            <button type="button" onclick="updateStatus()">Atualizar estado</button>
+
+            <label>Prioridade</label>
+            <select id="newPriority">
+                <option value="LOW">LOW</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="HIGH">HIGH</option>
+                <option value="CRITICAL">CRITICAL</option>
+            </select>
+            <button type="button" onclick="updatePriority()">Atualizar prioridade</button>
+
+            <label>Notas internas</label>
+            <textarea id="newNotes" rows="5" placeholder="Notas internas do analista"></textarea>
+            <button type="button" onclick="updateNotes()">Guardar notas</button>
+
+            <div id="caseResult" class="result"></div>
+            <div id="caseError" class="error"></div>
+        </section>
+
+        <section class="dashboard-section">
+            <h2>Anexos</h2>
+            <button type="button" onclick="loadAttachments()">Listar anexos do caso selecionado</button>
+            <div id="attachments"></div>
+        </section>
     </div>
 </div>
 
 <script src="/js/api.js"></script>
 
 <script>
-    let analystAuth = null;
+    let analystAuth = sessionStorage.getItem("analystAuth");
 
-    function login() {
-        const username = document.getElementById("username").value;
+    window.addEventListener("load", async () => {
+        if (analystAuth) {
+            try {
+                await validateSession();
+                showDashboard();
+            } catch {
+                logout(false);
+            }
+        }
+    });
+
+    function clearMessages() {
+        ["loginError", "globalResult", "globalError", "caseResult", "caseError"].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = "";
+        });
+    }
+
+    function authHeaders(extra = {}) {
+        if (!analystAuth) {
+            throw new Error("Sessão inválida. Faz login novamente.");
+        }
+
+        return {
+            "Authorization": analystAuth,
+            ...extra
+        };
+    }
+
+    async function safeFetch(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            credentials: "omit",
+            headers: {
+                ...(options.headers || {})
+            }
+        });
+
+        if (response.status === 401) {
+            sessionStorage.removeItem("analystAuth");
+            analystAuth = null;
+            throw new Error("Sessão expirada ou credenciais inválidas.");
+        }
+
+        return response;
+    }
+
+    async function validateSession() {
+        const response = await safeFetch(`${API_BASE}/analyst/panel`, {
+            headers: authHeaders()
+        });
+
+        if (!response.ok) {
+            throw new Error("Login inválido.");
+        }
+    }
+
+    function showDashboard() {
+        document.getElementById("loginSection").style.display = "none";
+        document.getElementById("analystPanel").style.display = "block";
+        document.getElementById("dashboard").style.display = "grid";
+
+        loadSubmittedReports();
+        loadMyCases();
+    }
+
+    async function login() {
+        clearMessages();
+
+        const username = document.getElementById("username").value.trim();
         const password = document.getElementById("password").value;
-        const errorDiv = document.getElementById("loginError");
+
+        if (!username || !password) {
+            document.getElementById("loginError").innerText = "Preenche utilizador e password.";
+            return;
+        }
 
         analystAuth = basicAuthHeader(username, password);
 
-        fetch(`${API_BASE}/analyst/my-cases`, {
-            method: "GET",
-            headers: {
-                "Authorization": analystAuth
-            }
-        })
-            .then(res => {
-                if (!res.ok) throw new Error("Login inválido");
-                return res.json();
-            })
-            .then(() => {
-                // esconder login
-                document.getElementById("loginSection").style.display = "none";
+        try {
+            await validateSession();
 
-                // mostrar painel
-                document.getElementById("analystPanel").style.display = "block";
+            sessionStorage.setItem("analystAuth", analystAuth);
+            showDashboard();
 
-                loadCases();
-            })
-            .catch(err => {
-                errorDiv.innerText = err.message;
-            });
+        } catch (error) {
+            sessionStorage.removeItem("analystAuth");
+            analystAuth = null;
+            document.getElementById("loginError").innerText = error.message || "Login inválido.";
+        }
     }
 
-    function loadCases() {
-        fetch(`${API_BASE}/analyst/my-cases`, {
-            headers: {
-                "Authorization": analystAuth
+    function logout(reload = true) {
+        sessionStorage.removeItem("analystAuth");
+        analystAuth = null;
+
+        if (reload) {
+            location.reload();
+        }
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    function jsString(value) {
+        return String(value ?? "")
+            .replaceAll("\\", "\\\\")
+            .replaceAll("`", "\\`")
+            .replaceAll("${", "\\${");
+    }
+
+    function selectCase(reportId, priority = "MEDIUM", notes = "") {
+        clearMessages();
+
+        document.getElementById("selectedReportId").value = reportId;
+        document.getElementById("newNotes").value = notes || "";
+
+        if (priority) {
+            document.getElementById("newPriority").value = priority;
+        }
+
+        document.getElementById("caseResult").innerText = `Caso ${reportId} selecionado.`;
+        loadAttachmentsForReport(reportId);
+    }
+
+    async function loadSubmittedReports() {
+        const div = document.getElementById("submittedReports");
+
+        try {
+            const response = await safeFetch(`${API_BASE}/analyst/reports`, {
+                headers: authHeaders()
+            });
+
+            const data = await handleJsonResponse(response);
+            const submitted = data.filter(r => r.status === "SUBMITTED");
+
+            if (!submitted.length) {
+                div.innerHTML = `<div class="result">Não existem denúncias pendentes.</div>`;
+                return;
             }
-        })
-            .then(res => res.json())
-            .then(data => {
-                const casesDiv = document.getElementById("cases");
 
-                if (!data.length) {
-                    casesDiv.innerHTML = "Não tens casos atribuídos.";
-                    return;
-                }
+            div.innerHTML = submitted.map(r => `
+                <div class="case-card">
+                    <strong>Report ID:</strong> ${escapeHtml(r.id)}<br>
+                    <strong>Categoria:</strong> ${escapeHtml(r.category)}<br>
+                    <strong>Estado:</strong> ${escapeHtml(r.status)}<br>
+                    <strong>Descrição:</strong> ${escapeHtml(r.description)}<br>
 
-                casesDiv.innerHTML = data.map(c => `
-                <div class="card">
-                    <strong>Report ID:</strong> ${c.reportId}<br>
-                    <strong>CaseReview ID:</strong> ${c.caseReviewId}<br>
-                    <strong>Analista:</strong> ${c.assignedAnalystUsername}<br>
-                    <strong>Prioridade:</strong> ${c.priority}<br>
-                    <strong>Notas:</strong> ${c.notes || "-"}<br>
-                    <strong>Estado:</strong> ${c.reportStatus}
+                    <div class="case-actions">
+                        <button type="button" onclick="assignToMe(${r.id})">Assumir caso</button>
+                        <button type="button" onclick="selectCase(${r.id})">Selecionar</button>
+                    </div>
                 </div>
             `).join("");
+
+        } catch (error) {
+            div.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+        }
+    }
+
+    async function loadMyCases() {
+        const div = document.getElementById("myCases");
+
+        try {
+            const response = await safeFetch(`${API_BASE}/analyst/my-cases`, {
+                headers: authHeaders()
             });
+
+            const data = await handleJsonResponse(response);
+
+            if (!data.length) {
+                div.innerHTML = `<div class="result">Não tens casos atribuídos.</div>`;
+                return;
+            }
+
+            div.innerHTML = data.map(c => `
+                <div class="case-card">
+                    <strong>Report ID:</strong> ${escapeHtml(c.reportId)}<br>
+                    <strong>CaseReview ID:</strong> ${escapeHtml(c.caseReviewId)}<br>
+                    <strong>Analista:</strong> ${escapeHtml(c.assignedAnalystUsername || "-")}<br>
+                    <strong>Prioridade:</strong> ${escapeHtml(c.priority || "-")}<br>
+                    <strong>Estado:</strong> ${escapeHtml(c.reportStatus)}<br>
+                    <strong>Notas:</strong> ${escapeHtml(c.notes || "-")}<br>
+
+                    <div class="case-actions">
+                        <button type="button" onclick="selectCase(${c.reportId}, '${escapeHtml(c.priority || "MEDIUM")}', \`${jsString(c.notes || "")}\`)">Selecionar</button>
+                        <button type="button" onclick="loadAttachmentsForReport(${c.reportId})">Ver anexos</button>
+                    </div>
+                </div>
+            `).join("");
+
+        } catch (error) {
+            div.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+        }
+    }
+
+    async function assignToMe(reportId) {
+        clearMessages();
+
+        try {
+            const body = {
+                analystUsername: getUsernameFromBasicAuth()
+            };
+
+            const response = await safeFetch(`${API_BASE}/analyst/reports/${reportId}/assign`, {
+                method: "POST",
+                headers: authHeaders({
+                    "Content-Type": "application/json"
+                }),
+                body: JSON.stringify(body)
+            });
+
+            await handleJsonResponse(response);
+
+            document.getElementById("globalResult").innerText = `Caso ${reportId} atribuído com sucesso.`;
+
+            loadSubmittedReports();
+            loadMyCases();
+
+        } catch (error) {
+            document.getElementById("globalError").innerText = error.message;
+        }
+    }
+
+    function getUsernameFromBasicAuth() {
+        try {
+            const decoded = atob(analystAuth.replace("Basic ", ""));
+            return decoded.split(":")[0];
+        } catch {
+            return "";
+        }
+    }
+
+    function selectedReportIdOrFail() {
+        const reportId = document.getElementById("selectedReportId").value;
+
+        if (!reportId) {
+            throw new Error("Seleciona um caso primeiro.");
+        }
+
+        return reportId;
+    }
+
+    async function updateStatus() {
+        clearMessages();
+
+        try {
+            const reportId = selectedReportIdOrFail();
+            const status = document.getElementById("newStatus").value;
+
+            const response = await safeFetch(`${API_BASE}/analyst/reports/${reportId}/status`, {
+                method: "PATCH",
+                headers: authHeaders({
+                    "Content-Type": "application/json"
+                }),
+                body: JSON.stringify({ status })
+            });
+
+            await handleJsonResponse(response);
+
+            document.getElementById("caseResult").innerText = "Estado atualizado.";
+            loadSubmittedReports();
+            loadMyCases();
+
+        } catch (error) {
+            document.getElementById("caseError").innerText = error.message;
+        }
+    }
+
+    async function updatePriority() {
+        clearMessages();
+
+        try {
+            const reportId = selectedReportIdOrFail();
+            const priority = document.getElementById("newPriority").value;
+
+            const response = await safeFetch(`${API_BASE}/analyst/reports/${reportId}/priority`, {
+                method: "PATCH",
+                headers: authHeaders({
+                    "Content-Type": "application/json"
+                }),
+                body: JSON.stringify({ priority })
+            });
+
+            await handleJsonResponse(response);
+
+            document.getElementById("caseResult").innerText = "Prioridade atualizada.";
+            loadMyCases();
+
+        } catch (error) {
+            document.getElementById("caseError").innerText = error.message;
+        }
+    }
+
+    async function updateNotes() {
+        clearMessages();
+
+        try {
+            const reportId = selectedReportIdOrFail();
+            const notes = document.getElementById("newNotes").value;
+
+            const response = await safeFetch(`${API_BASE}/analyst/reports/${reportId}/notes`, {
+                method: "PATCH",
+                headers: authHeaders({
+                    "Content-Type": "application/json"
+                }),
+                body: JSON.stringify({ notes })
+            });
+
+            await handleJsonResponse(response);
+
+            document.getElementById("caseResult").innerText = "Notas atualizadas.";
+            loadMyCases();
+
+        } catch (error) {
+            document.getElementById("caseError").innerText = error.message;
+        }
+    }
+
+    async function loadAttachments() {
+        clearMessages();
+
+        try {
+            const reportId = selectedReportIdOrFail();
+            loadAttachmentsForReport(reportId);
+        } catch (error) {
+            document.getElementById("attachments").innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+        }
+    }
+
+    async function loadAttachmentsForReport(reportId) {
+        const div = document.getElementById("attachments");
+
+        try {
+            const response = await safeFetch(`${API_BASE}/analyst/reports/${reportId}/attachments`, {
+                headers: authHeaders()
+            });
+
+            const data = await handleJsonResponse(response);
+
+            if (!data.length) {
+                div.innerHTML = `<div class="result">Este caso não tem anexos.</div>`;
+                return;
+            }
+
+            div.innerHTML = data.map(a => `
+                <div class="case-card">
+                    <strong>ID:</strong> ${escapeHtml(a.id)}<br>
+                    <strong>Nome:</strong> ${escapeHtml(a.originalName)}<br>
+                    <strong>Tipo:</strong> ${escapeHtml(a.mimeType)}<br>
+                    <strong>Tamanho:</strong> ${escapeHtml(a.size)} bytes<br>
+
+                    <div class="case-actions">
+                        <button type="button" onclick="downloadAttachment(${a.id})">Download</button>
+                    </div>
+                </div>
+            `).join("");
+
+        } catch (error) {
+            div.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+        }
+    }
+
+    async function downloadAttachment(attachmentId) {
+        try {
+            const response = await safeFetch(`${API_BASE}/analyst/attachments/${attachmentId}/download`, {
+                headers: authHeaders()
+            });
+
+            if (!response.ok) {
+                throw new Error("Erro no download.");
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+
+            a.href = url;
+            a.download = `attachment-${attachmentId}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+
+            window.URL.revokeObjectURL(url);
+
+        } catch (error) {
+            alert(error.message);
+        }
     }
 </script>
 

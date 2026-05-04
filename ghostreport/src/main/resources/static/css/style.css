@@ -258,6 +258,11 @@ select:focus {
     border: 1px solid #fecaca;
 }
 
+.error:empty,
+.result:empty {
+    display: none;
+}
+
 .card {
     margin-top: 14px;
     padding: 18px;
