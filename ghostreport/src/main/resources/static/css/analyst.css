@@ -3,10 +3,133 @@
     margin: 48px auto;
 }
 
-.dashboard-grid {
+.analyst-nav {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: auto;
+}
+
+.analyst-nav button {
+    background: transparent;
+    color: white;
+    box-shadow: none;
+    border: 0;
+    padding: 10px 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.analyst-nav button:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+}
+
+.analyst-nav .logout-btn {
+    background: var(--primary);
+    border-radius: 12px;
+    padding: 10px 16px;
+}
+
+.nav-links {
+    display: flex;
+    gap: 22px;
+    margin-left: auto;
+}
+
+.nav-links a {
+    color: white;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.nav-links a:hover {
+    opacity: 0.8;
+}
+
+.dashboard-pages {
+    margin-top: 32px;
+}
+
+.manage-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    align-items: flex-start;
+    margin-bottom: 28px;
+}
+
+.manage-header p {
+    margin-top: 8px;
+    color: var(--muted);
+}
+
+.selected-id-box {
+    min-width: 150px;
+    background: linear-gradient(135deg, var(--primary), #5546e8);
+    color: white;
+    border-radius: 18px;
+    padding: 16px 20px;
+    box-shadow: var(--shadow);
+}
+
+.selected-id-box span {
+    display: block;
+    font-size: 13px;
+    opacity: 0.85;
+}
+
+.selected-id-box strong {
+    display: block;
+    font-size: 28px;
+    margin-top: 4px;
+}
+
+.manage-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 22px;
+}
+
+.manage-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 22px;
+}
+
+.manage-card h3 {
+    margin-bottom: 16px;
+}
+
+.manage-card button {
+    margin-top: 14px;
+}
+
+.notes-card,
+.attachments-card {
+    grid-column: span 2;
+}
+
+.attachments-card p {
+    color: var(--muted);
+    margin-bottom: 12px;
+}
+
+@media (max-width: 900px) {
+    .manage-header {
+        flex-direction: column;
+    }
+
+    .manage-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .notes-card,
+    .attachments-card {
+        grid-column: span 1;
+    }
 }
 
 .dashboard-section {
@@ -15,6 +138,11 @@
     box-shadow: var(--shadow);
     border-radius: 24px;
     padding: 28px;
+    width: 100%;
+}
+
+.analyst-page {
+    width: 100%;
 }
 
 .case-card {
@@ -48,7 +176,15 @@
 }
 
 @media (max-width: 900px) {
-    .dashboard-grid {
-        grid-template-columns: 1fr;
+    .topnav {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .analyst-nav {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        margin-left: 0;
     }
 }

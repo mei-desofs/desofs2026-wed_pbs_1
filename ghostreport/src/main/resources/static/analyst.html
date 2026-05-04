@@ -11,10 +11,22 @@
 
 <div class="topnav">
     <a class="brand" href="/index.html">GhostReport</a>
-    <a href="/submit.html">Submeter denúncia</a>
-    <a href="/track.html">Acompanhar denúncia</a>
-    <a href="/analyst.html">Painel Analista</a>
-    <a href="/admin.html">Painel Admin</a>
+
+    <!-- NAV NORMAL (antes do login) -->
+    <div id="publicNav" class="nav-links">
+        <a href="/submit.html">Submeter denúncia</a>
+        <a href="/track.html">Acompanhar denúncia</a>
+        <a href="/analyst.html">Painel Analista</a>
+        <a href="/admin.html">Painel Admin</a>
+    </div>
+
+    <!-- NAV ANALISTA (depois do login) -->
+    <div id="analystNav" class="analyst-nav" style="display:none;">
+        <button onclick="showPage('submittedPage')">Denúncias</button>
+        <button onclick="showPage('myCasesPage')">Os meus casos</button>
+        <button onclick="showPage('managePage')">Gerir caso</button>
+        <button class="logout-btn" onclick="logout()">Terminar sessão</button>
+    </div>
 </div>
 
 <div class="analyst-layout">
@@ -32,64 +44,84 @@
             <div id="loginError" class="error"></div>
         </div>
 
-        <div id="analystPanel" style="display:none;">
-            <button type="button" onclick="logout()">Terminar sessão</button>
+        <div id="globalMessages" style="display:none;">
             <div id="globalResult" class="result"></div>
             <div id="globalError" class="error"></div>
         </div>
     </div>
 
-    <div id="dashboard" class="dashboard-grid" style="display:none;">
-        <section class="dashboard-section">
+    <div id="dashboard" class="dashboard-pages" style="display:none;">
+
+        <section id="submittedPage" class="dashboard-section analyst-page">
             <h2>Denúncias por analisar</h2>
             <p>Denúncias com estado SUBMITTED disponíveis para atribuição.</p>
             <button type="button" onclick="loadSubmittedReports()">Atualizar</button>
             <div id="submittedReports"></div>
         </section>
 
-        <section class="dashboard-section">
+        <section id="myCasesPage" class="dashboard-section analyst-page" style="display:none;">
             <h2>Os meus casos</h2>
             <p>Casos atribuídos ao analista autenticado.</p>
             <button type="button" onclick="loadMyCases()">Atualizar</button>
             <div id="myCases"></div>
         </section>
 
-        <section class="dashboard-section">
-            <h2>Gerir caso selecionado</h2>
+        <section id="managePage" class="dashboard-section analyst-page" style="display:none;">
+            <div class="manage-header">
+                <div>
+                    <h2>Gerir caso selecionado</h2>
+                    <p>Atualiza o estado, prioridade, notas internas e consulta os anexos da denúncia.</p>
+                </div>
 
-            <label>Report ID</label>
-            <input id="selectedReportId" type="number" readonly>
+                <div class="selected-id-box">
+                    <span>Report ID</span>
+                    <strong id="selectedReportLabel">Nenhum</strong>
+                </div>
+            </div>
 
-            <label>Estado</label>
-            <select id="newStatus">
-                <option value="UNDER_REVIEW">UNDER_REVIEW</option>
-                <option value="MORE_INFO_REQUIRED">MORE_INFO_REQUIRED</option>
-                <option value="RESOLVED">RESOLVED</option>
-                <option value="REJECTED">REJECTED</option>
-            </select>
-            <button type="button" onclick="updateStatus()">Atualizar estado</button>
+            <input id="selectedReportId" type="hidden">
 
-            <label>Prioridade</label>
-            <select id="newPriority">
-                <option value="LOW">LOW</option>
-                <option value="MEDIUM">MEDIUM</option>
-                <option value="HIGH">HIGH</option>
-                <option value="CRITICAL">CRITICAL</option>
-            </select>
-            <button type="button" onclick="updatePriority()">Atualizar prioridade</button>
+            <div class="manage-grid">
+                <div class="manage-card">
+                    <h3>Estado do caso</h3>
+                    <label>Novo estado</label>
+                    <select id="newStatus">
+                        <option value="UNDER_REVIEW">UNDER_REVIEW</option>
+                        <option value="MORE_INFO_REQUIRED">MORE_INFO_REQUIRED</option>
+                        <option value="RESOLVED">RESOLVED</option>
+                        <option value="REJECTED">REJECTED</option>
+                    </select>
+                    <button type="button" onclick="updateStatus()">Atualizar estado</button>
+                </div>
 
-            <label>Notas internas</label>
-            <textarea id="newNotes" rows="5" placeholder="Notas internas do analista"></textarea>
-            <button type="button" onclick="updateNotes()">Guardar notas</button>
+                <div class="manage-card">
+                    <h3>Prioridade</h3>
+                    <label>Nova prioridade</label>
+                    <select id="newPriority">
+                        <option value="LOW">LOW</option>
+                        <option value="MEDIUM">MEDIUM</option>
+                        <option value="HIGH">HIGH</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                    </select>
+                    <button type="button" onclick="updatePriority()">Atualizar prioridade</button>
+                </div>
+
+                <div class="manage-card notes-card">
+                    <h3>Notas internas</h3>
+                    <label>Notas do analista</label>
+                    <textarea id="newNotes" rows="7" placeholder="Escreve aqui notas internas sobre este caso..."></textarea>
+                    <button type="button" onclick="updateNotes()">Guardar notas</button>
+                </div>
+
+                <div class="manage-card attachments-card">
+                    <h3>Anexos do caso</h3>
+                    <p>Os anexos aparecem automaticamente quando selecionas uma denúncia.</p>
+                    <div id="attachments"></div>
+                </div>
+            </div>
 
             <div id="caseResult" class="result"></div>
             <div id="caseError" class="error"></div>
-        </section>
-
-        <section class="dashboard-section">
-            <h2>Anexos</h2>
-            <button type="button" onclick="loadAttachments()">Listar anexos do caso selecionado</button>
-            <div id="attachments"></div>
         </section>
     </div>
 </div>
@@ -115,6 +147,14 @@
             const el = document.getElementById(id);
             if (el) el.innerText = "";
         });
+    }
+
+    function showPage(pageId) {
+        document.querySelectorAll(".analyst-page").forEach(page => {
+            page.style.display = "none";
+        });
+
+        document.getElementById(pageId).style.display = "block";
     }
 
     function authHeaders(extra = {}) {
@@ -158,8 +198,12 @@
 
     function showDashboard() {
         document.getElementById("loginSection").style.display = "none";
-        document.getElementById("analystPanel").style.display = "block";
-        document.getElementById("dashboard").style.display = "grid";
+        document.getElementById("dashboard").style.display = "block";
+
+        document.getElementById("publicNav").style.display = "none";
+        document.getElementById("analystNav").style.display = "flex";
+
+        showPage("submittedPage");
 
         loadSubmittedReports();
         loadMyCases();
@@ -180,10 +224,8 @@
 
         try {
             await validateSession();
-
             sessionStorage.setItem("analystAuth", analystAuth);
             showDashboard();
-
         } catch (error) {
             sessionStorage.removeItem("analystAuth");
             analystAuth = null;
@@ -197,6 +239,9 @@
 
         if (reload) {
             location.reload();
+        } else {
+            document.getElementById("publicNav").style.display = "flex";
+            document.getElementById("analystNav").style.display = "none";
         }
     }
 
@@ -220,6 +265,7 @@
         clearMessages();
 
         document.getElementById("selectedReportId").value = reportId;
+        document.getElementById("selectedReportLabel").innerText = reportId;
         document.getElementById("newNotes").value = notes || "";
 
         if (priority) {
@@ -227,6 +273,7 @@
         }
 
         document.getElementById("caseResult").innerText = `Caso ${reportId} selecionado.`;
+        showPage("managePage");
         loadAttachmentsForReport(reportId);
     }
 
@@ -291,7 +338,6 @@
 
                     <div class="case-actions">
                         <button type="button" onclick="selectCase(${c.reportId}, '${escapeHtml(c.priority || "MEDIUM")}', \`${jsString(c.notes || "")}\`)">Selecionar</button>
-                        <button type="button" onclick="loadAttachmentsForReport(${c.reportId})">Ver anexos</button>
                     </div>
                 </div>
             `).join("");
@@ -421,17 +467,6 @@
 
         } catch (error) {
             document.getElementById("caseError").innerText = error.message;
-        }
-    }
-
-    async function loadAttachments() {
-        clearMessages();
-
-        try {
-            const reportId = selectedReportIdOrFail();
-            loadAttachmentsForReport(reportId);
-        } catch (error) {
-            document.getElementById("attachments").innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
         }
     }
 
