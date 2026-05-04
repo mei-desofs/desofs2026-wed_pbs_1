@@ -20,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -119,35 +120,47 @@ public class ReportService {
     }
 
     public AttachmentResponse uploadAttachment(Long reportId, MultipartFile file) {
+        return uploadMultipleAttachments(reportId, new MultipartFile[]{file}).get(0);
+    }
+
+    public List<AttachmentResponse> uploadMultipleAttachments(Long reportId, MultipartFile[] files) {
 
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        try {
-            FileStorageService.StoredFileInfo stored = fileStorageService.storeAttachment(reportId, file);
+        List<AttachmentResponse> responses = new ArrayList<>();
 
-            Attachment attachment = new Attachment();
-            attachment.setOriginalName(stored.originalName());
-            attachment.setStoredName(stored.storedName());
-            attachment.setFileReference(stored.fileReference());
-            attachment.setStoragePath(stored.storagePath());
-            attachment.setMimeType(stored.mimeType());
-            attachment.setSize(stored.size());
-            attachment.setHash(stored.hash());
-            attachment.setReport(report);
+        for (MultipartFile file : files) {
 
-            Attachment saved = attachmentRepository.save(attachment);
+            try {
+                FileStorageService.StoredFileInfo stored = fileStorageService.storeAttachment(reportId, file);
 
-            return new AttachmentResponse(
-                    saved.getId(),
-                    saved.getOriginalName(),
-                    saved.getMimeType(),
-                    saved.getSize()
-            );
+                Attachment attachment = new Attachment();
+                attachment.setOriginalName(stored.originalName());
+                attachment.setStoredName(stored.storedName());
+                attachment.setFileReference(stored.fileReference());
+                attachment.setStoragePath(stored.storagePath());
+                attachment.setMimeType(stored.mimeType());
+                attachment.setSize(stored.size());
+                attachment.setHash(stored.hash());
+                attachment.setReport(report);
 
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro ao guardar ficheiro");
+                Attachment saved = attachmentRepository.save(attachment);
+
+                responses.add(new AttachmentResponse(
+                        saved.getId(),
+                        saved.getOriginalName(),
+                        saved.getMimeType(),
+                        saved.getSize()
+                ));
+
+            } catch (Exception e) {
+                logger.error("Erro ao guardar ficheiro", e);
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro ao guardar ficheiro");
+            }
         }
+
+        return responses;
     }
 
     public List<AttachmentListResponse> listAttachments(Long reportId) {

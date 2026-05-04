@@ -4,10 +4,13 @@ import com.ghostreport.dto.*;
 import com.ghostreport.service.ReportService;
 import com.ghostreport.service.RateLimiterService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/reports")
@@ -23,13 +26,13 @@ public class ReportController {
     }
 
     @PostMapping
-    public CreateReportResponse createReport(@RequestBody CreateReportRequest request) {
+    public CreateReportResponse createReport(@Valid @RequestBody CreateReportRequest request) {
         return reportService.createReport(request);
     }
 
     @PostMapping("/verify")
     public ReportResponse verifyTrackingCodeOnly(
-            @RequestBody VerifyTrackingCodeRequest request,
+            @Valid @RequestBody VerifyTrackingCodeRequest request,
             HttpServletRequest httpRequest
     ) {
         String ip = httpRequest.getRemoteAddr();
@@ -40,26 +43,34 @@ public class ReportController {
     }
 
     @PostMapping("/{id}/attachments")
-    public AttachmentResponse uploadAttachment(
+    public List<AttachmentResponse> uploadAttachments(
             @PathVariable Long id,
-            @RequestParam("file") MultipartFile file,
+            @RequestParam("files") MultipartFile[] files,
             HttpServletRequest httpRequest
     ) {
         String ip = httpRequest.getRemoteAddr();
 
         rateLimiterService.checkLimit(ip + "_UPLOAD");
 
-        return reportService.uploadAttachment(id, file);
+        if (files == null || files.length == 0) {
+            throw new RuntimeException("Nenhum ficheiro enviado");
+        }
+
+        return reportService.uploadMultipleAttachments(id, files);
     }
 
     @PostMapping("/download")
     public ResponseEntity<Resource> downloadAttachment(
-            @RequestBody DownloadRequest request,
+            @Valid @RequestBody DownloadRequest request,
             HttpServletRequest httpRequest
     ) {
         String ip = httpRequest.getRemoteAddr();
 
         rateLimiterService.checkLimit(ip + "_DOWNLOAD");
+
+        if (request.getAttachmentId() == null || request.getTrackingCode() == null) {
+            throw new RuntimeException("Dados inválidos");
+        }
 
         return reportService.downloadAttachmentSecure(
                 request.getAttachmentId(),

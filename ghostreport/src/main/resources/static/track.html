@@ -2,15 +2,13 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GhostReport - Acompanhar Denúncia</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
 <div class="topnav">
-    <a class="brand" href="/index.html">GhostReport</a>
-    <a href="/submit.html">Submeter denúncia</a>
+    <a href="/index.html">Submeter denúncia</a>
     <a href="/track.html">Acompanhar denúncia</a>
     <a href="/analyst.html">Painel Analista</a>
     <a href="/admin.html">Painel Admin</a>
@@ -85,27 +83,32 @@
                 const files = document.getElementById("file").files;
                 const result = document.getElementById("attachmentResult");
 
-                result.innerHTML = "A enviar...";
-
-                for (let i = 0; i < files.length; i++) {
-
-                    const formData = new FormData();
-                    formData.append("file", files[i]);
-
-                    try {
-                        await fetch(`${API_BASE}/reports/${data.id}/attachments`, {
-                            method: "POST",
-                            body: formData
-                        });
-                    } catch (err) {
-                        result.innerHTML = `<div class="error">${err.message}</div>`;
-                        return;
-                    }
+                if (!files.length) {
+                    result.innerHTML = `<div class="error">Seleciona pelo menos um ficheiro</div>`;
+                    return;
                 }
 
-                result.innerHTML = `<div class="result">✔ Anexos enviados com sucesso</div>`;
+                result.innerHTML = "A enviar...";
 
-                loadAttachments(data.id);
+                const formData = new FormData();
+
+                for (let i = 0; i < files.length; i++) {
+                    formData.append("files", files[i]); // ⚠️ IMPORTANTE: "files"
+                }
+
+                try {
+                    await fetch(`${API_BASE}/reports/${data.id}/attachments`, {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    result.innerHTML = `<div class="result">✔ Anexos enviados com sucesso</div>`;
+
+                    loadAttachments(data.id);
+
+                } catch (err) {
+                    result.innerHTML = `<div class="error">${err.message}</div>`;
+                }
             });
 
         } catch (error) {
@@ -118,11 +121,7 @@
         const listDiv = document.getElementById("attachmentsList");
 
         try {
-            const response = await fetch(`${API_BASE}/analyst/reports/${reportId}/attachments`, {
-                headers: {
-                    // ⚠️ se precisares de auth, mete aqui
-                }
-            });
+            const response = await fetch(`${API_BASE}/analyst/reports/${reportId}/attachments`);
 
             const data = await response.json();
 
@@ -132,21 +131,14 @@
             }
 
             listDiv.innerHTML = data.map(a => `
-            <div class="card">
-                ${a.originalName}
-                <br>
-                <button onclick="downloadAttachment(${a.id})">
-                    Download
-                </button>
-            </div>
-        `).join("");
+                <div class="card">
+                    📎 ${a.originalName}
+                </div>
+            `).join("");
 
         } catch (err) {
             listDiv.innerHTML = "Erro ao carregar anexos";
         }
-    }
-    function downloadAttachment(id) {
-        window.open(`${API_BASE}/analyst/attachments/${id}/download`, "_blank");
     }
 
 </script>
