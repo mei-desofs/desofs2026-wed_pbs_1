@@ -1,6 +1,6 @@
 const API_BASE = "http://localhost:8081";
 
-let adminAuth = null;
+let adminAuth = localStorage.getItem("adminAuth");
 
 function basicAuthHeader(username, password) {
     return "Basic " + btoa(`${username}:${password}`);
@@ -39,6 +39,9 @@ async function login() {
         });
 
         await handleJsonResponse(response);
+
+        localStorage.setItem("adminAuth", adminAuth);
+
         document.getElementById("loginSection").style.display = "none";
         document.getElementById("adminPanel").style.display = "block";
 
@@ -49,7 +52,17 @@ async function login() {
     }
 }
 
+function logout() {
+    localStorage.removeItem("adminAuth");
+    adminAuth = null;
+
+    document.getElementById("adminPanel").style.display = "none";
+    document.getElementById("loginSection").style.display = "block";
+}
+
 async function loadUsers() {
+    if (!adminAuth) return;
+
     try {
         const response = await fetch(`${API_BASE}/admin/users`, {
             headers: {
@@ -102,3 +115,11 @@ async function createUser() {
         resultDiv.innerText = err.message;
     }
 }
+
+window.onload = () => {
+    if (adminAuth) {
+        document.getElementById("loginSection").style.display = "none";
+        document.getElementById("adminPanel").style.display = "block";
+        loadUsers();
+    }
+};
