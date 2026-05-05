@@ -47,11 +47,8 @@ public class AnalystController {
     }
 
     @PostMapping("/reports/{id}/assign")
-    public CaseReviewResponse assignAnalyst(
-            @PathVariable Long id,
-            @Valid @RequestBody AssignAnalystRequest request
-    ) {
-        return caseReviewService.assignAnalyst(id, request);
+    public CaseReviewResponse assignAnalyst(@PathVariable Long id) {
+        return caseReviewService.assignAnalystToCurrentUser(id);
     }
 
     @PatchMapping("/reports/{id}/priority")

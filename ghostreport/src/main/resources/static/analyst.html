@@ -130,6 +130,7 @@
 
 <script>
     let analystAuth = sessionStorage.getItem("analystAuth");
+    let analystUsername = sessionStorage.getItem("analystUsername");
 
     window.addEventListener("load", async () => {
         if (analystAuth) {
@@ -225,6 +226,9 @@
         try {
             await validateSession();
             sessionStorage.setItem("analystAuth", analystAuth);
+            sessionStorage.setItem("analystUsername", username);
+            analystUsername = username;
+
             showDashboard();
         } catch (error) {
             sessionStorage.removeItem("analystAuth");
@@ -235,7 +239,10 @@
 
     function logout(reload = true) {
         sessionStorage.removeItem("analystAuth");
+        sessionStorage.removeItem("analystUsername");
+
         analystAuth = null;
+        analystUsername = null;
 
         if (reload) {
             location.reload();
@@ -351,27 +358,23 @@
         clearMessages();
 
         try {
-            const body = {
-                analystUsername: getUsernameFromBasicAuth()
-            };
-
             const response = await safeFetch(`${API_BASE}/analyst/reports/${reportId}/assign`, {
                 method: "POST",
-                headers: authHeaders({
-                    "Content-Type": "application/json"
-                }),
-                body: JSON.stringify(body)
+                headers: authHeaders()
             });
 
             await handleJsonResponse(response);
 
             document.getElementById("globalResult").innerText = `Caso ${reportId} atribuído com sucesso.`;
 
-            loadSubmittedReports();
-            loadMyCases();
+            await loadSubmittedReports();
+            await loadMyCases();
+
+            showPage("myCasesPage");
 
         } catch (error) {
             document.getElementById("globalError").innerText = error.message;
+            alert(error.message);
         }
     }
 

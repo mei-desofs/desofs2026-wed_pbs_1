@@ -47,11 +47,13 @@ public class CaseReviewService {
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
 
-        User analyst = userRepository.findById(request.getAnalystId())
+        String currentUsername = SecurityUtils.getCurrentUsername();
+
+        User analyst = userRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Analyst not found"));
 
         if (analyst.getRole() != UserRole.ANALYST) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selected user is not an analyst");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current user is not an analyst");
         }
 
         CaseReview caseReview = caseReviewRepository.findByReportId(reportId)
@@ -73,10 +75,48 @@ public class CaseReviewService {
                 "REPORT_ASSIGNED",
                 "REPORT",
                 reportId,
-                "Assigned to analyst id " + analyst.getId()
+                "Assigned to analyst username " + analyst.getUsername()
         );
 
-        logger.info("Report id={} assigned to analyst id={}", reportId, analyst.getId());
+        logger.info("Report id={} assigned to analyst username={}", reportId, analyst.getUsername());
+
+        return toResponse(saved);
+    }
+
+    public CaseReviewResponse assignAnalystToCurrentUser(Long reportId) {
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
+
+        String currentUsername = SecurityUtils.getCurrentUsername();
+
+        User analyst = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Analyst not found"));
+
+        if (analyst.getRole() != UserRole.ANALYST) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current user is not an analyst");
+        }
+
+        CaseReview caseReview = caseReviewRepository.findByReportId(reportId)
+                .orElseGet(() -> {
+                    CaseReview newCaseReview = new CaseReview();
+                    newCaseReview.setReport(report);
+                    return newCaseReview;
+                });
+
+        caseReview.setAssignedAnalyst(analyst);
+
+        if (caseReview.getPriority() == null) {
+            caseReview.setPriority(CasePriority.MEDIUM);
+        }
+
+        CaseReview saved = caseReviewRepository.save(caseReview);
+
+        auditLogService.log(
+                "REPORT_ASSIGNED",
+                "REPORT",
+                reportId,
+                "Assigned to authenticated analyst"
+        );
 
         return toResponse(saved);
     }
