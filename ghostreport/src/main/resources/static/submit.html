@@ -10,7 +10,7 @@
 
 <div class="topnav">
     <a class="brand" href="/index.html">GhostReport</a>
-    <a href="/static/submit.html">Submeter denúncia</a>
+    <a href="/submit.html">Submeter denúncia</a>
     <a href="/track.html">Acompanhar denúncia</a>
     <a href="/analyst.html">Painel Analista</a>
     <a href="/admin.html">Painel Admin</a>
@@ -76,16 +76,21 @@
 
             if (files.length > 0) {
 
-                const formData = new FormData();
-
                 for (let i = 0; i < files.length; i++) {
-                    formData.append("files", files[i]); /
-                }
+                    const formData = new FormData();
+                    formData.append("files", files[i]);
 
-                await fetch(`${API_BASE}/reports/${data.id}/attachments`, {
-                    method: "POST",
-                    body: formData
-                });
+                    const uploadResponse = await fetch(`${API_BASE}/reports/${data.id}/attachments`, {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    if (!uploadResponse.ok) {
+                        const errorText = await uploadResponse.text();
+                        console.error("Upload failed:", uploadResponse.status, errorText);
+                        throw new Error(`Erro ao guardar anexos: ${uploadResponse.status} - ${errorText}`);
+                    }
+                }
             }
 
             resultDiv.innerHTML = `

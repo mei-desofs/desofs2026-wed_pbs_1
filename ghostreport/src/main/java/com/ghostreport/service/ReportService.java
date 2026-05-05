@@ -123,7 +123,50 @@ public class ReportService {
     }
 
     public AttachmentResponse uploadAttachment(Long reportId, MultipartFile file) {
-        return uploadMultipleAttachments(reportId, new MultipartFile[]{file}).get(0);
+
+        logger.info("UPLOAD endpoint chamado para reportId={}", reportId);
+        logger.info("Ficheiro recebido: name={}, type={}, size={}",
+                file.getOriginalFilename(),
+                file.getContentType(),
+                file.getSize()
+        );
+
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
+
+        try {
+            FileStorageService.StoredFileInfo stored = fileStorageService.storeAttachment(reportId, file);
+
+            Attachment attachment = new Attachment();
+            attachment.setOriginalName(stored.originalName());
+            attachment.setStoredName(stored.storedName());
+            attachment.setFileReference(stored.fileReference());
+            attachment.setStoragePath(stored.storagePath());
+            attachment.setMimeType(stored.mimeType());
+            attachment.setSize(stored.size());
+            attachment.setHash(stored.hash());
+            attachment.setReport(report);
+
+            Attachment saved = attachmentRepository.save(attachment);
+
+            logger.info("Attachment saved id={} for report={}", saved.getId(), reportId);
+
+            return new AttachmentResponse(
+                    saved.getId(),
+                    saved.getOriginalName(),
+                    saved.getMimeType(),
+                    saved.getSize()
+            );
+
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("ERRO REAL AO GUARDAR ANEXO no reportId={}", reportId, e);
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    e.getMessage()
+            );
+        }
     }
 
     public List<AttachmentResponse> uploadMultipleAttachments(Long reportId, MultipartFile[] files) {
@@ -157,8 +200,10 @@ public class ReportService {
                         saved.getSize()
                 ));
 
+            } catch (ResponseStatusException e) {
+                throw e;
             } catch (Exception e) {
-                logger.error("Erro ao guardar ficheiro", e);
+                logger.error("Erro ao guardar anexo no report {}", reportId, e);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro ao guardar ficheiro");
             }
         }

@@ -5,6 +5,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,7 +26,10 @@ public class FileStorageService {
             "application/pdf",
             "image/png",
             "image/jpeg",
-            "text/plain"
+            "text/plain",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
 
     private final Path baseStoragePath;
@@ -125,16 +130,26 @@ public class FileStorageService {
 
     private void validateFile(MultipartFile file) {
 
+        System.out.println("Upload recebido:");
+        System.out.println("Nome: " + file.getOriginalFilename());
+        System.out.println("Tipo: " + file.getContentType());
+        System.out.println("Tamanho: " + file.getSize());
+
         if (file.isEmpty()) {
-            throw new RuntimeException("Ficheiro vazio");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ficheiro vazio");
         }
 
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new RuntimeException("Ficheiro demasiado grande");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ficheiro demasiado grande");
         }
 
-        if (!ALLOWED_TYPES.contains(file.getContentType())) {
-            throw new RuntimeException("Tipo de ficheiro inválido");
+        String contentType = file.getContentType();
+
+        if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Tipo de ficheiro inválido: " + contentType
+            );
         }
     }
 
