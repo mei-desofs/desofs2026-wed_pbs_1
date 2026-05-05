@@ -91,7 +91,7 @@
                         <option value="RESOLVED">RESOLVED</option>
                         <option value="REJECTED">REJECTED</option>
                     </select>
-                    <button type="button" onclick="updateStatus()">Atualizar estado</button>
+                    <button id="updateStatusBtn" type="button" onclick="updateStatus()">Atualizar estado</button>
                 </div>
 
                 <div class="manage-card">
@@ -103,14 +103,14 @@
                         <option value="HIGH">HIGH</option>
                         <option value="CRITICAL">CRITICAL</option>
                     </select>
-                    <button type="button" onclick="updatePriority()">Atualizar prioridade</button>
+                    <button id="updatePriorityBtn" type="button" onclick="updatePriority()">Atualizar prioridade</button>
                 </div>
 
                 <div class="manage-card notes-card">
                     <h3>Notas internas</h3>
                     <label>Notas do analista</label>
                     <textarea id="newNotes" rows="7" placeholder="Escreve aqui notas internas sobre este caso..."></textarea>
-                    <button type="button" onclick="updateNotes()">Guardar notas</button>
+                    <button id="updateNotesBtn" type="button" onclick="updateNotes()">Guardar notas</button>
                 </div>
 
                 <div class="manage-card attachments-card">
@@ -277,6 +277,7 @@
 
     function selectCase(reportId, priority = "MEDIUM", notes = "") {
         clearMessages();
+        setManageReadonly(false);
 
         document.getElementById("selectedReportId").value = reportId;
         document.getElementById("selectedReportLabel").innerText = reportId;
@@ -394,7 +395,7 @@
                     <strong>Notas:</strong> ${escapeHtml(c.notes || "-")}<br>
 
                     <div class="case-actions">
-                        <button type="button" onclick="selectCase(${c.reportId}, '${escapeHtml(c.priority || "MEDIUM")}', \`${jsString(c.notes || "")}\`)">Ver detalhes</button>
+                        <button type="button" onclick="viewCaseOnly(${c.reportId}, '${escapeHtml(c.priority || "MEDIUM")}', \`${jsString(c.notes || "")}\`)">Ver detalhes</button>
                     </div>
                 </div>
             `).join("");
@@ -472,6 +473,25 @@
         } catch (error) {
             document.getElementById("caseError").innerText = error.message;
         }
+    }
+
+    function setManageReadonly(readonly) {
+        document.getElementById("newStatus").disabled = readonly;
+        document.getElementById("newPriority").disabled = readonly;
+        document.getElementById("newNotes").readOnly = readonly;
+
+        const statusBtn = document.getElementById("updateStatusBtn");
+        const priorityBtn = document.getElementById("updatePriorityBtn");
+        const notesBtn = document.getElementById("updateNotesBtn");
+
+        if (statusBtn) statusBtn.style.display = readonly ? "none" : "inline-block";
+        if (priorityBtn) priorityBtn.style.display = readonly ? "none" : "inline-block";
+        if (notesBtn) notesBtn.style.display = readonly ? "none" : "inline-block";
+    }
+
+    function viewCaseOnly(reportId, priority = "MEDIUM", notes = "") {
+        selectCase(reportId, priority, notes);
+        setManageReadonly(true);
     }
 
     async function updatePriority() {
