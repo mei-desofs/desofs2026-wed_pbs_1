@@ -56,61 +56,15 @@
 
                 <b>Categoria:</b> ${data.category}<br>
                 <b>Estado:</b> ${data.status}<br>
-                <b>Descrição:</b> ${data.description}
 
                 <hr>
 
                 <h3>Anexos</h3>
                 <div id="attachmentsList">A carregar...</div>
-
-                <hr>
-
-                <h3>Adicionar anexos</h3>
-
-                <form id="attachmentForm">
-                    <input type="file" id="file" multiple required>
-                    <button type="submit">Enviar anexos</button>
-                </form>
-
-                <div id="attachmentResult"></div>
             </div>
         `;
 
             loadAttachments(data.id);
-
-            document.getElementById("attachmentForm").addEventListener("submit", async (e) => {
-                e.preventDefault();
-
-                const files = document.getElementById("file").files;
-                const result = document.getElementById("attachmentResult");
-
-                if (!files.length) {
-                    result.innerHTML = `<div class="error">Seleciona pelo menos um ficheiro</div>`;
-                    return;
-                }
-
-                result.innerHTML = "A enviar...";
-
-                const formData = new FormData();
-
-                for (let i = 0; i < files.length; i++) {
-                    formData.append("files", files[i]); // ⚠️ IMPORTANTE: "files"
-                }
-
-                try {
-                    await fetch(`${API_BASE}/reports/${data.id}/attachments`, {
-                        method: "POST",
-                        body: formData
-                    });
-
-                    result.innerHTML = `<div class="result">✔ Anexos enviados com sucesso</div>`;
-
-                    loadAttachments(data.id);
-
-                } catch (err) {
-                    result.innerHTML = `<div class="error">${err.message}</div>`;
-                }
-            });
 
         } catch (error) {
             resultDiv.innerHTML = `<div class="error">${error.message}</div>`;
@@ -131,11 +85,11 @@
                 return;
             }
 
-            listDiv.innerHTML = data.map(a => `
+            listDiv.innerHTML = `
                 <div class="card">
-                    📎 ${a.originalName}
+                    📎 ${data.length} anexo(s) associado(s) à denúncia
                 </div>
-            `).join("");
+            `;
 
         } catch (err) {
             listDiv.innerHTML = "Erro ao carregar anexos";
