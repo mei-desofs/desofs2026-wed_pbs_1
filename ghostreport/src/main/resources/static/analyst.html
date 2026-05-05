@@ -24,7 +24,7 @@
     <div id="analystNav" class="analyst-nav" style="display:none;">
         <button onclick="showPage('submittedPage')">Denúncias</button>
         <button onclick="showPage('myCasesPage')">Os meus casos</button>
-        <button onclick="showPage('managePage')">Gerir caso</button>
+        <button onclick="showPage('historyPage')">Histórico</button>
         <button class="logout-btn" onclick="logout()">Terminar sessão</button>
     </div>
 </div>
@@ -122,6 +122,13 @@
 
             <div id="caseResult" class="result"></div>
             <div id="caseError" class="error"></div>
+        </section>
+
+        <section id="historyPage" class="dashboard-section analyst-page" style="display:none;">
+            <h2>Histórico</h2>
+            <p>Casos concluídos ou rejeitados.</p>
+            <button type="button" onclick="loadHistory()">Atualizar</button>
+            <div id="historyCases"></div>
         </section>
     </div>
 </div>
@@ -329,12 +336,16 @@
 
             const data = await handleJsonResponse(response);
 
-            if (!data.length) {
+            const activeCases = data.filter(c =>
+                c.reportStatus !== "RESOLVED" && c.reportStatus !== "REJECTED"
+            );
+
+            if (!activeCases.length) {
                 div.innerHTML = `<div class="result">Não tens casos atribuídos.</div>`;
                 return;
             }
 
-            div.innerHTML = data.map(c => `
+            div.innerHTML = activeCases.map(c => `
                 <div class="case-card">
                     <strong>Report ID:</strong> ${escapeHtml(c.reportId)}<br>
                     <strong>CaseReview ID:</strong> ${escapeHtml(c.caseReviewId)}<br>
@@ -345,6 +356,45 @@
 
                     <div class="case-actions">
                         <button type="button" onclick="selectCase(${c.reportId}, '${escapeHtml(c.priority || "MEDIUM")}', \`${jsString(c.notes || "")}\`)">Selecionar</button>
+                    </div>
+                </div>
+            `).join("");
+
+        } catch (error) {
+            div.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+        }
+    }
+
+    async function loadHistory() {
+        const div = document.getElementById("historyCases");
+
+        try {
+            const response = await safeFetch(`${API_BASE}/analyst/my-cases`, {
+                headers: authHeaders()
+            });
+
+            const data = await handleJsonResponse(response);
+
+            const historyCases = data.filter(c =>
+                c.reportStatus === "RESOLVED" || c.reportStatus === "REJECTED"
+            );
+
+            if (!historyCases.length) {
+                div.innerHTML = `<div class="result">Ainda não existem casos no histórico.</div>`;
+                return;
+            }
+
+            div.innerHTML = historyCases.map(c => `
+                <div class="case-card">
+                    <strong>Report ID:</strong> ${escapeHtml(c.reportId)}<br>
+                    <strong>CaseReview ID:</strong> ${escapeHtml(c.caseReviewId)}<br>
+                    <strong>Analista:</strong> ${escapeHtml(c.assignedAnalystUsername || "-")}<br>
+                    <strong>Prioridade:</strong> ${escapeHtml(c.priority || "-")}<br>
+                    <strong>Estado:</strong> ${escapeHtml(c.reportStatus)}<br>
+                    <strong>Notas:</strong> ${escapeHtml(c.notes || "-")}<br>
+
+                    <div class="case-actions">
+                        <button type="button" onclick="selectCase(${c.reportId}, '${escapeHtml(c.priority || "MEDIUM")}', \`${jsString(c.notes || "")}\`)">Ver detalhes</button>
                     </div>
                 </div>
             `).join("");
@@ -417,6 +467,7 @@
             document.getElementById("caseResult").innerText = "Estado atualizado.";
             loadSubmittedReports();
             loadMyCases();
+            loadHistory();
 
         } catch (error) {
             document.getElementById("caseError").innerText = error.message;
