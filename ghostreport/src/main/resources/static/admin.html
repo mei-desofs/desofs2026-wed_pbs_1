@@ -5,146 +5,686 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GhostReport - Painel Admin</title>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
 
 <div class="topnav">
     <a class="brand" href="/index.html">GhostReport</a>
-    <a href="/submit.html">Submeter denúncia</a>
-    <a href="/track.html">Acompanhar denúncia</a>
-    <a href="/analyst.html">Painel Analista</a>
-    <a href="/admin.html">Painel Admin</a>
-</div>
 
-<div class="container">
-    <h1>Painel do Admin</h1>
-
-    <div id="loginSection">
-        <label>Utilizador</label>
-        <input id="username" type="text">
-
-        <label>Password</label>
-        <input id="password" type="password">
-
-        <button onclick="login()">Entrar</button>
-
-        <div id="loginError" class="error"></div>
+    <!-- NAV NORMAL (antes do login) -->
+    <div id="publicNav" class="nav-links">
+        <a href="/submit.html">Submeter denúncia</a>
+        <a href="/track.html">Acompanhar denúncia</a>
+        <a href="/analyst.html">Painel Analista</a>
+        <a href="/admin.html">Painel Admin</a>
     </div>
 
-    <div id="adminPanel" style="display:none;">
+    <!-- NAV ADMIN (depois do login) -->
+    <div id="adminNav" class="admin-nav" style="display:none;">
+        <button type="button" onclick="showAdminPage('usersPage')">Utilizadores</button>
+        <button type="button" onclick="showAdminPage('createUserPage')">Criar utilizador</button>
+        <button type="button" onclick="showAdminPage('auditLogsPage')">Audit Logs</button>
+        <button type="button" onclick="showAdminPage('securityAlertsPage')">Security Alerts</button>
+        <button type="button" onclick="showAdminPage('backupsPage')">Backups</button>
+        <button type="button" class="logout-btn" onclick="adminLogout()">Terminar sessão</button>
+    </div>
+</div>
 
-        <h2>Utilizadores</h2>
-        <button onclick="loadUsers()">Listar utilizadores</button>
-        <div id="users"></div>
+<div class="admin-layout">
+    <div id="adminLoginPanel" class="container">
+        <h1>Painel do Admin</h1>
 
-        <hr>
+        <div id="loginSection">
+            <label>Utilizador</label>
+            <input id="username" type="text" autocomplete="username">
 
-        <h2>Audit Logs</h2>
-        <button onclick="loadAuditLogs()">Carregar Audit Logs</button>
-        <div id="auditLogs"></div>
+            <label>Password</label>
+            <input id="password" type="password" autocomplete="current-password">
 
-        <hr>
+            <button type="button" onclick="adminLogin()">Entrar</button>
 
-        <h2>Security Alerts</h2>
-        <button onclick="loadSecurityAlerts()">Carregar Security Alerts</button>
-        <div id="securityAlerts"></div>
+            <div id="loginError" class="error"></div>
+        </div>
 
-        <hr>
+        <div id="globalMessages" style="display:none;">
+            <div id="globalResult" class="result"></div>
+            <div id="globalError" class="error"></div>
+        </div>
+    </div>
 
-        <h2>Criar utilizador</h2>
+    <div id="adminDashboard" class="dashboard-pages" style="display:none;">
 
-        <input id="newUsername" placeholder="Username">
-        <input id="newEmail" placeholder="Email">
-        <input id="newPassword" placeholder="Password">
+        <section id="usersPage" class="dashboard-section admin-page">
+            <div class="admin-hero">
+                <div>
+                    <h2>Utilizadores</h2>
+                    <p>Consulta os utilizadores registados na plataforma GhostReport.</p>
+                </div>
 
-        <select id="newRole">
-            <option value="ANALYST">ANALYST</option>
-            <option value="ADMIN">ADMIN</option>
-        </select>
+                <span class="admin-badge">
+                    Total: <strong id="usersCount">0</strong>
+                </span>
+            </div>
 
-        <button onclick="createUser()">Criar utilizador</button>
+            <button type="button" onclick="loadUsers()">Atualizar utilizadores</button>
+            <div id="users" class="admin-grid"></div>
+        </section>
 
-        <div id="createUserResult"></div>
+        <section id="createUserPage" class="dashboard-section admin-page" style="display:none;">
+            <div class="admin-hero">
+                <div>
+                    <h2>Criar utilizador</h2>
+                    <p>Cria contas de acesso para analistas ou administradores.</p>
+                </div>
+
+                <span class="admin-badge">Administração</span>
+            </div>
+
+            <div class="admin-card">
+                <div class="admin-form-grid">
+                    <div>
+                        <label>Username</label>
+                        <input id="newUsername" type="text" placeholder="ex.: ana.silva" autocomplete="off">
+                    </div>
+
+                    <div>
+                        <label>Email</label>
+                        <input id="newEmail" type="email" placeholder="ex.: ana@empresa.pt" autocomplete="off">
+                    </div>
+
+                    <div>
+                        <label>Password</label>
+                        <input id="newPassword" type="password" placeholder="Password inicial" autocomplete="new-password">
+                    </div>
+
+                    <div>
+                        <label>Role</label>
+                        <select id="newRole">
+                            <option value="ANALYST">ANALYST</option>
+                            <option value="ADMIN">ADMIN</option>
+                        </select>
+                    </div>
+
+                    <div class="full-width admin-actions">
+                        <button type="button" onclick="createUser()">Criar utilizador</button>
+                        <button type="button" onclick="clearCreateUserForm()">Limpar formulário</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="createUserResult" class="result"></div>
+            <div id="createUserError" class="error"></div>
+        </section>
+
+        <section id="auditLogsPage" class="dashboard-section admin-page" style="display:none;">
+            <div class="admin-hero">
+                <div>
+                    <h2>Audit Logs</h2>
+                    <p>Registo de ações efetuadas na plataforma.</p>
+                </div>
+
+                <span class="admin-badge">
+                    Total: <strong id="auditLogsCount">0</strong>
+                </span>
+            </div>
+
+            <button type="button" onclick="loadAuditLogs()">Atualizar Audit Logs</button>
+            <div id="auditLogs" class="admin-grid"></div>
+        </section>
+
+        <section id="securityAlertsPage" class="dashboard-section admin-page" style="display:none;">
+            <div class="admin-hero">
+                <div>
+                    <h2>Security Alerts</h2>
+                    <p>Alertas de segurança gerados pelo sistema.</p>
+                </div>
+
+                <span class="admin-badge">
+                    Total: <strong id="securityAlertsCount">0</strong>
+                </span>
+            </div>
+
+            <button type="button" onclick="loadSecurityAlerts()">Atualizar Security Alerts</button>
+            <div id="securityAlerts" class="admin-grid"></div>
+        </section>
+
+        <section id="backupsPage" class="dashboard-section admin-page" style="display:none;">
+            <div class="admin-hero">
+                <div>
+                    <h2>Backups</h2>
+                    <p>Gere cópias de segurança da base de dados, evidências, audit logs e security alerts.</p>
+                </div>
+
+                <span class="admin-badge">
+                    Total: <strong id="backupsCount">0</strong>
+                </span>
+            </div>
+
+            <div class="backup-toolbar">
+                <button type="button" onclick="createBackup()">Criar backup</button>
+                <button type="button" onclick="loadBackups()">Atualizar lista</button>
+            </div>
+
+            <div id="backupResult" class="result"></div>
+            <div id="backupError" class="error"></div>
+            <div id="backups" class="admin-grid backups-grid"></div>
+        </section>
     </div>
 </div>
 
 <script src="/js/api.js"></script>
 
 <script>
-    async function loadAuditLogs() {
-        const logsDiv = document.getElementById("auditLogs");
+    let adminSessionAuth = sessionStorage.getItem("adminAuth");
+    let adminUsername = sessionStorage.getItem("adminUsername");
 
-        if (!adminAuth) {
-            logsDiv.innerHTML = `<div class="error">Faz login como admin primeiro.</div>`;
+    window.addEventListener("load", async () => {
+        if (adminSessionAuth) {
+            try {
+                await adminValidateSession();
+                showAdminDashboard();
+            } catch {
+                adminLogout(false);
+            }
+        }
+    });
+
+    function getApiBase() {
+        return typeof API_BASE !== "undefined" ? API_BASE : "";
+    }
+
+    function adminBasicAuthHeader(username, password) {
+        if (typeof basicAuthHeader === "function") {
+            return basicAuthHeader(username, password);
+        }
+
+        return "Basic " + btoa(`${username}:${password}`);
+    }
+
+    async function adminHandleJsonResponse(response) {
+        if (typeof handleJsonResponse === "function") {
+            return handleJsonResponse(response);
+        }
+
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : null;
+
+        if (!response.ok) {
+            throw new Error(data?.message || data?.error || text || "Erro no pedido.");
+        }
+
+        return data;
+    }
+
+    function clearAdminMessages() {
+        [
+            "loginError",
+            "globalResult",
+            "globalError",
+            "createUserResult",
+            "createUserError",
+            "backupResult",
+            "backupError"
+        ].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = "";
+        });
+    }
+
+    function showAdminPage(pageId) {
+        clearAdminMessages();
+
+        document.querySelectorAll(".admin-page").forEach(page => {
+            page.style.display = "none";
+        });
+
+        document.getElementById(pageId).style.display = "block";
+
+        document.querySelectorAll("#adminNav button").forEach(button => {
+            button.classList.remove("active");
+        });
+
+        const activeButton = Array.from(document.querySelectorAll("#adminNav button"))
+            .find(button => button.getAttribute("onclick")?.includes(pageId));
+
+        if (activeButton) {
+            activeButton.classList.add("active");
+        }
+
+        if (pageId === "usersPage") {
+            loadUsers();
+        }
+
+        if (pageId === "auditLogsPage") {
+            loadAuditLogs();
+        }
+
+        if (pageId === "securityAlertsPage") {
+            loadSecurityAlerts();
+        }
+
+        if (pageId === "backupsPage") {
+            loadBackups();
+        }
+    }
+
+    function adminAuthHeaders(extra = {}) {
+        if (!adminSessionAuth) {
+            throw new Error("Sessão inválida. Faz login novamente.");
+        }
+
+        return {
+            "Authorization": adminSessionAuth,
+            ...extra
+        };
+    }
+
+    async function adminSafeFetch(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            credentials: "omit",
+            headers: {
+                ...(options.headers || {})
+            }
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            sessionStorage.removeItem("adminAuth");
+            sessionStorage.removeItem("adminUsername");
+            adminSessionAuth = null;
+            throw new Error("Sessão expirada ou sem permissões de administrador.");
+        }
+
+        return response;
+    }
+
+    async function adminValidateSession() {
+        const response = await adminSafeFetch(`${getApiBase()}/admin/panel`, {
+            headers: adminAuthHeaders()
+        });
+
+        if (!response.ok) {
+            throw new Error("Login inválido.");
+        }
+    }
+
+    function showAdminDashboard() {
+        document.getElementById("adminLoginPanel").style.display = "none";
+        document.getElementById("loginSection").style.display = "none";
+        document.getElementById("adminDashboard").style.display = "block";
+
+        document.getElementById("publicNav").style.display = "none";
+        document.getElementById("adminNav").style.display = "flex";
+
+        showAdminPage("usersPage");
+        loadAuditLogs();
+        loadSecurityAlerts();
+        loadBackups();
+    }
+
+    async function adminLogin() {
+        clearAdminMessages();
+
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value;
+
+        if (!username || !password) {
+            document.getElementById("loginError").innerText = "Preenche utilizador e password.";
+            return;
+        }
+
+        adminSessionAuth = adminBasicAuthHeader(username, password);
+
+        try {
+            await adminValidateSession();
+
+            sessionStorage.setItem("adminAuth", adminSessionAuth);
+            sessionStorage.setItem("adminUsername", username);
+            adminUsername = username;
+
+            showAdminDashboard();
+        } catch (error) {
+            sessionStorage.removeItem("adminAuth");
+            sessionStorage.removeItem("adminUsername");
+            adminSessionAuth = null;
+            document.getElementById("loginError").innerText = error.message || "Login inválido.";
+        }
+    }
+
+    function adminLogout(reload = true) {
+        sessionStorage.removeItem("adminAuth");
+        sessionStorage.removeItem("adminUsername");
+
+        adminSessionAuth = null;
+        adminUsername = null;
+
+        if (reload) {
+            location.reload();
+        } else {
+            document.getElementById("publicNav").style.display = "flex";
+            document.getElementById("adminNav").style.display = "none";
+            document.getElementById("adminDashboard").style.display = "none";
+            document.getElementById("adminLoginPanel").style.display = "block";
+            document.getElementById("loginSection").style.display = "block";
+        }
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    function roleLabel(role) {
+        const value = String(role ?? "-").toUpperCase();
+        return value;
+    }
+
+    function renderMeta(label, value) {
+        return `
+            <div class="meta-line">
+                <span class="meta-label">${escapeHtml(label)}</span>
+                <span>${escapeHtml(value || "-")}</span>
+            </div>
+        `;
+    }
+
+    async function loadUsers() {
+        const usersDiv = document.getElementById("users");
+        const count = document.getElementById("usersCount");
+
+        try {
+            const response = await adminSafeFetch(`${getApiBase()}/admin/users`, {
+                method: "GET",
+                headers: adminAuthHeaders()
+            });
+
+            const data = await adminHandleJsonResponse(response);
+            const users = Array.isArray(data) ? data : [];
+
+            count.innerText = users.length;
+
+            if (!users.length) {
+                usersDiv.innerHTML = `<div class="result">Sem utilizadores para apresentar.</div>`;
+                return;
+            }
+
+            usersDiv.innerHTML = users.map(user => `
+                <div class="user-card">
+                    <h3>${escapeHtml(user.username || user.name || "Utilizador")}</h3>
+                    ${renderMeta("ID", user.id)}
+                    ${renderMeta("Email", user.email)}
+                    ${renderMeta("Role", roleLabel(user.role))}
+                    ${renderMeta("Estado", user.active === false ? "Inativo" : "Ativo")}
+                </div>
+            `).join("");
+        } catch (error) {
+            usersDiv.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+            if (count) count.innerText = "0";
+        }
+    }
+
+    async function createUser() {
+        clearAdminMessages();
+
+        const username = document.getElementById("newUsername").value.trim();
+        const email = document.getElementById("newEmail").value.trim();
+        const password = document.getElementById("newPassword").value;
+        const role = document.getElementById("newRole").value;
+
+        if (!username || !email || !password || !role) {
+            document.getElementById("createUserError").innerText = "Preenche todos os campos.";
             return;
         }
 
         try {
-            const response = await fetch(`${API_BASE}/admin/audit-logs`, {
-                method: "GET",
-                headers: {
-                    "Authorization": adminAuth
-                }
+            const response = await adminSafeFetch(`${getApiBase()}/admin/users`, {
+                method: "POST",
+                headers: adminAuthHeaders({
+                    "Content-Type": "application/json"
+                }),
+                body: JSON.stringify({
+                    username,
+                    email,
+                    password,
+                    role
+                })
             });
 
-            const data = await handleJsonResponse(response);
+            await adminHandleJsonResponse(response);
 
-            if (!data.length) {
+            document.getElementById("createUserResult").innerText = `Utilizador ${username} criado com sucesso.`;
+            clearCreateUserForm();
+
+            await loadUsers();
+            showAdminPage("usersPage");
+        } catch (error) {
+            document.getElementById("createUserError").innerText = error.message;
+        }
+    }
+
+    function clearCreateUserForm() {
+        document.getElementById("newUsername").value = "";
+        document.getElementById("newEmail").value = "";
+        document.getElementById("newPassword").value = "";
+        document.getElementById("newRole").value = "ANALYST";
+    }
+
+    async function loadAuditLogs() {
+        const logsDiv = document.getElementById("auditLogs");
+        const count = document.getElementById("auditLogsCount");
+
+        try {
+            const response = await adminSafeFetch(`${getApiBase()}/admin/audit-logs`, {
+                method: "GET",
+                headers: adminAuthHeaders()
+            });
+
+            const data = await adminHandleJsonResponse(response);
+            const logs = Array.isArray(data) ? data : [];
+
+            count.innerText = logs.length;
+
+            if (!logs.length) {
                 logsDiv.innerHTML = `<div class="result">Sem audit logs.</div>`;
                 return;
             }
 
-            logsDiv.innerHTML = data.map(log => `
-                <div class="card">
-                    <strong>ID:</strong> ${log.id}<br>
-                    <strong>Data:</strong> ${log.timestamp}<br>
-                    <strong>Ator:</strong> ${log.actor}<br>
-                    <strong>Ação:</strong> ${log.action}<br>
-                    <strong>Alvo:</strong> ${log.targetType || "-"} ${log.targetId || ""}<br>
-                    <strong>Detalhes:</strong> ${log.details || "-"}
+            logsDiv.innerHTML = logs.map(log => `
+                <div class="audit-card">
+                    <h3>${escapeHtml(log.action || "Ação registada")}</h3>
+                    ${renderMeta("ID", log.id)}
+                    ${renderMeta("Data", log.timestamp)}
+                    ${renderMeta("Ator", log.actor)}
+                    ${renderMeta("Alvo", `${log.targetType || "-"} ${log.targetId || ""}`.trim())}
+                    ${renderMeta("Detalhes", log.details)}
                 </div>
             `).join("");
         } catch (error) {
-            logsDiv.innerHTML = `<div class="error">${error.message}</div>`;
+            logsDiv.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+            if (count) count.innerText = "0";
         }
     }
 
     async function loadSecurityAlerts() {
         const alertsDiv = document.getElementById("securityAlerts");
-
-        if (!adminAuth) {
-            alertsDiv.innerHTML = `<div class="error">Faz login como admin primeiro.</div>`;
-            return;
-        }
+        const count = document.getElementById("securityAlertsCount");
 
         try {
-            const response = await fetch(`${API_BASE}/admin/security-alerts`, {
+            const response = await adminSafeFetch(`${getApiBase()}/admin/security-alerts`, {
                 method: "GET",
-                headers: {
-                    "Authorization": adminAuth
-                }
+                headers: adminAuthHeaders()
             });
 
-            const data = await handleJsonResponse(response);
+            const data = await adminHandleJsonResponse(response);
+            const alerts = Array.isArray(data) ? data : [];
 
-            if (!data.length) {
+            count.innerText = alerts.length;
+
+            if (!alerts.length) {
                 alertsDiv.innerHTML = `<div class="result">Sem security alerts.</div>`;
                 return;
             }
 
-            alertsDiv.innerHTML = data.map(alert => `
-                <div class="card">
-                    <strong>ID:</strong> ${alert.id}<br>
-                    <strong>Data:</strong> ${alert.timestamp}<br>
-                    <strong>Tipo:</strong> ${alert.alertType}<br>
-                    <strong>Severidade:</strong> ${alert.severity}<br>
-                    <strong>Ator:</strong> ${alert.actor || "-"}<br>
-                    <strong>Alvo:</strong> ${alert.targetType || "-"} ${alert.targetId || ""}<br>
-                    <strong>Descrição:</strong> ${alert.description || "-"}
+            alertsDiv.innerHTML = alerts.map(alert => {
+                const severity = String(alert.severity || "-").toLowerCase();
+
+                return `
+                    <div class="alert-card">
+                        <h3>${escapeHtml(alert.alertType || "Alerta de segurança")}</h3>
+                        <div class="meta-line">
+                            <span class="meta-label">Severidade</span>
+                            <span class="severity ${escapeHtml(severity)}">${escapeHtml(alert.severity || "-")}</span>
+                        </div>
+                        ${renderMeta("ID", alert.id)}
+                        ${renderMeta("Data", alert.timestamp)}
+                        ${renderMeta("Ator", alert.actor)}
+                        ${renderMeta("Alvo", `${alert.targetType || "-"} ${alert.targetId || ""}`.trim())}
+                        ${renderMeta("Descrição", alert.description)}
+                    </div>
+                `;
+            }).join("");
+        } catch (error) {
+            alertsDiv.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+            if (count) count.innerText = "0";
+        }
+    }
+
+    function formatBytes(size) {
+        const value = Number(size || 0);
+        if (value < 1024) return `${value} B`;
+        if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+        return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function shortHash(hash) {
+        const value = String(hash || "");
+        return value.length > 16 ? `${value.slice(0, 16)}...` : value || "-";
+    }
+
+    async function loadBackups() {
+        const backupsDiv = document.getElementById("backups");
+        const count = document.getElementById("backupsCount");
+
+        try {
+            const response = await adminSafeFetch(`${getApiBase()}/admin/backups`, {
+                method: "GET",
+                headers: adminAuthHeaders()
+            });
+
+            const data = await adminHandleJsonResponse(response);
+            const backups = Array.isArray(data) ? data : [];
+
+            count.innerText = backups.length;
+
+            if (!backups.length) {
+                backupsDiv.innerHTML = `<div class="result">Sem backups criados.</div>`;
+                return;
+            }
+
+            backupsDiv.innerHTML = backups.map(backup => `
+                <div class="backup-card">
+                    <h3>${escapeHtml(backup.filename)}</h3>
+                    ${renderMeta("Criado em", backup.createdAt)}
+                    ${renderMeta("Tamanho", formatBytes(backup.size))}
+                    ${renderMeta("SHA-256", shortHash(backup.sha256))}
+                    <div class="backup-actions">
+                        <button type="button" onclick="verifyBackup('${escapeHtml(backup.filename)}')">Validar</button>
+                        <button type="button" onclick="downloadBackup('${escapeHtml(backup.filename)}')">Descarregar</button>
+                        <button type="button" onclick="restoreBackup('${escapeHtml(backup.filename)}')">Restore</button>
+                    </div>
                 </div>
             `).join("");
         } catch (error) {
-            alertsDiv.innerHTML = `<div class="error">${error.message}</div>`;
+            backupsDiv.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+            if (count) count.innerText = "0";
+        }
+    }
+
+    async function createBackup() {
+        clearAdminMessages();
+
+        try {
+            const response = await adminSafeFetch(`${getApiBase()}/admin/backups`, {
+                method: "POST",
+                headers: adminAuthHeaders()
+            });
+
+            const data = await adminHandleJsonResponse(response);
+            document.getElementById("backupResult").innerText =
+                `Backup criado: ${data.filename} (${formatBytes(data.size)}).`;
+            await loadBackups();
+        } catch (error) {
+            document.getElementById("backupError").innerText = error.message;
+        }
+    }
+
+    async function verifyBackup(filename) {
+        clearAdminMessages();
+
+        try {
+            const response = await adminSafeFetch(`${getApiBase()}/admin/backups/${encodeURIComponent(filename)}/verify`, {
+                method: "POST",
+                headers: adminAuthHeaders()
+            });
+
+            const data = await adminHandleJsonResponse(response);
+            document.getElementById("backupResult").innerText =
+                `${data.filename} validado com sucesso. Ficheiros verificados: ${data.checkedFiles}.`;
+            await loadBackups();
+        } catch (error) {
+            document.getElementById("backupError").innerText = error.message;
+        }
+    }
+
+    async function downloadBackup(filename) {
+        clearAdminMessages();
+
+        try {
+            const response = await adminSafeFetch(`${getApiBase()}/admin/backups/${encodeURIComponent(filename)}/download`, {
+                method: "GET",
+                headers: adminAuthHeaders()
+            });
+
+            if (!response.ok) {
+                await adminHandleJsonResponse(response);
+                return;
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+
+            document.getElementById("backupResult").innerText = `Download iniciado: ${filename}.`;
+        } catch (error) {
+            document.getElementById("backupError").innerText = error.message;
+        }
+    }
+
+    async function restoreBackup(filename) {
+        clearAdminMessages();
+
+        try {
+            const response = await adminSafeFetch(`${getApiBase()}/admin/backups/${encodeURIComponent(filename)}/restore`, {
+                method: "POST",
+                headers: adminAuthHeaders()
+            });
+
+            const data = await adminHandleJsonResponse(response);
+            document.getElementById("backupResult").innerText =
+                `${data.filename} validado e extraído para staging.`;
+        } catch (error) {
+            document.getElementById("backupError").innerText = error.message;
         }
     }
 </script>

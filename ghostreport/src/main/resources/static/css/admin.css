@@ -1,0 +1,250 @@
+.nav-links {
+    display: flex;
+    gap: 22px;
+    margin-left: auto;
+}
+
+.nav-links a {
+    color: white;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.nav-links a:hover {
+    opacity: 0.8;
+}
+
+.admin-layout {
+    display: grid;
+    gap: 24px;
+}
+
+.admin-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+    flex-wrap: wrap;
+}
+
+.admin-nav button {
+    border: 0;
+    cursor: pointer;
+    padding: 10px 14px;
+    border-radius: 999px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.12);
+    color: inherit;
+    transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+}
+
+.admin-nav button:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.20);
+}
+
+.admin-nav button.active {
+    background: #ffffff;
+    color: #111827;
+}
+
+.admin-nav .logout-btn {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+.admin-nav .logout-btn:hover {
+    background: #dc2626;
+}
+
+.dashboard-pages {
+    margin-top: 32px;
+}
+
+.dashboard-section {
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    border-radius: 24px;
+    padding: 28px;
+    width: 100%;
+}
+
+.admin-page {
+    animation: fadeIn 0.18s ease-in-out;
+}
+
+.admin-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.admin-hero p {
+    margin: 6px 0 0;
+    opacity: 0.8;
+}
+
+.admin-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.12);
+    font-size: 0.9rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.admin-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.admin-card,
+.user-card,
+.audit-card,
+.alert-card,
+.backup-card {
+    background: #ffffff;
+    border: 1px solid rgba(17, 24, 39, 0.08);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 12px 28px rgba(17, 24, 39, 0.08);
+}
+
+.admin-card h3 {
+    margin-top: 0;
+}
+
+.admin-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.admin-form-grid .full-width {
+    grid-column: 1 / -1;
+}
+
+.admin-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.backup-toolbar,
+.backup-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.backup-toolbar {
+    margin-bottom: 16px;
+}
+
+.backup-actions {
+    margin-top: 14px;
+}
+
+.backup-actions button {
+    padding: 9px 12px;
+}
+
+.backup-card h3 {
+    overflow-wrap: anywhere;
+}
+
+.meta-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+}
+
+.meta-line:last-child {
+    border-bottom: 0;
+}
+
+.meta-label {
+    font-weight: 700;
+    color: #374151;
+}
+
+.meta-line span:last-child {
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.severity {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    background: rgba(245, 158, 11, 0.16);
+}
+
+.severity.critical,
+.severity.high {
+    background: rgba(239, 68, 68, 0.16);
+    color: #991b1b;
+}
+
+.severity.medium {
+    background: rgba(245, 158, 11, 0.16);
+    color: #92400e;
+}
+
+.severity.low {
+    background: rgba(16, 185, 129, 0.16);
+    color: #065f46;
+}
+
+.error:empty,
+.result:empty {
+    display: none;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 760px) {
+    .topnav {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .admin-nav,
+    .nav-links {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .admin-hero {
+        flex-direction: column;
+    }
+
+    .admin-grid,
+    .admin-form-grid {
+        grid-template-columns: 1fr;
+    }
+}

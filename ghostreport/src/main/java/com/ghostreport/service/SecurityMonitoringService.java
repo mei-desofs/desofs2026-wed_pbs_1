@@ -68,6 +68,46 @@ public class SecurityMonitoringService {
         );
     }
 
+    public void recordBackupPathTraversalAttempt(String input) {
+        createAlert(
+                "BACKUP_PATH_TRAVERSAL_ATTEMPT",
+                "CRITICAL",
+                "BACKUP",
+                null,
+                "Possible path traversal in backup filename: " + sanitize(input)
+        );
+    }
+
+    public void recordMissingBackupDownload(String filename) {
+        createAlert(
+                "BACKUP_DOWNLOAD_NOT_FOUND",
+                "HIGH",
+                "BACKUP",
+                null,
+                "Attempt to download missing backup: " + sanitize(filename)
+        );
+    }
+
+    public void recordBackupIntegrityFailure(String filename) {
+        createAlert(
+                "BACKUP_INTEGRITY_FAILURE",
+                "CRITICAL",
+                "BACKUP",
+                null,
+                "Backup integrity validation failed: " + sanitize(filename)
+        );
+    }
+
+    public void recordUnauthorizedBackupAccess(String path) {
+        createAlert(
+                "BACKUP_UNAUTHORIZED_ATTEMPT",
+                "HIGH",
+                "BACKUP",
+                null,
+                "Unauthorized attempt to access backup endpoint: " + sanitize(path)
+        );
+    }
+
     public void createAlert(String alertType, String severity, String targetType, Long targetId, String description) {
         SecurityAlert alert = new SecurityAlert();
         alert.setAlertType(alertType);
