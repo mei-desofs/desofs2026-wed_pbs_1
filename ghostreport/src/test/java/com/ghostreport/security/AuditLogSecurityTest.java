@@ -10,9 +10,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.security.access.AccessDeniedException;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
@@ -61,10 +62,18 @@ class AuditLogSecurityTest {
         Report report = createReport(ReportStatus.RESOLVED);
         createCaseReview(report, analyst);
 
-        assertThrows(
-                AccessDeniedException.class,
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
                 () -> casePackageService.generateCasePackage(report.getId())
         );
+
+        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        assertThat(auditLogRepository.findAll())
+                .noneMatch(log ->
+                        "CASE_PACKAGE_GENERATED".equals(log.getAction()) &&
+                                report.getId().equals(log.getTargetId())
+                );
     }
 
     private Report createReport(ReportStatus status) {
