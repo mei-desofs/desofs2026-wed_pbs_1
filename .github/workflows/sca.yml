@@ -1,0 +1,30 @@
+name: SCA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  dependency-check:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./ghostreport
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: ghostreport/pom.xml
+
+      - name: OWASP Dependency Check
+        run: >
+          mvn org.owasp:dependency-check-maven:check
+          -DnvdApiKey=${{ secrets.NVD_API_KEY }}
+          -DossindexAnalyzerEnabled=false
+          -DretireJsAnalyzerEnabled=false
+          -DnodeAuditAnalyzerEnabled=false
