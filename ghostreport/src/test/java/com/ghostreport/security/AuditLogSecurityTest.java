@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.access.AccessDeniedException;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -48,6 +50,21 @@ class AuditLogSecurityTest {
                                 "REPORT".equals(log.getTargetType()) &&
                                 report.getId().equals(log.getTargetId())
                 );
+    }
+
+    @Test
+    @WithMockUser(username = "unauthorized_user", roles = "REPORTER")
+    void unauthorizedUserShouldNotGenerateCasePackage() {
+        auditLogRepository.deleteAll();
+
+        User analyst = createUser("analyst_forbidden", UserRole.ANALYST);
+        Report report = createReport(ReportStatus.RESOLVED);
+        createCaseReview(report, analyst);
+
+        assertThrows(
+                AccessDeniedException.class,
+                () -> casePackageService.generateCasePackage(report.getId())
+        );
     }
 
     private Report createReport(ReportStatus status) {
