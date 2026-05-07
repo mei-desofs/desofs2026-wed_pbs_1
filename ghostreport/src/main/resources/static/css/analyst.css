@@ -235,6 +235,23 @@
     }
 }
 
+.package-result {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 16px;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #064e3b;
+}
+
+.package-result p {
+    margin: 6px 0;
+}
+
+.package-result ul {
+    margin: 8px 0 0 20px;
+}
+
 @media (max-width: 900px) {
     .topnav {
         align-items: flex-start;

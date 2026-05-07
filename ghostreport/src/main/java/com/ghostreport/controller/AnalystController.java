@@ -1,14 +1,9 @@
 package com.ghostreport.controller;
 
-import com.ghostreport.dto.AssignAnalystRequest;
-import com.ghostreport.dto.CaseReviewResponse;
-import com.ghostreport.dto.ReportResponse;
-import com.ghostreport.dto.UpdateNotesRequest;
-import com.ghostreport.dto.UpdatePriorityRequest;
-import com.ghostreport.dto.UpdateReportStatusRequest;
+import com.ghostreport.dto.*;
+import com.ghostreport.service.CasePackageService;
 import com.ghostreport.service.CaseReviewService;
 import com.ghostreport.service.ReportService;
-import com.ghostreport.dto.AttachmentListResponse;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import jakarta.validation.Valid;
@@ -22,10 +17,12 @@ public class AnalystController {
 
     private final ReportService reportService;
     private final CaseReviewService caseReviewService;
+    private final CasePackageService casePackageService;
 
-    public AnalystController(ReportService reportService, CaseReviewService caseReviewService) {
+    public AnalystController(ReportService reportService, CaseReviewService caseReviewService, CasePackageService casePackageService) {
         this.reportService = reportService;
         this.caseReviewService = caseReviewService;
+        this.casePackageService = casePackageService;
     }
 
     @GetMapping("/panel")
@@ -86,4 +83,10 @@ public class AnalystController {
     public ResponseEntity<Resource> downloadAttachment(@PathVariable Long attachmentId) {
         return reportService.downloadAttachment(attachmentId);
     }
+
+    @PostMapping("/reports/{id}/case-package")
+    public ResponseEntity<CasePackageResponse> generateCasePackage(@PathVariable Long id) {
+        return ResponseEntity.ok(casePackageService.generateCasePackage(id));
+    }
+
 }

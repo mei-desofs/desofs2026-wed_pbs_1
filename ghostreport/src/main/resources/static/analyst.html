@@ -476,14 +476,61 @@
                     ${renderMeta("Notas", c.notes)}
 
                     <div class="case-actions">
-                        <button type="button" onclick="viewCaseOnly(${c.reportId}, '${escapeHtml(c.priority || "MEDIUM")}', \`${jsString(c.notes || "")}\`)">Ver detalhes</button>
+                        <button type="button" onclick="viewCaseOnly(${c.reportId}, '${escapeHtml(c.priority || "MEDIUM")}', \`${jsString(c.notes || "")}\`)">
+                            Ver detalhes
+                        </button>
+
+                        <button class="package-btn" type="button" onclick="generateCasePackage(${c.reportId})">
+                            Gerar pacote
+                        </button>
                     </div>
+
+                    <div id="package-result-${c.reportId}"></div>
                 </div>
             `).join("");
 
         } catch (error) {
             div.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
             if (count) count.innerText = "0";
+        }
+    }
+
+    async function generateCasePackage(reportId = null) {
+        clearMessages();
+
+        try {
+            const id = reportId || selectedReportIdOrFail();
+
+            const response = await safeFetch(`${API_BASE}/analyst/reports/${id}/case-package`, {
+                method: "POST",
+                headers: authHeaders()
+            });
+
+            const data = await handleJsonResponse(response);
+
+            const packageBoxId = `package-result-${id}`;
+            const box = document.getElementById(packageBoxId);
+
+            const html = `
+                <div class="package-result">
+                    <strong>Pacote de evidências gerado</strong>
+                    <p>Caso #${escapeHtml(data.reportId)}</p>
+                    <p>Estado: ${escapeHtml(data.status)}</p>
+                    <p>Ficheiros gerados:</p>
+                    <ul>
+                        ${data.generatedFiles.map(file => `<li>${escapeHtml(file)}</li>`).join("")}
+                    </ul>
+                </div>
+            `;
+
+            if (box) {
+                box.innerHTML = html;
+            } else {
+                alert(`Pacote de evidências do caso ${id} gerado com sucesso.`);
+            }
+
+        } catch (error) {
+            alert(error.message);
         }
     }
 
