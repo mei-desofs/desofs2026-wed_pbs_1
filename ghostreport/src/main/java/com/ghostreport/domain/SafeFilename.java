@@ -1,61 +1,33 @@
 package com.ghostreport.domain;
 
-import java.util.Set;
-import java.util.UUID;
+public record SafeFilename(String value) {
 
-public final class SafeFilename {
+    public SafeFilename {
 
-    private static final Set<String> ALLOWED_EXTENSIONS =
-            Set.of("pdf", "png", "jpg", "jpeg", "txt");
-
-    private final String value;
-
-    public SafeFilename(String originalName) {
-
-        if (originalName == null || originalName.isBlank()) {
-            throw new IllegalArgumentException("Filename required");
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Filename cannot be empty");
         }
 
-        String clean = originalName
-                .replace("\\", "/");
-
-        clean = clean.substring(
-                clean.lastIndexOf("/") + 1
-        );
-
-        if (clean.contains("..")) {
-            throw new IllegalArgumentException(
-                    "Invalid filename"
-            );
+        if (value.contains("..")) {
+            throw new IllegalArgumentException("Path traversal detected");
         }
 
-        String extension = getExtension(clean);
-
-        if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException(
-                    "Extension not allowed"
-            );
+        if (value.contains("/") || value.contains("\\")) {
+            throw new IllegalArgumentException("Invalid path separator");
         }
 
-        this.value =
-                UUID.randomUUID() + "_" + clean;
-    }
+        String lower = value.toLowerCase();
 
-    private String getExtension(String name) {
+        if (lower.endsWith(".exe")
+                || lower.endsWith(".bat")
+                || lower.endsWith(".cmd")
+                || lower.endsWith(".sh")) {
 
-        int index = name.lastIndexOf(".");
-
-        if (index < 0) {
-            throw new IllegalArgumentException(
-                    "File extension required"
-            );
+            throw new IllegalArgumentException("Executable files are not allowed");
         }
 
-        return name.substring(index + 1)
-                .toLowerCase();
-    }
-
-    public String value() {
-        return value;
+        if (value.length() > 255) {
+            throw new IllegalArgumentException("Filename too long");
+        }
     }
 }

@@ -7,6 +7,7 @@ import com.ghostreport.dto.UpdatePriorityRequest;
 import com.ghostreport.model.CasePriority;
 import com.ghostreport.model.CaseReview;
 import com.ghostreport.model.Report;
+import com.ghostreport.model.ReportStatus;
 import com.ghostreport.model.User;
 import com.ghostreport.model.UserRole;
 import com.ghostreport.repository.CaseReviewRepository;
@@ -44,16 +45,30 @@ public class CaseReviewService {
     }
 
     public CaseReviewResponse assignAnalyst(Long reportId, AssignAnalystRequest request) {
+
         Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Report not found"
+                        )
+                );
 
         String currentUsername = SecurityUtils.getCurrentUsername();
 
         User analyst = userRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Analyst not found"));
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Analyst not found"
+                        )
+                );
 
         if (analyst.getRole() != UserRole.ANALYST) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current user is not an analyst");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Current user is not an analyst"
+            );
         }
 
         CaseReview caseReview = caseReviewRepository.findByReportId(reportId)
@@ -78,22 +93,40 @@ public class CaseReviewService {
                 "Assigned to analyst username " + analyst.getUsername()
         );
 
-        logger.info("Report id={} assigned to analyst username={}", reportId, analyst.getUsername());
+        logger.info(
+                "Report id={} assigned to analyst username={}",
+                reportId,
+                analyst.getUsername()
+        );
 
         return toResponse(saved);
     }
 
     public CaseReviewResponse assignAnalystToCurrentUser(Long reportId) {
+
         Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Report not found"
+                        )
+                );
 
         String currentUsername = SecurityUtils.getCurrentUsername();
 
         User analyst = userRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Analyst not found"));
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Analyst not found"
+                        )
+                );
 
         if (analyst.getRole() != UserRole.ANALYST) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current user is not an analyst");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Current user is not an analyst"
+            );
         }
 
         CaseReview caseReview = caseReviewRepository.findByReportId(reportId)
@@ -122,13 +155,24 @@ public class CaseReviewService {
     }
 
     public CaseReviewResponse updatePriority(Long reportId, UpdatePriorityRequest request) {
+
         CaseReview caseReview = getAccessibleCaseReview(reportId);
 
+        validateCaseIsEditable(caseReview);
+
         try {
-            CasePriority priority = CasePriority.valueOf(request.getPriority().toUpperCase());
+
+            CasePriority priority =
+                    CasePriority.valueOf(request.getPriority().toUpperCase());
+
             caseReview.setPriority(priority);
+
         } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid priority");
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid priority"
+            );
         }
 
         CaseReview saved = caseReviewRepository.save(caseReview);
@@ -140,13 +184,20 @@ public class CaseReviewService {
                 "Priority updated to " + saved.getPriority()
         );
 
-        logger.info("Priority updated for report id={} to {}", reportId, saved.getPriority());
+        logger.info(
+                "Priority updated for report id={} to {}",
+                reportId,
+                saved.getPriority()
+        );
 
         return toResponse(saved);
     }
 
     public CaseReviewResponse updateNotes(Long reportId, UpdateNotesRequest request) {
+
         CaseReview caseReview = getAccessibleCaseReview(reportId);
+
+        validateCaseIsEditable(caseReview);
 
         caseReview.setNotes(request.getNotes());
 
@@ -165,21 +216,31 @@ public class CaseReviewService {
     }
 
     public CaseReviewResponse getCaseReview(Long reportId) {
+
         CaseReview caseReview = getAccessibleCaseReview(reportId);
+
         return toResponse(caseReview);
     }
 
     public List<CaseReviewResponse> getMyAssignedCases() {
+
         String username = SecurityUtils.getCurrentUsername();
 
-        return caseReviewRepository.findByAssignedAnalystUsername(username).stream()
+        return caseReviewRepository.findByAssignedAnalystUsername(username)
+                .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     private CaseReview getAccessibleCaseReview(Long reportId) {
+
         CaseReview caseReview = caseReviewRepository.findByReportId(reportId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case review not found"));
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Case review not found"
+                        )
+                );
 
         if (SecurityUtils.hasRole("ADMIN")) {
             return caseReview;
@@ -188,19 +249,44 @@ public class CaseReviewService {
         String currentUsername = SecurityUtils.getCurrentUsername();
 
         if (caseReview.getAssignedAnalyst() == null ||
-                !caseReview.getAssignedAnalyst().getUsername().equals(currentUsername)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this case");
+                !caseReview.getAssignedAnalyst()
+                        .getUsername()
+                        .equals(currentUsername)) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You do not have access to this case"
+            );
         }
 
         return caseReview;
     }
 
+    private void validateCaseIsEditable(CaseReview caseReview) {
+
+        ReportStatus status = caseReview.getReport().getStatus();
+
+        if (status == ReportStatus.RESOLVED ||
+                status == ReportStatus.REJECTED) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Closed cases cannot be modified"
+            );
+        }
+    }
+
     private CaseReviewResponse toResponse(CaseReview caseReview) {
+
         return new CaseReviewResponse(
                 caseReview.getReport().getId(),
                 caseReview.getId(),
-                caseReview.getAssignedAnalyst() != null ? caseReview.getAssignedAnalyst().getUsername() : null,
-                caseReview.getPriority() != null ? caseReview.getPriority().name() : null,
+                caseReview.getAssignedAnalyst() != null
+                        ? caseReview.getAssignedAnalyst().getUsername()
+                        : null,
+                caseReview.getPriority() != null
+                        ? caseReview.getPriority().name()
+                        : null,
                 caseReview.getNotes(),
                 caseReview.getReport().getStatus().name()
         );
