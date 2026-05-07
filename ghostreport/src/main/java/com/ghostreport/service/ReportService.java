@@ -1,5 +1,7 @@
 package com.ghostreport.service;
 
+import com.ghostreport.domain.ReportDescription;
+import com.ghostreport.domain.TrackingCode;
 import com.ghostreport.dto.*;
 import com.ghostreport.model.Attachment;
 import com.ghostreport.model.CaseReview;
@@ -19,16 +21,14 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class ReportService {
 
-    private static final Logger logger = LoggerFactory.getLogger(ReportService.class);
-    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final Logger logger =
+            LoggerFactory.getLogger(ReportService.class);
 
     private final ReportRepository reportRepository;
     private final AttachmentRepository attachmentRepository;
@@ -36,7 +36,8 @@ public class ReportService {
     private final CaseReviewRepository caseReviewRepository;
     private final AuditLogService auditLogService;
 
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final BCryptPasswordEncoder passwordEncoder =
+            new BCryptPasswordEncoder();
 
     public ReportService(
             ReportRepository reportRepository,
@@ -54,17 +55,40 @@ public class ReportService {
 
     public CreateReportResponse createReport(CreateReportRequest request) {
 
-        String trackingCode = generateTrackingCode();
-        String trackingCodeHash = passwordEncoder.encode(trackingCode);
+        TrackingCode trackingCode =
+                TrackingCode.generate();
+
+        String trackingCodeHash =
+                passwordEncoder.encode(
+                        trackingCode.value()
+                );
+
+        ReportDescription description =
+                new ReportDescription(
+                        request.getDescription()
+                );
 
         Report report = new Report();
 
-        report.setTitle(request.getTitle());
+        report.setTitle(
+                request.getTitle().trim()
+        );
 
-        report.setDescription(request.getDescription());
-        report.setCategory(request.getCategory());
-        report.setStatus(ReportStatus.SUBMITTED);
-        report.setTrackingCodeHash(trackingCodeHash);
+        report.setDescription(
+                description.value()
+        );
+
+        report.setCategory(
+                request.getCategory()
+        );
+
+        report.setStatus(
+                ReportStatus.SUBMITTED
+        );
+
+        report.setTrackingCodeHash(
+                trackingCodeHash
+        );
 
         Report saved = reportRepository.save(report);
 
@@ -75,81 +99,156 @@ public class ReportService {
                 saved.getStatus().name()
         );
 
-        auditLogService.log("REPORT_CREATED", "REPORT", saved.getId(), "Anonymous report created");
+        auditLogService.log(
+                "REPORT_CREATED",
+                "REPORT",
+                saved.getId(),
+                "Anonymous report created"
+        );
 
         return new CreateReportResponse(
                 saved.getId(),
                 saved.getStatus().name(),
-                trackingCode
+                trackingCode.value()
         );
     }
 
     public ReportResponse verifyTrackingCodeOnly(String trackingCode) {
 
         if (trackingCode == null || trackingCode.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Código inválido");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Código inválido"
+            );
         }
 
         trackingCode = trackingCode.trim();
 
         for (Report report : reportRepository.findAll()) {
-            if (passwordEncoder.matches(trackingCode, report.getTrackingCodeHash())) {
+
+            if (passwordEncoder.matches(
+                    trackingCode,
+                    report.getTrackingCodeHash()
+            )) {
+
                 return toReportResponse(report);
             }
         }
 
-        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Denúncia não encontrada");
+        throw new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Denúncia não encontrada"
+        );
     }
 
     public List<ReportResponse> getAllReports() {
+
         return reportRepository.findAll()
                 .stream()
                 .map(this::toReportResponse)
                 .toList();
     }
 
-    public ReportResponse updateReportStatus(Long id, UpdateReportStatusRequest request) {
+    public ReportResponse updateReportStatus(
+            Long id,
+            UpdateReportStatusRequest request
+    ) {
 
         Report report = reportRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND
+                        )
+                );
 
         checkInternalAccessToReport(id);
 
-        report.setStatus(ReportStatus.valueOf(request.getStatus().toUpperCase()));
+        report.setStatus(
+                ReportStatus.valueOf(
+                        request.getStatus().toUpperCase()
+                )
+        );
 
         Report saved = reportRepository.save(report);
 
         return toReportResponse(saved);
     }
 
-    public AttachmentResponse uploadAttachment(Long reportId, MultipartFile file) {
+    public AttachmentResponse uploadAttachment(
+            Long reportId,
+            MultipartFile file
+    ) {
 
-        logger.info("UPLOAD endpoint chamado para reportId={}", reportId);
-        logger.info("Ficheiro recebido: name={}, type={}, size={}",
+        logger.info(
+                "UPLOAD endpoint chamado para reportId={}",
+                reportId
+        );
+
+        logger.info(
+                "Ficheiro recebido: name={}, type={}, size={}",
                 file.getOriginalFilename(),
                 file.getContentType(),
                 file.getSize()
         );
 
         Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Report not found"
+                        )
+                );
 
         try {
-            FileStorageService.StoredFileInfo stored = fileStorageService.storeAttachment(reportId, file);
+
+            FileStorageService.StoredFileInfo stored =
+                    fileStorageService.storeAttachment(
+                            reportId,
+                            file
+                    );
 
             Attachment attachment = new Attachment();
-            attachment.setOriginalName(stored.originalName());
-            attachment.setStoredName(stored.storedName());
-            attachment.setFileReference(stored.fileReference());
-            attachment.setStoragePath(stored.storagePath());
-            attachment.setMimeType(stored.mimeType());
-            attachment.setSize(stored.size());
-            attachment.setHash(stored.hash());
+
+            attachment.setOriginalName(
+                    stored.originalName()
+            );
+
+            attachment.setStoredName(
+                    stored.storedName()
+            );
+
+            attachment.setFileReference(
+                    stored.fileReference()
+            );
+
+            attachment.setStoragePath(
+                    stored.storagePath()
+            );
+
+            attachment.setMimeType(
+                    stored.mimeType()
+            );
+
+            attachment.setSize(
+                    stored.size()
+            );
+
+            attachment.setHash(
+                    stored.hash()
+            );
+
             attachment.setReport(report);
 
-            Attachment saved = attachmentRepository.save(attachment);
+            Attachment saved =
+                    attachmentRepository.save(
+                            attachment
+                    );
 
-            logger.info("Attachment saved id={} for report={}", saved.getId(), reportId);
+            logger.info(
+                    "Attachment saved id={} for report={}",
+                    saved.getId(),
+                    reportId
+            );
 
             return new AttachmentResponse(
                     saved.getId(),
@@ -159,9 +258,17 @@ public class ReportService {
             );
 
         } catch (ResponseStatusException e) {
+
             throw e;
+
         } catch (Exception e) {
-            logger.error("ERRO REAL AO GUARDAR ANEXO no reportId={}", reportId, e);
+
+            logger.error(
+                    "ERRO REAL AO GUARDAR ANEXO no reportId={}",
+                    reportId,
+                    e
+            );
+
             throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     e.getMessage()
@@ -169,49 +276,102 @@ public class ReportService {
         }
     }
 
-    public List<AttachmentResponse> uploadMultipleAttachments(Long reportId, MultipartFile[] files) {
+    public List<AttachmentResponse> uploadMultipleAttachments(
+            Long reportId,
+            MultipartFile[] files
+    ) {
 
         Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND
+                        )
+                );
 
-        List<AttachmentResponse> responses = new ArrayList<>();
+        List<AttachmentResponse> responses =
+                new ArrayList<>();
 
         for (MultipartFile file : files) {
 
             try {
-                FileStorageService.StoredFileInfo stored = fileStorageService.storeAttachment(reportId, file);
+
+                FileStorageService.StoredFileInfo stored =
+                        fileStorageService.storeAttachment(
+                                reportId,
+                                file
+                        );
 
                 Attachment attachment = new Attachment();
-                attachment.setOriginalName(stored.originalName());
-                attachment.setStoredName(stored.storedName());
-                attachment.setFileReference(stored.fileReference());
-                attachment.setStoragePath(stored.storagePath());
-                attachment.setMimeType(stored.mimeType());
-                attachment.setSize(stored.size());
-                attachment.setHash(stored.hash());
+
+                attachment.setOriginalName(
+                        stored.originalName()
+                );
+
+                attachment.setStoredName(
+                        stored.storedName()
+                );
+
+                attachment.setFileReference(
+                        stored.fileReference()
+                );
+
+                attachment.setStoragePath(
+                        stored.storagePath()
+                );
+
+                attachment.setMimeType(
+                        stored.mimeType()
+                );
+
+                attachment.setSize(
+                        stored.size()
+                );
+
+                attachment.setHash(
+                        stored.hash()
+                );
+
                 attachment.setReport(report);
 
-                Attachment saved = attachmentRepository.save(attachment);
+                Attachment saved =
+                        attachmentRepository.save(
+                                attachment
+                        );
 
-                responses.add(new AttachmentResponse(
-                        saved.getId(),
-                        saved.getOriginalName(),
-                        saved.getMimeType(),
-                        saved.getSize()
-                ));
+                responses.add(
+                        new AttachmentResponse(
+                                saved.getId(),
+                                saved.getOriginalName(),
+                                saved.getMimeType(),
+                                saved.getSize()
+                        )
+                );
 
             } catch (ResponseStatusException e) {
+
                 throw e;
+
             } catch (Exception e) {
-                logger.error("Erro ao guardar anexo no report {}", reportId, e);
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro ao guardar ficheiro");
+
+                logger.error(
+                        "Erro ao guardar anexo no report {}",
+                        reportId,
+                        e
+                );
+
+                throw new ResponseStatusException(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Erro ao guardar ficheiro"
+                );
             }
         }
 
         return responses;
     }
 
-    public List<AttachmentListResponse> listAttachments(Long reportId) {
+    public List<AttachmentListResponse> listAttachments(
+            Long reportId
+    ) {
 
         checkInternalAccessToReport(reportId);
 
@@ -226,62 +386,133 @@ public class ReportService {
                 .toList();
     }
 
-    public ResponseEntity<Resource> downloadAttachment(Long attachmentId) {
+    public ResponseEntity<Resource> downloadAttachment(
+            Long attachmentId
+    ) {
 
-        Attachment attachment = attachmentRepository.findById(attachmentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Attachment attachment =
+                attachmentRepository.findById(
+                        attachmentId
+                ).orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND
+                        )
+                );
 
-        Resource resource = fileStorageService.loadFileAsResource(attachment.getStoragePath());
+        Resource resource =
+                fileStorageService.loadFileAsResource(
+                        attachment.getStoragePath()
+                );
 
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(attachment.getMimeType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION,
+                .contentType(
+                        MediaType.parseMediaType(
+                                attachment.getMimeType()
+                        )
+                )
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.attachment()
-                                .filename(attachment.getOriginalName(), StandardCharsets.UTF_8)
-                                .build().toString())
+                                .filename(
+                                        attachment.getOriginalName(),
+                                        StandardCharsets.UTF_8
+                                )
+                                .build()
+                                .toString()
+                )
                 .body(resource);
     }
 
-    public ResponseEntity<Resource> downloadAttachmentSecure(Long attachmentId, String trackingCode) {
+    public ResponseEntity<Resource> downloadAttachmentSecure(
+            Long attachmentId,
+            String trackingCode
+    ) {
 
         if (trackingCode == null || trackingCode.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST
+            );
         }
 
-        Attachment attachment = attachmentRepository.findById(attachmentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Attachment attachment =
+                attachmentRepository.findById(
+                        attachmentId
+                ).orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND
+                        )
+                );
 
-        if (!passwordEncoder.matches(trackingCode, attachment.getReport().getTrackingCodeHash())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        if (!passwordEncoder.matches(
+                trackingCode,
+                attachment.getReport().getTrackingCodeHash()
+        )) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN
+            );
         }
 
-        Resource resource = fileStorageService.loadFileAsResource(attachment.getStoragePath());
+        Resource resource =
+                fileStorageService.loadFileAsResource(
+                        attachment.getStoragePath()
+                );
 
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(attachment.getMimeType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION,
+                .contentType(
+                        MediaType.parseMediaType(
+                                attachment.getMimeType()
+                        )
+                )
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.attachment()
-                                .filename(attachment.getOriginalName(), StandardCharsets.UTF_8)
-                                .build().toString())
+                                .filename(
+                                        attachment.getOriginalName(),
+                                        StandardCharsets.UTF_8
+                                )
+                                .build()
+                                .toString()
+                )
                 .body(resource);
     }
 
-    private void checkInternalAccessToReport(Long reportId) {
+    private void checkInternalAccessToReport(
+            Long reportId
+    ) {
 
-        if (SecurityUtils.hasRole("ADMIN")) return;
+        if (SecurityUtils.hasRole("ADMIN")) {
+            return;
+        }
 
-        CaseReview caseReview = caseReviewRepository.findByReportId(reportId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
+        CaseReview caseReview =
+                caseReviewRepository.findByReportId(
+                        reportId
+                ).orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.FORBIDDEN
+                        )
+                );
 
-        String currentUser = SecurityUtils.getCurrentUsername();
+        String currentUser =
+                SecurityUtils.getCurrentUsername();
 
         if (caseReview.getAssignedAnalyst() == null ||
-                !caseReview.getAssignedAnalyst().getUsername().equals(currentUser)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+                !caseReview.getAssignedAnalyst()
+                        .getUsername()
+                        .equals(currentUser)) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN
+            );
         }
     }
 
-    private ReportResponse toReportResponse(Report report) {
+    private ReportResponse toReportResponse(
+            Report report
+    ) {
+
         return new ReportResponse(
                 report.getId(),
                 report.getTitle(),
@@ -289,13 +520,5 @@ public class ReportService {
                 report.getCategory(),
                 report.getDescription()
         );
-    }
-
-    private String generateTrackingCode() {
-        StringBuilder code = new StringBuilder();
-        for (int i = 0; i < 16; i++) {
-            code.append(CHARACTERS.charAt(RANDOM.nextInt(CHARACTERS.length())));
-        }
-        return code.toString();
     }
 }
