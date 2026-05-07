@@ -22,15 +22,15 @@
 
     <!-- NAV ANALISTA (depois do login) -->
     <div id="analystNav" class="analyst-nav" style="display:none;">
-        <button onclick="showPage('submittedPage')">Denúncias</button>
-        <button onclick="showPage('myCasesPage')">Os meus casos</button>
-        <button onclick="showPage('historyPage')">Histórico</button>
-        <button class="logout-btn" onclick="logout()">Terminar sessão</button>
+        <button type="button" onclick="showPage('submittedPage')">Denúncias</button>
+        <button type="button" onclick="showPage('myCasesPage')">Os meus casos</button>
+        <button type="button" onclick="showPage('historyPage')">Histórico</button>
+        <button type="button" class="logout-btn" onclick="logout()">Terminar sessão</button>
     </div>
 </div>
 
 <div class="analyst-layout">
-    <div class="container">
+    <div id="analystLoginPanel" class="container">
         <h1>Painel do Analista</h1>
 
         <div id="loginSection">
@@ -53,21 +53,39 @@
     <div id="dashboard" class="dashboard-pages" style="display:none;">
 
         <section id="submittedPage" class="dashboard-section analyst-page">
-            <h2>Denúncias por analisar</h2>
-            <p>Denúncias com estado SUBMITTED disponíveis para atribuição.</p>
-            <button type="button" onclick="loadSubmittedReports()">Atualizar</button>
-            <div id="submittedReports"></div>
+            <div class="analyst-hero">
+                <div>
+                    <h2>Denúncias</h2>
+                    <p>Denúncias com estado SUBMITTED disponíveis para atribuição.</p>
+                </div>
+
+                <span class="analyst-badge">
+                    Total: <strong id="submittedCount">0</strong>
+                </span>
+            </div>
+
+            <button type="button" onclick="loadSubmittedReports()">Atualizar denúncias</button>
+            <div id="submittedReports" class="analyst-grid"></div>
         </section>
 
         <section id="myCasesPage" class="dashboard-section analyst-page" style="display:none;">
-            <h2>Os meus casos</h2>
-            <p>Casos atribuídos ao analista autenticado.</p>
-            <button type="button" onclick="loadMyCases()">Atualizar</button>
-            <div id="myCases"></div>
+            <div class="analyst-hero">
+                <div>
+                    <h2>Os meus casos</h2>
+                    <p>Casos atribuídos ao analista autenticado.</p>
+                </div>
+
+                <span class="analyst-badge">
+                    Total: <strong id="myCasesCount">0</strong>
+                </span>
+            </div>
+
+            <button type="button" onclick="loadMyCases()">Atualizar casos</button>
+            <div id="myCases" class="analyst-grid"></div>
         </section>
 
         <section id="managePage" class="dashboard-section analyst-page" style="display:none;">
-            <div class="manage-header">
+            <div class="analyst-hero manage-header">
                 <div>
                     <h2>Gerir caso selecionado</h2>
                     <p>Atualiza o estado, prioridade, notas internas e consulta os anexos da denúncia.</p>
@@ -125,10 +143,19 @@
         </section>
 
         <section id="historyPage" class="dashboard-section analyst-page" style="display:none;">
-            <h2>Histórico</h2>
-            <p>Casos concluídos ou rejeitados.</p>
-            <button type="button" onclick="loadHistory()">Atualizar</button>
-            <div id="historyCases"></div>
+            <div class="analyst-hero">
+                <div>
+                    <h2>Histórico</h2>
+                    <p>Casos concluídos ou rejeitados.</p>
+                </div>
+
+                <span class="analyst-badge">
+                    Total: <strong id="historyCount">0</strong>
+                </span>
+            </div>
+
+            <button type="button" onclick="loadHistory()">Atualizar histórico</button>
+            <div id="historyCases" class="analyst-grid"></div>
         </section>
     </div>
 </div>
@@ -158,11 +185,36 @@
     }
 
     function showPage(pageId) {
+        clearMessages();
+
         document.querySelectorAll(".analyst-page").forEach(page => {
             page.style.display = "none";
         });
 
         document.getElementById(pageId).style.display = "block";
+
+        document.querySelectorAll("#analystNav button").forEach(button => {
+            button.classList.remove("active");
+        });
+
+        const activeButton = Array.from(document.querySelectorAll("#analystNav button"))
+            .find(button => button.getAttribute("onclick")?.includes(pageId));
+
+        if (activeButton) {
+            activeButton.classList.add("active");
+        }
+
+        if (pageId === "submittedPage") {
+            loadSubmittedReports();
+        }
+
+        if (pageId === "myCasesPage") {
+            loadMyCases();
+        }
+
+        if (pageId === "historyPage") {
+            loadHistory();
+        }
     }
 
     function authHeaders(extra = {}) {
@@ -205,6 +257,7 @@
     }
 
     function showDashboard() {
+        document.getElementById("analystLoginPanel").style.display = "none";
         document.getElementById("loginSection").style.display = "none";
         document.getElementById("dashboard").style.display = "block";
 
@@ -256,6 +309,9 @@
         } else {
             document.getElementById("publicNav").style.display = "flex";
             document.getElementById("analystNav").style.display = "none";
+            document.getElementById("dashboard").style.display = "none";
+            document.getElementById("analystLoginPanel").style.display = "block";
+            document.getElementById("loginSection").style.display = "block";
         }
     }
 
@@ -273,6 +329,22 @@
             .replaceAll("\\", "\\\\")
             .replaceAll("`", "\\`")
             .replaceAll("${", "\\${");
+    }
+
+    function renderMeta(label, value) {
+        return `
+            <div class="meta-line">
+                <span class="meta-label">${escapeHtml(label)}</span>
+                <span>${escapeHtml(value || "-")}</span>
+            </div>
+        `;
+    }
+
+    function formatBytes(size) {
+        const value = Number(size || 0);
+        if (value < 1024) return `${value} B`;
+        if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+        return `${(value / (1024 * 1024)).toFixed(1)} MB`;
     }
 
     function selectCase(reportId, priority = "MEDIUM", notes = "") {
@@ -294,6 +366,7 @@
 
     async function loadSubmittedReports() {
         const div = document.getElementById("submittedReports");
+        const count = document.getElementById("submittedCount");
 
         try {
             const response = await safeFetch(`${API_BASE}/analyst/reports`, {
@@ -302,6 +375,7 @@
 
             const data = await handleJsonResponse(response);
             const submitted = data.filter(r => r.status === "SUBMITTED");
+            count.innerText = submitted.length;
 
             if (!submitted.length) {
                 div.innerHTML = `<div class="result">Não existem denúncias pendentes.</div>`;
@@ -310,10 +384,11 @@
 
             div.innerHTML = submitted.map(r => `
                 <div class="case-card">
-                    <strong>Report ID:</strong> ${escapeHtml(r.id)}<br>
-                    <strong>Categoria:</strong> ${escapeHtml(r.category)}<br>
-                    <strong>Estado:</strong> ${escapeHtml(r.status)}<br>
-                    <strong>Descrição:</strong> ${escapeHtml(r.description)}<br>
+                    <h3>${escapeHtml(r.title || `Denúncia #${r.id}`)}</h3>
+                    ${renderMeta("Report ID", r.id)}
+                    ${renderMeta("Categoria", r.category)}
+                    ${renderMeta("Estado", r.status)}
+                    ${renderMeta("Descrição", r.description)}
 
                     <div class="case-actions">
                         <button type="button" onclick="assignToMe(${r.id})">Assumir caso</button>
@@ -324,11 +399,13 @@
 
         } catch (error) {
             div.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+            if (count) count.innerText = "0";
         }
     }
 
     async function loadMyCases() {
         const div = document.getElementById("myCases");
+        const count = document.getElementById("myCasesCount");
 
         try {
             const response = await safeFetch(`${API_BASE}/analyst/my-cases`, {
@@ -340,6 +417,7 @@
             const activeCases = data.filter(c =>
                 c.reportStatus !== "RESOLVED" && c.reportStatus !== "REJECTED"
             );
+            count.innerText = activeCases.length;
 
             if (!activeCases.length) {
                 div.innerHTML = `<div class="result">Não tens casos atribuídos.</div>`;
@@ -348,12 +426,12 @@
 
             div.innerHTML = activeCases.map(c => `
                 <div class="case-card">
-                    <strong>Report ID:</strong> ${escapeHtml(c.reportId)}<br>
-                    <strong>CaseReview ID:</strong> ${escapeHtml(c.caseReviewId)}<br>
-                    <strong>Analista:</strong> ${escapeHtml(c.assignedAnalystUsername || "-")}<br>
-                    <strong>Prioridade:</strong> ${escapeHtml(c.priority || "-")}<br>
-                    <strong>Estado:</strong> ${escapeHtml(c.reportStatus)}<br>
-                    <strong>Notas:</strong> ${escapeHtml(c.notes || "-")}<br>
+                    <h3>Caso #${escapeHtml(c.reportId)}</h3>
+                    ${renderMeta("CaseReview ID", c.caseReviewId)}
+                    ${renderMeta("Analista", c.assignedAnalystUsername)}
+                    ${renderMeta("Prioridade", c.priority)}
+                    ${renderMeta("Estado", c.reportStatus)}
+                    ${renderMeta("Notas", c.notes)}
 
                     <div class="case-actions">
                         <button type="button" onclick="selectCase(${c.reportId}, '${escapeHtml(c.priority || "MEDIUM")}', \`${jsString(c.notes || "")}\`)">Selecionar</button>
@@ -363,11 +441,13 @@
 
         } catch (error) {
             div.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+            if (count) count.innerText = "0";
         }
     }
 
     async function loadHistory() {
         const div = document.getElementById("historyCases");
+        const count = document.getElementById("historyCount");
 
         try {
             const response = await safeFetch(`${API_BASE}/analyst/my-cases`, {
@@ -379,6 +459,7 @@
             const historyCases = data.filter(c =>
                 c.reportStatus === "RESOLVED" || c.reportStatus === "REJECTED"
             );
+            count.innerText = historyCases.length;
 
             if (!historyCases.length) {
                 div.innerHTML = `<div class="result">Ainda não existem casos no histórico.</div>`;
@@ -387,12 +468,12 @@
 
             div.innerHTML = historyCases.map(c => `
                 <div class="case-card">
-                    <strong>Report ID:</strong> ${escapeHtml(c.reportId)}<br>
-                    <strong>CaseReview ID:</strong> ${escapeHtml(c.caseReviewId)}<br>
-                    <strong>Analista:</strong> ${escapeHtml(c.assignedAnalystUsername || "-")}<br>
-                    <strong>Prioridade:</strong> ${escapeHtml(c.priority || "-")}<br>
-                    <strong>Estado:</strong> ${escapeHtml(c.reportStatus)}<br>
-                    <strong>Notas:</strong> ${escapeHtml(c.notes || "-")}<br>
+                    <h3>Caso #${escapeHtml(c.reportId)}</h3>
+                    ${renderMeta("CaseReview ID", c.caseReviewId)}
+                    ${renderMeta("Analista", c.assignedAnalystUsername)}
+                    ${renderMeta("Prioridade", c.priority)}
+                    ${renderMeta("Estado", c.reportStatus)}
+                    ${renderMeta("Notas", c.notes)}
 
                     <div class="case-actions">
                         <button type="button" onclick="viewCaseOnly(${c.reportId}, '${escapeHtml(c.priority || "MEDIUM")}', \`${jsString(c.notes || "")}\`)">Ver detalhes</button>
@@ -402,6 +483,7 @@
 
         } catch (error) {
             div.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+            if (count) count.innerText = "0";
         }
     }
 
@@ -561,10 +643,10 @@
 
             div.innerHTML = data.map(a => `
                 <div class="case-card">
-                    <strong>ID:</strong> ${escapeHtml(a.id)}<br>
-                    <strong>Nome:</strong> ${escapeHtml(a.originalName)}<br>
-                    <strong>Tipo:</strong> ${escapeHtml(a.mimeType)}<br>
-                    <strong>Tamanho:</strong> ${escapeHtml(a.size)} bytes<br>
+                    <h3>${escapeHtml(a.originalName || `Anexo #${a.id}`)}</h3>
+                    ${renderMeta("ID", a.id)}
+                    ${renderMeta("Tipo", a.mimeType)}
+                    ${renderMeta("Tamanho", formatBytes(a.size))}
 
                     <div class="case-actions">
                         <button type="button" onclick="downloadAttachment(${a.id})">Download</button>
