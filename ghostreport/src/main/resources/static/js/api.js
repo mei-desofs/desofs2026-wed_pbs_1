@@ -1,11 +1,5 @@
 const API_BASE = "http://localhost:8081";
 
-let adminAuth = localStorage.getItem("adminAuth");
-
-function basicAuthHeader(username, password) {
-    return "Basic " + btoa(`${username}:${password}`);
-}
-
 async function handleJsonResponse(response) {
     const contentType = response.headers.get("content-type");
 
@@ -17,58 +11,16 @@ async function handleJsonResponse(response) {
     }
 
     if (!response.ok) {
-        const errorMessage = data?.error || data?.message || JSON.stringify(data);
+        const errorMessage = data?.error || data?.message || data || "Erro na API";
         throw new Error(errorMessage);
     }
 
     return data;
 }
 
-async function login() {
-    const username = document.getElementById("username").value;
-    const password = document.getElementById("password").value;
-    const errorDiv = document.getElementById("loginError");
-
-    adminAuth = basicAuthHeader(username, password);
-
-    try {
-        const response = await fetch(`${API_BASE}/admin/users`, {
-            headers: {
-                "Authorization": adminAuth
-            }
-        });
-
-        await handleJsonResponse(response);
-
-        localStorage.setItem("adminAuth", adminAuth);
-
-        document.getElementById("loginSection").style.display = "none";
-        document.getElementById("adminPanel").style.display = "block";
-
-        loadUsers();
-
-    } catch (err) {
-        errorDiv.innerText = err.message;
-    }
-}
-
-function logout() {
-    localStorage.removeItem("adminAuth");
-    adminAuth = null;
-
-    document.getElementById("adminPanel").style.display = "none";
-    document.getElementById("loginSection").style.display = "block";
-}
-
 async function loadUsers() {
-    if (!adminAuth) return;
-
     try {
-        const response = await fetch(`${API_BASE}/admin/users`, {
-            headers: {
-                "Authorization": adminAuth
-            }
-        });
+        const response = await fetch(`${API_BASE}/admin/users`);
 
         const data = await handleJsonResponse(response);
 
@@ -100,7 +52,6 @@ async function createUser() {
         const response = await fetch(`${API_BASE}/admin/users`, {
             method: "POST",
             headers: {
-                "Authorization": adminAuth,
                 "Content-Type": "application/json"
             },
             body: JSON.stringify(payload)
@@ -117,9 +68,10 @@ async function createUser() {
 }
 
 window.onload = () => {
-    if (adminAuth) {
-        document.getElementById("loginSection").style.display = "none";
-        document.getElementById("adminPanel").style.display = "block";
-        loadUsers();
-    }
+    localStorage.removeItem("adminAuth");
+
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("adminPanel").style.display = "block";
+
+    loadUsers();
 };

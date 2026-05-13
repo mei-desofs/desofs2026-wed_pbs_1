@@ -3,13 +3,11 @@ package com.ghostreport.security;
 import com.ghostreport.service.SecurityMonitoringService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpHeaders;
-import org.springframework.security.config.Customizer;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.http.HttpMethod;
 
 @Configuration
 public class SecurityConfig {
@@ -39,17 +37,23 @@ public class SecurityConfig {
                             if (request.getRequestURI().startsWith("/admin/backups")) {
                                 securityMonitoringService.recordUnauthorizedBackupAccess(request.getRequestURI());
                             }
-                            response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"GhostReport\"");
-                            response.sendError(401, "Unauthorized");
+
+                            response.setStatus(401);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"Unauthorized\"}");
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             if (request.getRequestURI().startsWith("/admin/backups")) {
                                 securityMonitoringService.recordUnauthorizedBackupAccess(request.getRequestURI());
                             }
-                            response.sendError(403, "Access denied");
+
+                            response.setStatus(403);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"Access denied\"}");
                         })
                 )
-                .httpBasic(Customizer.withDefaults());
+                .httpBasic(httpBasic -> httpBasic.disable())
+                .formLogin(formLogin -> formLogin.disable());
 
         return http.build();
     }
