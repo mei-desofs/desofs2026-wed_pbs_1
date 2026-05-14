@@ -235,9 +235,10 @@ public class CasePackageService {
     }
 
     private Path safeResolve(Path base, String child) {
-        Path resolved = base.resolve(child).normalize();
+        Path normalizedBase = base.toAbsolutePath().normalize();
+        Path resolved = normalizedBase.resolve(child).toAbsolutePath().normalize();
 
-        if (!resolved.startsWith(base)) {
+        if (!resolved.startsWith(normalizedBase)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
         }
 
