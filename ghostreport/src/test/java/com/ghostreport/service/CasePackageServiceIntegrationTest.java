@@ -1,5 +1,6 @@
 package com.ghostreport.service;
 
+import com.ghostreport.dto.CasePackageResponse;
 import com.ghostreport.model.*;
 import com.ghostreport.repository.AttachmentRepository;
 import com.ghostreport.repository.CaseReviewRepository;
@@ -7,6 +8,7 @@ import com.ghostreport.repository.ReportRepository;
 import com.ghostreport.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
@@ -36,6 +38,9 @@ class CasePackageServiceIntegrationTest {
     @Autowired
     private AttachmentRepository attachmentRepository;
 
+    @Value("${app.upload-dir}")
+    private String uploadDir;
+
     @Test
     @WithMockUser(username = "analyst", roles = "ANALYST")
     void shouldNotGeneratePackageForOpenCase() {
@@ -58,15 +63,12 @@ class CasePackageServiceIntegrationTest {
         User analyst = createAnalyst("analyst");
         createCaseReview(report, analyst);
 
-        casePackageService.generateCasePackage(report.getId());
+        CasePackageResponse response = casePackageService.generateCasePackage(report.getId());
 
-        Path packagePath = Path.of("uploads", "reports", String.valueOf(report.getId()), "case_package");
+        Path packagePath = expectedPackagePath(report.getId());
 
-        assertTrue(Files.exists(packagePath));
-        assertTrue(Files.exists(packagePath.resolve("case_summary.txt")));
-        assertTrue(Files.exists(packagePath.resolve("evidence_manifest.json")));
-        assertTrue(Files.exists(packagePath.resolve("integrity_hashes.txt")));
-        assertTrue(Files.exists(packagePath.resolve("attachments")));
+        assertEquals(packagePath.toString(), response.packagePath());
+        assertCasePackageFilesExist(packagePath, true);
     }
 
     @Test
@@ -93,13 +95,12 @@ class CasePackageServiceIntegrationTest {
         createAdmin("admin");
         createCaseReview(report, analyst);
 
-        casePackageService.generateCasePackage(report.getId());
+        CasePackageResponse response = casePackageService.generateCasePackage(report.getId());
 
-        Path packagePath = Path.of("uploads", "reports", String.valueOf(report.getId()), "case_package");
+        Path packagePath = expectedPackagePath(report.getId());
 
-        assertTrue(Files.exists(packagePath.resolve("case_summary.txt")));
-        assertTrue(Files.exists(packagePath.resolve("evidence_manifest.json")));
-        assertTrue(Files.exists(packagePath.resolve("integrity_hashes.txt")));
+        assertEquals(packagePath.toString(), response.packagePath());
+        assertCasePackageFilesExist(packagePath, false);
     }
 
     private Report createReport(ReportStatus status) {
@@ -142,5 +143,29 @@ class CasePackageServiceIntegrationTest {
         caseReview.setNotes("Notas internas de teste.");
 
         return caseReviewRepository.save(caseReview);
+    }
+
+    private Path expectedPackagePath(Long reportId) {
+        return Path.of(uploadDir)
+                .toAbsolutePath()
+                .normalize()
+                .resolve("reports")
+                .resolve(String.valueOf(reportId))
+                .resolve("case_package");
+    }
+
+    private void assertCasePackageFilesExist(Path packagePath, boolean includeAttachmentsDirectory) {
+        assertTrue(Files.exists(packagePath), "Expected case package directory at " + packagePath);
+        assertTrue(Files.exists(packagePath.resolve("case_summary.txt")),
+                "Expected case summary in case package at " + packagePath);
+        assertTrue(Files.exists(packagePath.resolve("evidence_manifest.json")),
+                "Expected evidence manifest in case package at " + packagePath);
+        assertTrue(Files.exists(packagePath.resolve("integrity_hashes.txt")),
+                "Expected integrity hashes in case package at " + packagePath);
+
+        if (includeAttachmentsDirectory) {
+            assertTrue(Files.exists(packagePath.resolve("attachments")),
+                    "Expected attachments directory in case package at " + packagePath);
+        }
     }
 }
