@@ -42,12 +42,33 @@ jobs:
           cache-dependency-path: ghostreport/pom.xml
 
       - name: Build project
-        run: mvn clean compile
+        run: ./mvnw clean compile
 
       - name: Run tests
-        run: mvn test
+        run: ./mvnw test
         env:
           DB_URL: jdbc:postgresql://localhost:5432/ghostreport
           DB_USERNAME: postgres
           DB_PASSWORD: user
 
+      - name: Run SpotBugs SAST report
+        run: ./mvnw com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs
+        continue-on-error: true
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: surefire-test-reports
+          path: ghostreport/target/surefire-reports/**
+          if-no-files-found: warn
+
+      - name: Upload SpotBugs report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spotbugs-sast-report
+          path: |
+            ghostreport/target/spotbugs*.xml
+            ghostreport/target/site/spotbugs*
+          if-no-files-found: warn
