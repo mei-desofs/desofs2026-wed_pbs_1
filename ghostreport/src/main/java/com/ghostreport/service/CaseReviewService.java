@@ -78,6 +78,8 @@ public class CaseReviewService {
                     return newCaseReview;
                 });
 
+        validateCaseCanBeAssignedTo(caseReview, analyst);
+
         caseReview.setAssignedAnalyst(analyst);
 
         if (caseReview.getPriority() == null) {
@@ -135,6 +137,8 @@ public class CaseReviewService {
                     newCaseReview.setReport(report);
                     return newCaseReview;
                 });
+
+        validateCaseCanBeAssignedTo(caseReview, analyst);
 
         caseReview.setAssignedAnalyst(analyst);
 
@@ -274,6 +278,22 @@ public class CaseReviewService {
                     "Closed cases cannot be modified"
             );
         }
+    }
+
+    private void validateCaseCanBeAssignedTo(CaseReview caseReview, User analyst) {
+
+        if (caseReview.getAssignedAnalyst() == null) {
+            return;
+        }
+
+        if (caseReview.getAssignedAnalyst().getUsername().equals(analyst.getUsername())) {
+            return;
+        }
+
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Case is already assigned to another analyst"
+        );
     }
 
     private CaseReviewResponse toResponse(CaseReview caseReview) {

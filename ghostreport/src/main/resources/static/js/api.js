@@ -2,10 +2,6 @@ const API_BASE = "http://localhost:8081";
 
 let adminAuth = localStorage.getItem("adminAuth");
 
-function basicAuthHeader(username, password) {
-    return "Basic " + btoa(`${username}:${password}`);
-}
-
 async function handleJsonResponse(response) {
     const contentType = response.headers.get("content-type");
 
@@ -29,16 +25,17 @@ async function login() {
     const password = document.getElementById("password").value;
     const errorDiv = document.getElementById("loginError");
 
-    adminAuth = basicAuthHeader(username, password);
-
     try {
-        const response = await fetch(`${API_BASE}/admin/users`, {
+        const loginResponse = await fetch(`${API_BASE}/auth/login`, {
+            method: "POST",
             headers: {
-                "Authorization": adminAuth
-            }
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ username, password })
         });
 
-        await handleJsonResponse(response);
+        const loginData = await handleJsonResponse(loginResponse);
+        adminAuth = `${loginData.tokenType} ${loginData.token}`;
 
         localStorage.setItem("adminAuth", adminAuth);
 

@@ -196,14 +196,6 @@
         return typeof API_BASE !== "undefined" ? API_BASE : "";
     }
 
-    function adminBasicAuthHeader(username, password) {
-        if (typeof basicAuthHeader === "function") {
-            return basicAuthHeader(username, password);
-        }
-
-        return "Basic " + btoa(`${username}:${password}`);
-    }
-
     async function adminHandleJsonResponse(response) {
         if (typeof handleJsonResponse === "function") {
             return handleJsonResponse(response);
@@ -336,14 +328,22 @@
             return;
         }
 
-        adminSessionAuth = adminBasicAuthHeader(username, password);
-
         try {
+            const loginResponse = await adminSafeFetch(`${getApiBase()}/auth/login`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ username, password })
+            });
+            const loginData = await adminHandleJsonResponse(loginResponse);
+            adminSessionAuth = `${loginData.tokenType} ${loginData.token}`;
+
             await adminValidateSession();
 
             sessionStorage.setItem("adminAuth", adminSessionAuth);
-            sessionStorage.setItem("adminUsername", username);
-            adminUsername = username;
+            sessionStorage.setItem("adminUsername", loginData.username);
+            adminUsername = loginData.username;
 
             showAdminDashboard();
         } catch (error) {
