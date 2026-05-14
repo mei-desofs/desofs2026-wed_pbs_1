@@ -123,6 +123,14 @@ public class ReportService {
         }
 
         trackingCode = trackingCode.trim();
+        try {
+            trackingCode = TrackingCode.from(trackingCode).value();
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Código inválido"
+            );
+        }
 
         for (Report report : reportRepository.findAll()) {
 
