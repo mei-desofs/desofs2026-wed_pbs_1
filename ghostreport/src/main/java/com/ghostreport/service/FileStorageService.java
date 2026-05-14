@@ -52,9 +52,14 @@ public class FileStorageService {
             Path attachmentsDir = baseStoragePath
                     .resolve("reports")
                     .resolve(String.valueOf(reportId))
-                    .resolve("attachments");
+                    .resolve("attachments")
+                    .toAbsolutePath()
+                    .normalize();
+
+            ensureInsideBase(attachmentsDir);
 
             Files.createDirectories(attachmentsDir);
+            ensureRealPathInsideBase(attachmentsDir);
 
             String originalName = sanitize(file.getOriginalFilename());
             String extension = getExtension(originalName);
@@ -62,7 +67,11 @@ public class FileStorageService {
             String fileRef = UUID.randomUUID().toString();
             String storedName = fileRef + extension;
 
-            Path target = attachmentsDir.resolve(storedName);
+            Path target = attachmentsDir.resolve(storedName)
+                    .toAbsolutePath()
+                    .normalize();
+
+            ensureInsideBase(target);
 
             try (InputStream input = file.getInputStream()) {
                 Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING);
@@ -91,11 +100,20 @@ public class FileStorageService {
             Path dir = baseStoragePath
                     .resolve("reports")
                     .resolve(String.valueOf(reportId))
-                    .resolve("documents");
+                    .resolve("documents")
+                    .toAbsolutePath()
+                    .normalize();
+
+            ensureInsideBase(dir);
 
             Files.createDirectories(dir);
+            ensureRealPathInsideBase(dir);
 
-            Path file = dir.resolve("report_" + reportId + ".txt");
+            Path file = dir.resolve("report_" + reportId + ".txt")
+                    .toAbsolutePath()
+                    .normalize();
+
+            ensureInsideBase(file);
 
             String content = """
                     === DENÚNCIA ===
@@ -121,10 +139,69 @@ public class FileStorageService {
 
     public Resource loadFileAsResource(String path) {
         try {
-            Path file = Paths.get(path).toAbsolutePath();
+            Path file = resolveStoredPath(path);
             return new UrlResource(file.toUri());
         } catch (MalformedURLException e) {
             throw new RuntimeException("Erro ao carregar ficheiro", e);
+        }
+    }
+
+    private Path resolveStoredPath(String path) {
+        if (path == null || path.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
+        }
+
+        Path rawPath;
+
+        try {
+            rawPath = Paths.get(path);
+        } catch (InvalidPathException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
+        }
+
+        Path resolved = rawPath.isAbsolute()
+                ? rawPath.toAbsolutePath().normalize()
+                : baseStoragePath.resolve(rawPath).toAbsolutePath().normalize();
+
+        if (!Files.exists(resolved) && !rawPath.isAbsolute()) {
+            Path legacyRelativePath = rawPath.toAbsolutePath().normalize();
+            if (legacyRelativePath.startsWith(baseStoragePath)) {
+                resolved = legacyRelativePath;
+            }
+        }
+
+        ensureInsideBase(resolved);
+
+        try {
+            Path realBase = baseStoragePath.toRealPath();
+            Path realFile = resolved.toRealPath();
+
+            if (!realFile.startsWith(realBase) || !Files.isRegularFile(realFile)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
+            }
+
+            return realFile;
+        } catch (NoSuchFileException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found");
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
+        }
+    }
+
+    private void ensureInsideBase(Path path) {
+        Path normalized = path.toAbsolutePath().normalize();
+
+        if (!normalized.startsWith(baseStoragePath)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
+        }
+    }
+
+    private void ensureRealPathInsideBase(Path path) throws IOException {
+        Path realBase = baseStoragePath.toRealPath();
+        Path realPath = path.toRealPath();
+
+        if (!realPath.startsWith(realBase)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
         }
     }
 
