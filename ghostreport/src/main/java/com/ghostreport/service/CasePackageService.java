@@ -1,12 +1,17 @@
 package com.ghostreport.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghostreport.dto.CasePackageResponse;
+import com.ghostreport.dto.EvidencePackageFileCheckResponse;
+import com.ghostreport.dto.EvidencePackageVerificationResponse;
 import com.ghostreport.model.Attachment;
 import com.ghostreport.model.CaseReview;
 import com.ghostreport.model.ReportStatus;
 import com.ghostreport.repository.AttachmentRepository;
 import com.ghostreport.repository.CaseReviewRepository;
 import com.ghostreport.security.SecurityUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -14,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.InputStream;
 import java.nio.file.*;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 
@@ -23,17 +29,21 @@ public class CasePackageService {
     private final CaseReviewRepository caseReviewRepository;
     private final AttachmentRepository attachmentRepository;
     private final AuditLogService auditLogService;
-
-    private final Path basePath = Paths.get("uploads").toAbsolutePath().normalize();
+    private final ObjectMapper objectMapper;
+    private final Path basePath;
 
     public CasePackageService(
             CaseReviewRepository caseReviewRepository,
             AttachmentRepository attachmentRepository,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            ObjectMapper objectMapper,
+            @Value("${app.upload-dir:uploads}") String uploadDir
     ) {
         this.caseReviewRepository = caseReviewRepository;
         this.attachmentRepository = attachmentRepository;
         this.auditLogService = auditLogService;
+        this.objectMapper = objectMapper;
+        this.basePath = Paths.get(uploadDir).toAbsolutePath().normalize();
     }
 
     public CasePackageResponse generateCasePackage(Long reportId) {
@@ -147,6 +157,80 @@ public class CasePackageService {
 
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not generate case package");
+        }
+    }
+
+    public EvidencePackageVerificationResponse verifyCasePackage(Long reportId) {
+        CaseReview caseReview = caseReviewRepository.findByReportId(reportId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case review not found"));
+
+        ReportStatus status = caseReview.getReport().getStatus();
+        if (status != ReportStatus.RESOLVED && status != ReportStatus.REJECTED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Evidence package is only available for closed cases");
+        }
+
+        try {
+            Path reportPath = safeResolve(basePath, "reports/" + reportId);
+            Path packagePath = safeResolve(reportPath, "case_package");
+            Path manifestPath = safeResolve(packagePath, "evidence_manifest.json");
+
+            if (!Files.exists(manifestPath)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Evidence package manifest not found");
+            }
+
+            JsonNode manifest = objectMapper.readTree(Files.readString(manifestPath));
+            if (manifest.path("reportId").asLong(-1) != reportId) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Evidence package manifest does not match report");
+            }
+
+            JsonNode attachments = manifest.get("attachments");
+            if (attachments == null || !attachments.isArray()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid evidence package manifest");
+            }
+
+            List<EvidencePackageFileCheckResponse> files = new ArrayList<>();
+            int index = 0;
+            for (JsonNode attachment : attachments) {
+                String storedName = attachment.path("storedName").asText();
+                String expectedSha256 = attachment.path("sha256").asText();
+
+                if (storedName == null || storedName.isBlank() || storedName.contains("/") || storedName.contains("\\")
+                        || storedName.contains("..") || expectedSha256 == null || expectedSha256.isBlank()) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid evidence package manifest");
+                }
+
+                Path file = safeResolve(packagePath, "attachments/" + storedName);
+                if (!Files.exists(file)) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Evidence package file is missing");
+                }
+
+                String actualSha256 = sha256(file);
+                boolean valid = expectedSha256.equals(actualSha256);
+                if (!valid) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Evidence package integrity validation failed");
+                }
+
+                files.add(new EvidencePackageFileCheckResponse(
+                        index,
+                        Files.size(file),
+                        actualSha256,
+                        true
+                ));
+                index++;
+            }
+
+            return new EvidencePackageVerificationResponse(
+                    reportId,
+                    status.name(),
+                    true,
+                    files.size(),
+                    files,
+                    "Evidence package is valid"
+            );
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Evidence package integrity validation failed");
         }
     }
 

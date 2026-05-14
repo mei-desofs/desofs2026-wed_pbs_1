@@ -19,7 +19,17 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.datasource.url=jdbc:h2:mem:admin-authorization-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
+        "spring.datasource.username=sa",
+        "spring.datasource.password=",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.show-sql=false",
+        "ghostreport.backup-dir=target/test-backups/admin-authorization",
+        "app.upload-dir=target/test-uploads/admin-authorization",
+        "ghostreport.backup-enabled=true"
+})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class AdminAuthorizationTest {

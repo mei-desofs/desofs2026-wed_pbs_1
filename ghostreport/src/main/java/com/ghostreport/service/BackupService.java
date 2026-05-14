@@ -3,6 +3,7 @@ package com.ghostreport.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghostreport.dto.BackupFileResponse;
+import com.ghostreport.dto.BackupManifestSummaryResponse;
 import com.ghostreport.dto.BackupOperationResponse;
 import com.ghostreport.dto.BackupRestoreResponse;
 import com.ghostreport.dto.BackupVerificationResponse;
@@ -176,6 +177,40 @@ public class BackupService {
             securityMonitoringService.recordBackupIntegrityFailure(filename);
             auditLogService.log("BACKUP_ERROR", "BACKUP", null, "Backup validation failed: " + filename);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Backup integrity validation failed");
+        }
+    }
+
+    public BackupManifestSummaryResponse getBackupManifestSummary(String filename) {
+        Path path = resolveExistingBackup(filename);
+        try (ZipFile zipFile = new ZipFile(path.toFile())) {
+            ZipEntry manifestEntry = zipFile.getEntry("manifest.json");
+            if (manifestEntry == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Backup manifest not found");
+            }
+
+            JsonNode manifest;
+            try (InputStream input = zipFile.getInputStream(manifestEntry)) {
+                manifest = objectMapper.readTree(input);
+            }
+
+            Map<String, Integer> databaseExports = new LinkedHashMap<>();
+            JsonNode exports = manifest.get("databaseExports");
+            if (exports != null && exports.isObject()) {
+                exports.fields().forEachRemaining(entry -> databaseExports.put(entry.getKey(), entry.getValue().asInt()));
+            }
+
+            return new BackupManifestSummaryResponse(
+                    filename,
+                    manifest.path("formatVersion").asText(null),
+                    manifest.path("createdAt").toString(),
+                    manifest.path("totalFiles").asInt(0),
+                    databaseExports
+            );
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            securityMonitoringService.recordBackupIntegrityFailure(filename);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not read backup manifest");
         }
     }
 
