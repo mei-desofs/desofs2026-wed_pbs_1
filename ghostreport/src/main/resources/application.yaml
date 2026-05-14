@@ -11,7 +11,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+    ddl-auto: validate
     show-sql: false
     open-in-view: false
     properties:
@@ -20,8 +20,7 @@ spring:
 
   h2:
     console:
-      enabled: true
-      path: /h2-console
+      enabled: false
 
   servlet:
     multipart:
