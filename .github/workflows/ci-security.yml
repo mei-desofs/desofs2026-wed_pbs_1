@@ -51,3 +51,51 @@ jobs:
           DB_USERNAME: postgres
           DB_PASSWORD: user
 
+      - name: Start GhostReport for DAST
+        run: |
+          mkdir -p target/zap-reports
+          nohup ./mvnw spring-boot:run \
+            -Dspring-boot.run.profiles=dev \
+            > target/ghostreport-dast-app.log 2>&1 &
+          echo $! > target/ghostreport-dast-app.pid
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/ghostreport
+          DB_USERNAME: postgres
+          DB_PASSWORD: user
+
+      - name: Wait for GhostReport
+        run: |
+          for i in {1..60}; do
+            if curl --fail --silent --show-error http://localhost:8081/index.html > /dev/null; then
+              echo "GhostReport is ready for DAST"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "GhostReport did not become ready"
+          cat target/ghostreport-dast-app.log
+          exit 1
+
+      - name: Run OWASP ZAP baseline DAST
+        run: |
+          docker run --rm --network host \
+            -v "$PWD/target/zap-reports:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+              -t http://localhost:8081 \
+              -r zap-baseline.html \
+              -x zap-baseline.xml \
+              -J zap-baseline.json \
+              -I
+        continue-on-error: true
+
+      - name: Upload OWASP ZAP reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-baseline-dast-reports
+          path: |
+            ghostreport/target/zap-reports/**
+            ghostreport/target/ghostreport-dast-app.log
+          if-no-files-found: warn
