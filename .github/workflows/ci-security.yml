@@ -41,13 +41,57 @@ jobs:
           cache: maven
           cache-dependency-path: ghostreport/pom.xml
 
+      - name: Cache OWASP Dependency-Check data
+        uses: actions/cache@v4
+        with:
+          path: ~/.dependency-check-data
+          key: dependency-check-${{ runner.os }}-${{ hashFiles('ghostreport/pom.xml') }}
+          restore-keys: |
+            dependency-check-${{ runner.os }}-
+
       - name: Build project
-        run: mvn clean compile
+        run: ./mvnw clean compile
 
       - name: Run tests
-        run: mvn test
+        run: ./mvnw test
         env:
           DB_URL: jdbc:postgresql://localhost:5432/ghostreport
           DB_USERNAME: postgres
           DB_PASSWORD: user
 
+      - name: Run OWASP Dependency-Check SCA report
+        run: |
+          SCA_ARGS=(
+            org.owasp:dependency-check-maven:12.1.0:check
+            -DdataDirectory="$HOME/.dependency-check-data"
+            -Dformat=ALL
+            -DfailBuildOnCVSS=11
+          )
+
+          if [ -n "$NVD_API_KEY" ]; then
+            SCA_ARGS+=("-DnvdApiKey=$NVD_API_KEY")
+          fi
+
+          ./mvnw "${SCA_ARGS[@]}"
+        continue-on-error: true
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: surefire-test-reports
+          path: ghostreport/target/surefire-reports/**
+          if-no-files-found: warn
+
+      - name: Upload OWASP Dependency-Check reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-sca-reports
+          path: |
+            ghostreport/target/dependency-check-report.html
+            ghostreport/target/dependency-check-report.xml
+            ghostreport/target/dependency-check-report.json
+          if-no-files-found: warn

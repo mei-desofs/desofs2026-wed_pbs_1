@@ -87,6 +87,15 @@
 				<groupId>org.owasp</groupId>
 				<artifactId>dependency-check-maven</artifactId>
 				<version>12.1.0</version>
+				<configuration>
+					<formats>
+						<format>HTML</format>
+						<format>XML</format>
+						<format>JSON</format>
+					</formats>
+					<dataDirectory>${user.home}/.dependency-check-data</dataDirectory>
+					<failBuildOnCVSS>11</failBuildOnCVSS>
+				</configuration>
 			</plugin>
 
 			<plugin>
