@@ -3,6 +3,8 @@ package com.ghostreport.service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.HttpStatus;
@@ -19,6 +21,8 @@ import java.util.UUID;
 
 @Service
 public class FileStorageService {
+
+    private static final Logger logger = LoggerFactory.getLogger(FileStorageService.class);
 
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -112,7 +116,7 @@ public class FileStorageService {
                     StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING);
 
-            System.out.println("Documento criado: " + file);
+            logger.info("Report document generated for report id={}", reportId);
 
         } catch (IOException e) {
             throw new RuntimeException("Erro ao gerar documento", e);
@@ -129,11 +133,7 @@ public class FileStorageService {
     }
 
     private void validateFile(MultipartFile file) {
-
-        System.out.println("Upload recebido:");
-        System.out.println("Nome: " + file.getOriginalFilename());
-        System.out.println("Tipo: " + file.getContentType());
-        System.out.println("Tamanho: " + file.getSize());
+        logger.info("Attachment upload validation started");
 
         if (file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ficheiro vazio");

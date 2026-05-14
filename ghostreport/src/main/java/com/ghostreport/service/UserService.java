@@ -71,9 +71,8 @@ public class UserService {
         User saved = userRepository.save(user);
 
         logger.info(
-                "User created with id={}, username={}, role={}",
+                "User created with id={}, role={}",
                 saved.getId(),
-                saved.getUsername(),
                 saved.getRole()
         );
 

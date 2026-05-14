@@ -64,7 +64,7 @@ public class SecurityMonitoringService {
                 "CRITICAL",
                 "FILE_SYSTEM",
                 null,
-                "Possible path traversal input detected: " + sanitize(input)
+                "Possible path traversal input detected"
         );
     }
 
@@ -74,7 +74,7 @@ public class SecurityMonitoringService {
                 "CRITICAL",
                 "BACKUP",
                 null,
-                "Possible path traversal in backup filename: " + sanitize(input)
+                "Possible path traversal in backup filename"
         );
     }
 
@@ -84,7 +84,7 @@ public class SecurityMonitoringService {
                 "HIGH",
                 "BACKUP",
                 null,
-                "Attempt to download missing backup: " + sanitize(filename)
+                "Attempt to download missing backup"
         );
     }
 
@@ -94,7 +94,7 @@ public class SecurityMonitoringService {
                 "CRITICAL",
                 "BACKUP",
                 null,
-                "Backup integrity validation failed: " + sanitize(filename)
+                "Backup integrity validation failed"
         );
     }
 
@@ -104,7 +104,7 @@ public class SecurityMonitoringService {
                 "HIGH",
                 "BACKUP",
                 null,
-                "Unauthorized attempt to access backup endpoint: " + sanitize(path)
+                "Unauthorized attempt to access backup endpoint"
         );
     }
 
