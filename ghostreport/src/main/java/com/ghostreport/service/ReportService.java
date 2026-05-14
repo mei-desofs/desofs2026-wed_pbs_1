@@ -179,17 +179,7 @@ public class ReportService {
             MultipartFile file
     ) {
 
-        logger.info(
-                "UPLOAD endpoint chamado para reportId={}",
-                reportId
-        );
-
-        logger.info(
-                "Ficheiro recebido: name={}, type={}, size={}",
-                file.getOriginalFilename(),
-                file.getContentType(),
-                file.getSize()
-        );
+        logger.info("Attachment upload requested for report id={}", reportId);
 
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() ->
@@ -263,15 +253,11 @@ public class ReportService {
 
         } catch (Exception e) {
 
-            logger.error(
-                    "ERRO REAL AO GUARDAR ANEXO no reportId={}",
-                    reportId,
-                    e
-            );
+            logger.warn("Attachment upload failed for report id={}", reportId);
 
             throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
-                    e.getMessage()
+                    "Erro ao guardar ficheiro"
             );
         }
     }
@@ -353,11 +339,7 @@ public class ReportService {
 
             } catch (Exception e) {
 
-                logger.error(
-                        "Erro ao guardar anexo no report {}",
-                        reportId,
-                        e
-                );
+                logger.warn("Attachment upload failed for report id={}", reportId);
 
                 throw new ResponseStatusException(
                         HttpStatus.INTERNAL_SERVER_ERROR,
