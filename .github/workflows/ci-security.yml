@@ -80,6 +80,7 @@ jobs:
       - name: Run OWASP ZAP baseline DAST
         run: |
           docker run --rm --network host \
+            -w /zap/wrk \
             -v "$PWD/target/zap-reports:/zap/wrk:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
@@ -89,6 +90,18 @@ jobs:
               -J zap-baseline.json \
               -I
         continue-on-error: true
+
+      - name: List OWASP ZAP generated reports
+        if: always()
+        run: |
+          echo "Generated ZAP report files:"
+          find target/zap-reports -maxdepth 1 -type f -print -exec ls -lh {} \;
+
+          if [ ! -f target/zap-reports/zap-baseline.html ] || \
+             [ ! -f target/zap-reports/zap-baseline.xml ] || \
+             [ ! -f target/zap-reports/zap-baseline.json ]; then
+            echo "::warning::Expected ZAP HTML/XML/JSON reports were not all generated."
+          fi
 
       - name: Upload OWASP ZAP reports
         uses: actions/upload-artifact@v4
