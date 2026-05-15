@@ -29,5 +29,19 @@ ghostreport:
   jwt:
     secret: test-only-change-this-secret-32-chars
     expiration-seconds: 3600
+  seed-users:
+    enabled: true
   backup-dir: target/test-backups/default
   backup-enabled: true
+
+security:
+  rate-limit:
+    tracking:
+      max-attempts: 10
+      window-seconds: 60
+    upload:
+      max-attempts: 10
+      window-seconds: 60
+    download:
+      max-attempts: 10
+      window-seconds: 60

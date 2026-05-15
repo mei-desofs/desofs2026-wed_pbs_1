@@ -108,6 +108,16 @@ public class SecurityMonitoringService {
         );
     }
 
+    public void recordUnauthorizedAnalystAccess(Long reportId) {
+        createAlert(
+                "ANALYST_OWNERSHIP_VIOLATION",
+                "HIGH",
+                "REPORT",
+                reportId,
+                "Analyst attempted to access a report without ownership"
+        );
+    }
+
     public void createAlert(String alertType, String severity, String targetType, Long targetId, String description) {
         SecurityAlert alert = new SecurityAlert();
         alert.setAlertType(alertType);

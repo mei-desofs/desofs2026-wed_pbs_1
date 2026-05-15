@@ -39,7 +39,7 @@ public class ReportController {
     ) {
         String ip = httpRequest.getRemoteAddr();
 
-        rateLimiterService.checkLimit(ip + "_VERIFY");
+        rateLimiterService.checkTrackingLimit(ip);
 
         return reportService.verifyTrackingCodeOnly(request.getTrackingCode());
     }
@@ -48,12 +48,12 @@ public class ReportController {
     public List<AttachmentResponse> uploadAttachments(
             @PathVariable Long id,
             @RequestParam("files") MultipartFile[] files,
-            @RequestParam("trackingCode") String trackingCode,
+            @RequestParam(name = "trackingCode", required = false) String trackingCode,
             HttpServletRequest httpRequest
     ) {
         String ip = httpRequest.getRemoteAddr();
 
-        rateLimiterService.checkLimit(ip + "_UPLOAD");
+        rateLimiterService.checkUploadLimit(ip);
 
         if (files == null || files.length == 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nenhum ficheiro enviado");
@@ -69,7 +69,7 @@ public class ReportController {
     ) {
         String ip = httpRequest.getRemoteAddr();
 
-        rateLimiterService.checkLimit(ip + "_DOWNLOAD");
+        rateLimiterService.checkDownloadLimit(ip);
 
         if (request.getAttachmentId() == null || request.getTrackingCode() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dados inválidos");

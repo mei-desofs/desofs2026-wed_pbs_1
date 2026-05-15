@@ -1,5 +1,7 @@
 package com.ghostreport.service;
 
+import com.ghostreport.domain.SafeFilename;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -15,6 +17,7 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.nio.file.*;
 import java.security.MessageDigest;
+import java.util.Locale;
 import java.util.HexFormat;
 import java.util.Set;
 import java.util.UUID;
@@ -31,21 +34,29 @@ public class FileStorageService {
             "image/png",
             "image/jpeg",
             "text/plain",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     );
 
     private final Path baseStoragePath;
+    private final SecurityMonitoringService securityMonitoringService;
 
-    public FileStorageService(@Value("${app.upload-dir:uploads}") String uploadDir) {
+    @Autowired
+    public FileStorageService(
+            @Value("${app.upload-dir:uploads}") String uploadDir,
+            SecurityMonitoringService securityMonitoringService
+    ) {
         this.baseStoragePath = Paths.get(uploadDir).toAbsolutePath().normalize();
+        this.securityMonitoringService = securityMonitoringService;
 
         try {
             Files.createDirectories(this.baseStoragePath);
         } catch (IOException e) {
             throw new RuntimeException("Erro ao criar pasta uploads", e);
         }
+    }
+
+    FileStorageService(String uploadDir) {
+        this(uploadDir, null);
     }
 
     public StoredFileInfo storeAttachment(Long reportId, MultipartFile file) {
@@ -65,7 +76,7 @@ public class FileStorageService {
             Files.createDirectories(attachmentsDir);
             ensureRealPathInsideBase(attachmentsDir);
 
-            String originalName = sanitize(file.getOriginalFilename());
+            String originalName = sanitizeFilename(file.getOriginalFilename());
             String extension = getExtension(originalName);
 
             String fileRef = UUID.randomUUID().toString();
@@ -87,7 +98,7 @@ public class FileStorageService {
                     originalName,
                     storedName,
                     fileRef,
-                    target.toString(),
+                    baseStoragePath.relativize(target).toString().replace('\\', '/'),
                     file.getContentType(),
                     file.getSize(),
                     hash
@@ -152,7 +163,7 @@ public class FileStorageService {
 
     private Path resolveStoredPath(String path) {
         if (path == null || path.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
+            return rejectInvalidPath(path);
         }
 
         Path rawPath;
@@ -160,14 +171,20 @@ public class FileStorageService {
         try {
             rawPath = Paths.get(path);
         } catch (InvalidPathException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
+            return rejectInvalidPath(path);
         }
 
-        Path resolved = rawPath.isAbsolute()
-                ? rawPath.toAbsolutePath().normalize()
-                : baseStoragePath.resolve(rawPath).toAbsolutePath().normalize();
+        if (rawPath.isAbsolute()) {
+            return rejectInvalidPath(path);
+        }
 
-        if (!Files.exists(resolved) && !rawPath.isAbsolute()) {
+        if (rawPath.normalize().startsWith("..") || path.contains("..")) {
+            return rejectInvalidPath(path);
+        }
+
+        Path resolved = baseStoragePath.resolve(rawPath).toAbsolutePath().normalize();
+
+        if (!Files.exists(resolved)) {
             Path legacyRelativePath = rawPath.toAbsolutePath().normalize();
             if (legacyRelativePath.startsWith(baseStoragePath)) {
                 resolved = legacyRelativePath;
@@ -181,14 +198,14 @@ public class FileStorageService {
             Path realFile = resolved.toRealPath();
 
             if (!realFile.startsWith(realBase) || !Files.isRegularFile(realFile)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
+                return rejectInvalidPath(path);
             }
 
             return realFile;
         } catch (NoSuchFileException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found");
         } catch (IOException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
+            return rejectInvalidPath(path);
         }
     }
 
@@ -196,7 +213,7 @@ public class FileStorageService {
         Path normalized = path.toAbsolutePath().normalize();
 
         if (!normalized.startsWith(baseStoragePath)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
+            rejectInvalidPath(path.toString());
         }
     }
 
@@ -205,12 +222,16 @@ public class FileStorageService {
         Path realPath = path.toRealPath();
 
         if (!realPath.startsWith(realBase)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
+            rejectInvalidPath(path.toString());
         }
     }
 
     private void validateFile(MultipartFile file) {
         logger.info("Attachment upload validation started");
+
+        if (file == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ficheiro vazio");
+        }
 
         if (file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ficheiro vazio");
@@ -221,17 +242,34 @@ public class FileStorageService {
         }
 
         String contentType = file.getContentType();
+        String originalName = sanitizeFilename(file.getOriginalFilename());
+        String extension = getExtension(originalName).toLowerCase(Locale.ROOT);
 
         if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Tipo de ficheiro inválido: " + contentType
+                    "Invalid file type"
             );
         }
+
+        validateExtensionForContentType(extension, contentType);
+        validateMagicBytes(file, extension, contentType);
     }
 
-    private String sanitize(String name) {
-        return name == null ? "file" : name.replaceAll("[^a-zA-Z0-9._-]", "_");
+    private String sanitizeFilename(String name) {
+        if (name == null || name.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid filename");
+        }
+
+        String normalized = name.trim();
+
+        try {
+            new SafeFilename(normalized);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid filename");
+        }
+
+        return normalized.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
 
     private String getExtension(String name) {
@@ -247,6 +285,76 @@ public class FileStorageService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void validateExtensionForContentType(String extension, String contentType) {
+        boolean valid = switch (contentType) {
+            case "application/pdf" -> ".pdf".equals(extension);
+            case "image/png" -> ".png".equals(extension);
+            case "image/jpeg" -> ".jpg".equals(extension) || ".jpeg".equals(extension);
+            case "text/plain" -> ".txt".equals(extension);
+            case "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> ".docx".equals(extension);
+            default -> false;
+        };
+
+        if (!valid) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File extension does not match type");
+        }
+    }
+
+    private void validateMagicBytes(MultipartFile file, String extension, String contentType) {
+        try (InputStream input = file.getInputStream()) {
+            byte[] header = input.readNBytes(8192);
+            boolean valid = switch (contentType) {
+                case "application/pdf" -> startsWith(header, new byte[]{0x25, 0x50, 0x44, 0x46});
+                case "image/png" -> startsWith(header, new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A});
+                case "image/jpeg" -> startsWith(header, new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF});
+                case "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ->
+                        ".docx".equals(extension) && startsWith(header, new byte[]{0x50, 0x4B, 0x03, 0x04});
+                case "text/plain" -> isTextLike(header);
+                default -> false;
+            };
+
+            if (!valid) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File signature does not match type");
+            }
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not validate file");
+        }
+    }
+
+    private boolean startsWith(byte[] value, byte[] prefix) {
+        if (value.length < prefix.length) {
+            return false;
+        }
+
+        for (int i = 0; i < prefix.length; i++) {
+            if (value[i] != prefix[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean isTextLike(byte[] bytes) {
+        for (byte value : bytes) {
+            int unsigned = value & 0xFF;
+            if (unsigned == 0) {
+                return false;
+            }
+            if (unsigned < 0x20 && unsigned != '\n' && unsigned != '\r' && unsigned != '\t') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private Path rejectInvalidPath(String input) {
+        if (securityMonitoringService != null) {
+            securityMonitoringService.recordPathTraversalAttempt(input);
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
     }
 
     public record StoredFileInfo(

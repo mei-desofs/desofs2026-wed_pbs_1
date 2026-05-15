@@ -9,8 +9,10 @@ import com.ghostreport.model.ReportStatus;
 import com.ghostreport.model.User;
 import com.ghostreport.model.UserRole;
 import com.ghostreport.repository.AttachmentRepository;
+import com.ghostreport.repository.AuditLogRepository;
 import com.ghostreport.repository.CaseReviewRepository;
 import com.ghostreport.repository.ReportRepository;
+import com.ghostreport.repository.SecurityAlertRepository;
 import com.ghostreport.repository.UserRepository;
 import com.ghostreport.service.CaseReviewService;
 import com.ghostreport.service.ReportService;
@@ -62,6 +64,12 @@ class AnalystCaseOwnershipTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private AuditLogRepository auditLogRepository;
+
+    @Autowired
+    private SecurityAlertRepository securityAlertRepository;
+
     @Value("${app.upload-dir}")
     private String uploadDir;
 
@@ -73,6 +81,9 @@ class AnalystCaseOwnershipTest {
 
     @BeforeEach
     void setUp() {
+        auditLogRepository.deleteAll();
+        securityAlertRepository.deleteAll();
+        attachmentRepository.deleteAll();
         caseReviewRepository.deleteAll();
         reportRepository.deleteAll();
 
@@ -133,6 +144,50 @@ class AnalystCaseOwnershipTest {
                 .isEqualTo(200);
     }
 
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void adminCanDownloadAttachmentWithoutOwnership() throws Exception {
+        Attachment attachment = createAttachment(otherReport);
+
+        assertThat(reportService.downloadAttachment(attachment.getId()).getStatusCode().value())
+                .isEqualTo(200);
+    }
+
+    @Test
+    @WithMockUser(username = "auditor", roles = "AUDITOR")
+    void auditorCannotDownloadThroughAnalystService() throws Exception {
+        Attachment attachment = createAttachment(ownerReport);
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> reportService.downloadAttachment(attachment.getId())
+        );
+
+        assertThat(exception.getStatusCode().value()).isEqualTo(403);
+    }
+
+    @Test
+    @WithMockUser(username = "other_analyst", roles = "ANALYST")
+    void ownershipViolationCreatesAuditLogAndSecurityAlert() throws Exception {
+        Attachment attachment = createAttachment(ownerReport);
+
+        assertThrows(
+                ResponseStatusException.class,
+                () -> reportService.downloadAttachment(attachment.getId())
+        );
+
+        assertThat(auditLogRepository.findAll())
+                .anyMatch(log ->
+                        "ANALYST_ACCESS_DENIED".equals(log.getAction()) &&
+                                ownerReport.getId().equals(log.getTargetId())
+                );
+        assertThat(securityAlertRepository.findAll())
+                .anyMatch(alert ->
+                        "ANALYST_OWNERSHIP_VIOLATION".equals(alert.getAlertType()) &&
+                                ownerReport.getId().equals(alert.getTargetId())
+                );
+    }
+
     private User createUser(String username, UserRole role) {
         return userRepository.findByUsername(username)
                 .orElseGet(() -> {
@@ -180,7 +235,7 @@ class AnalystCaseOwnershipTest {
         attachment.setOriginalName("owned-evidence.txt");
         attachment.setStoredName("owned-evidence.txt");
         attachment.setFileReference("owned-evidence");
-        attachment.setStoragePath(file.toString());
+        attachment.setStoragePath(Path.of(uploadDir).toAbsolutePath().normalize().relativize(file).toString());
         attachment.setMimeType("text/plain");
         attachment.setSize(Files.size(file));
         attachment.setHash("test-hash");

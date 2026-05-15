@@ -4,6 +4,7 @@ import com.ghostreport.model.Attachment;
 import com.ghostreport.model.Report;
 import com.ghostreport.model.ReportStatus;
 import com.ghostreport.repository.AttachmentRepository;
+import com.ghostreport.repository.AuditLogRepository;
 import com.ghostreport.repository.ReportRepository;
 import com.ghostreport.repository.SecurityAlertRepository;
 import com.ghostreport.service.FileStorageService;
@@ -49,7 +50,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "server.error.include-stacktrace=never",
         "ghostreport.backup-dir=target/test-backups/report-controller-attachment-upload",
         "app.upload-dir=target/test-uploads/report-controller-attachment-upload",
-        "ghostreport.backup-enabled=true"
+        "ghostreport.backup-enabled=true",
+        "security.rate-limit.upload.max-attempts=100"
 })
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -70,6 +72,9 @@ class ReportControllerAttachmentUploadTest {
     private SecurityAlertRepository securityAlertRepository;
 
     @Autowired
+    private AuditLogRepository auditLogRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Value("${app.upload-dir}")
@@ -82,6 +87,7 @@ class ReportControllerAttachmentUploadTest {
         uploadBase = Path.of(uploadDir).toAbsolutePath().normalize();
 
         securityAlertRepository.deleteAll();
+        auditLogRepository.deleteAll();
         attachmentRepository.deleteAll();
         reportRepository.deleteAll();
         deleteRecursively(uploadBase);
@@ -91,6 +97,7 @@ class ReportControllerAttachmentUploadTest {
     @AfterEach
     void cleanup() throws Exception {
         securityAlertRepository.deleteAll();
+        auditLogRepository.deleteAll();
         attachmentRepository.deleteAll();
         reportRepository.deleteAll();
         deleteRecursively(uploadBase);
@@ -130,7 +137,7 @@ class ReportControllerAttachmentUploadTest {
         assertNotNull(UUID.fromString(attachment.getFileReference()));
         assertEquals(sha256(content), attachment.getHash());
 
-        Path storedPath = Path.of(attachment.getStoragePath()).toAbsolutePath().normalize();
+        Path storedPath = uploadBase.resolve(attachment.getStoragePath()).toAbsolutePath().normalize();
         assertTrue(storedPath.startsWith(uploadBase), "Stored file must remain inside upload base");
         assertTrue(Files.exists(storedPath), "Stored file should exist on disk");
         assertEquals(content.length, Files.size(storedPath));
@@ -161,7 +168,7 @@ class ReportControllerAttachmentUploadTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"../../evil.txt", "..\\..\\evil.txt"})
-    void maliciousOriginalFilenameDoesNotControlStoredPath(String originalFilename) throws Exception {
+    void maliciousOriginalFilenameIsRejected(String originalFilename) throws Exception {
         Report report = createReport();
         byte[] content = "malicious name, valid content".getBytes();
         MockMultipartFile file = new MockMultipartFile(
@@ -174,18 +181,10 @@ class ReportControllerAttachmentUploadTest {
         mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
                         .file(file)
                         .param("trackingCode", TRACKING_CODE))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").exists());
+                .andExpect(status().isBadRequest());
 
-        Attachment attachment = attachmentRepository.findByReportId(report.getId()).get(0);
-        Path storedPath = Path.of(attachment.getStoragePath()).toAbsolutePath().normalize();
-
-        assertTrue(storedPath.startsWith(uploadBase), "Stored file must remain inside upload base");
-        assertTrue(Files.exists(storedPath), "Stored file should exist on disk");
-        assertFalse(attachment.getStoredName().contains(".."));
-        assertFalse(attachment.getStoredName().contains("/"));
-        assertFalse(attachment.getStoredName().contains("\\"));
-        assertNotEquals(originalFilename, attachment.getStoredName());
+        assertTrue(attachmentRepository.findByReportId(report.getId()).isEmpty());
+        assertEquals(0, countRegularFiles(uploadBase));
     }
 
     @Test
@@ -224,7 +223,7 @@ class ReportControllerAttachmentUploadTest {
         );
 
         mockMvc.perform(multipart("/reports/{id}/attachments", report.getId()).file(file))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
                         .file(file)
@@ -233,6 +232,99 @@ class ReportControllerAttachmentUploadTest {
 
         assertTrue(attachmentRepository.findByReportId(report.getId()).isEmpty());
         assertEquals(0, countRegularFiles(uploadBase));
+    }
+
+    @Test
+    void invalidReportIdAndInvalidTrackingCodeReturnSameGenericError() throws Exception {
+        Report report = createReport();
+        MockMultipartFile file = new MockMultipartFile(
+                "files",
+                "invoice.txt",
+                "text/plain",
+                "approved evidence".getBytes()
+        );
+
+        String wrongCodeResponse = mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
+                        .file(file)
+                        .param("trackingCode", "GR-zzzzzzzzzzzzzzzzzzzz"))
+                .andExpect(status().isForbidden())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String wrongReportResponse = mockMvc.perform(multipart("/reports/{id}/attachments", report.getId() + 10_000)
+                        .file(file)
+                        .param("trackingCode", TRACKING_CODE))
+                .andExpect(status().isForbidden())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertTrue(wrongCodeResponse.contains("Upload not authorized"));
+        assertTrue(wrongReportResponse.contains("Upload not authorized"));
+        assertFalse(wrongCodeResponse.contains("tracking"));
+        assertFalse(wrongReportResponse.contains("not found"));
+    }
+
+    @Test
+    void fakePdfWithWrongMagicBytesIsRejected() throws Exception {
+        Report report = createReport();
+        MockMultipartFile file = new MockMultipartFile(
+                "files",
+                "evidence.pdf",
+                "application/pdf",
+                "MZ executable content".getBytes()
+        );
+
+        mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
+                        .file(file)
+                        .param("trackingCode", TRACKING_CODE))
+                .andExpect(status().isBadRequest());
+
+        assertTrue(attachmentRepository.findByReportId(report.getId()).isEmpty());
+        assertEquals(0, countRegularFiles(uploadBase));
+    }
+
+    @Test
+    void maliciousFilenameRejectionsAreAuditedWithoutRawFilename() throws Exception {
+        Report report = createReport();
+        String maliciousFilename = "../evil\r\nname.txt";
+
+        for (int i = 0; i < 3; i++) {
+            MockMultipartFile file = new MockMultipartFile(
+                    "files",
+                    maliciousFilename,
+                    "text/plain",
+                    "approved evidence".getBytes()
+            );
+
+            mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
+                            .file(file)
+                            .param("trackingCode", TRACKING_CODE))
+                    .andExpect(status().isBadRequest());
+        }
+
+        assertTrue(
+                auditLogRepository.findAll()
+                        .stream()
+                        .anyMatch(log ->
+                                "UPLOAD_REJECTED".equals(log.getAction()) &&
+                                        log.getDetails() != null &&
+                                        log.getDetails().contains("Invalid filename") &&
+                                        !log.getDetails().contains("evil") &&
+                                        !log.getDetails().contains("\n")
+                        )
+        );
+        assertTrue(
+                securityAlertRepository.findAll()
+                        .stream()
+                        .anyMatch(alert ->
+                                "SUSPICIOUS_UPLOAD_ACTIVITY".equals(alert.getAlertType()) &&
+                                        alert.getDescription() != null &&
+                                        !alert.getDescription().contains("evil") &&
+                                        !alert.getDescription().contains("\n")
+                        )
+        );
     }
 
     @Test

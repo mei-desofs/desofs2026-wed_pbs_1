@@ -208,10 +208,13 @@ public class ReportService {
 
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Report not found"
-                        )
+                {
+                    recordUploadRejected(reportId, "Upload authorization failed");
+                    return new ResponseStatusException(
+                            HttpStatus.FORBIDDEN,
+                            "Upload not authorized"
+                    );
+                }
                 );
 
         validateTrackingCodeForReport(report, trackingCode);
@@ -276,7 +279,7 @@ public class ReportService {
 
         } catch (ResponseStatusException e) {
 
-            securityMonitoringService.recordRejectedUpload(reportId, e.getReason());
+            recordUploadRejected(reportId, e.getReason());
             throw e;
 
         } catch (Exception e) {
@@ -298,9 +301,13 @@ public class ReportService {
 
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND
-                        )
+                {
+                    recordUploadRejected(reportId, "Upload authorization failed");
+                    return new ResponseStatusException(
+                            HttpStatus.FORBIDDEN,
+                            "Upload not authorized"
+                    );
+                }
                 );
 
         validateTrackingCodeForReport(report, trackingCode);
@@ -366,7 +373,7 @@ public class ReportService {
 
             } catch (ResponseStatusException e) {
 
-                securityMonitoringService.recordRejectedUpload(reportId, e.getReason());
+                recordUploadRejected(reportId, e.getReason());
                 throw e;
 
             } catch (Exception e) {
@@ -496,10 +503,10 @@ public class ReportService {
 
     private void validateTrackingCodeForReport(Report report, String trackingCode) {
         if (trackingCode == null || trackingCode.isBlank()) {
-            securityMonitoringService.recordRejectedUpload(report.getId(), "Missing tracking code");
+            recordUploadRejected(report.getId(), "Missing tracking code");
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
-                    "Invalid tracking code"
+                    "Upload not authorized"
             );
         }
 
@@ -507,10 +514,10 @@ public class ReportService {
         try {
             normalizedTrackingCode = TrackingCode.from(trackingCode.trim()).value();
         } catch (IllegalArgumentException e) {
-            securityMonitoringService.recordRejectedUpload(report.getId(), "Invalid tracking code format");
+            recordUploadRejected(report.getId(), "Invalid tracking code format");
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
-                    "Invalid tracking code"
+                    "Upload not authorized"
             );
         }
 
@@ -518,10 +525,10 @@ public class ReportService {
                 normalizedTrackingCode,
                 report.getTrackingCodeHash()
         )) {
-            securityMonitoringService.recordRejectedUpload(report.getId(), "Tracking code mismatch");
+            recordUploadRejected(report.getId(), "Tracking code mismatch");
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
-                    "Invalid tracking code"
+                    "Upload not authorized"
             );
         }
     }
@@ -538,9 +545,13 @@ public class ReportService {
                 caseReviewRepository.findByReportId(
                         reportId
                 ).orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.FORBIDDEN
-                        )
+                {
+                    auditLogService.log("ANALYST_ACCESS_DENIED", "REPORT", reportId, "Report has no assigned case review");
+                    securityMonitoringService.recordUnauthorizedAnalystAccess(reportId);
+                    return new ResponseStatusException(
+                            HttpStatus.FORBIDDEN
+                    );
+                }
                 );
 
         String currentUser =
@@ -551,10 +562,21 @@ public class ReportService {
                         .getUsername()
                         .equals(currentUser)) {
 
+            auditLogService.log("ANALYST_ACCESS_DENIED", "REPORT", reportId, "Analyst attempted to access a report without ownership");
+            securityMonitoringService.recordUnauthorizedAnalystAccess(reportId);
+
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN
             );
         }
+    }
+
+    private void recordUploadRejected(Long reportId, String reason) {
+        String safeReason = reason == null || reason.isBlank()
+                ? "Upload rejected"
+                : reason;
+        securityMonitoringService.recordRejectedUpload(reportId, safeReason);
+        auditLogService.log("UPLOAD_REJECTED", "REPORT", reportId, "Upload rejected: " + safeReason);
     }
 
     private ReportResponse toReportResponse(

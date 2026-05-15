@@ -10,6 +10,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.server.ResponseStatusException;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
@@ -38,10 +39,12 @@ class TrackingCodeEnumerationTest {
 
     @Test
     void repeatedInvalidTrackingCodesCreateSecurityAlert() {
+        String rawTrackingCode = "GR-aaaaaaaaaaaaaaaaaaaa";
+
         for (int i = 0; i < 5; i++) {
             assertThrows(
                     ResponseStatusException.class,
-                    () -> reportService.verifyTrackingCodeOnly("INVALID-CODE")
+                    () -> reportService.verifyTrackingCodeOnly(rawTrackingCode)
             );
         }
 
@@ -49,6 +52,11 @@ class TrackingCodeEnumerationTest {
                 securityAlertRepository.findAll()
                         .stream()
                         .anyMatch(alert -> "TRACKING_CODE_ENUMERATION".equals(alert.getAlertType()))
+        );
+        assertFalse(
+                securityAlertRepository.findAll()
+                        .stream()
+                        .anyMatch(alert -> alert.getDescription() != null && alert.getDescription().contains(rawTrackingCode))
         );
     }
 }

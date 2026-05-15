@@ -4,6 +4,7 @@ import com.ghostreport.model.User;
 import com.ghostreport.model.UserRole;
 import com.ghostreport.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -14,6 +15,7 @@ public class DataInitializer {
 
     @Bean
     @Profile({"dev", "test"})
+    @ConditionalOnProperty(prefix = "ghostreport.seed-users", name = "enabled", havingValue = "true")
     CommandLineRunner initUsers(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         return args -> {
             if (userRepository.findByUsername("admin").isEmpty()) {
@@ -40,6 +42,7 @@ public class DataInitializer {
 
     @Bean
     @Profile({"dev", "test"})
+    @ConditionalOnProperty(prefix = "ghostreport.seed-users", name = "enabled", havingValue = "true")
     CommandLineRunner initAuditor(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         return args -> {
             if (userRepository.findByUsername("auditor").isEmpty()) {
