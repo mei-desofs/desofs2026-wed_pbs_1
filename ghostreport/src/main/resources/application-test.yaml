@@ -26,5 +26,8 @@ app:
   upload-dir: target/test-uploads/default
 
 ghostreport:
+  jwt:
+    secret: test-only-change-this-secret-32-chars
+    expiration-seconds: 3600
   backup-dir: target/test-backups/default
   backup-enabled: true

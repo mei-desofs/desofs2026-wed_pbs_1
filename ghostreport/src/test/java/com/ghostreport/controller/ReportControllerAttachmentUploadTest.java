@@ -5,6 +5,7 @@ import com.ghostreport.model.Report;
 import com.ghostreport.model.ReportStatus;
 import com.ghostreport.repository.AttachmentRepository;
 import com.ghostreport.repository.ReportRepository;
+import com.ghostreport.repository.SecurityAlertRepository;
 import com.ghostreport.service.FileStorageService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -53,6 +55,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class ReportControllerAttachmentUploadTest {
 
+    private static final String TRACKING_CODE = "GR-abcdefghijklmnopqrst";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -61,6 +65,12 @@ class ReportControllerAttachmentUploadTest {
 
     @Autowired
     private AttachmentRepository attachmentRepository;
+
+    @Autowired
+    private SecurityAlertRepository securityAlertRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Value("${app.upload-dir}")
     private String uploadDir;
@@ -71,6 +81,7 @@ class ReportControllerAttachmentUploadTest {
     void setup() throws Exception {
         uploadBase = Path.of(uploadDir).toAbsolutePath().normalize();
 
+        securityAlertRepository.deleteAll();
         attachmentRepository.deleteAll();
         reportRepository.deleteAll();
         deleteRecursively(uploadBase);
@@ -79,6 +90,7 @@ class ReportControllerAttachmentUploadTest {
 
     @AfterEach
     void cleanup() throws Exception {
+        securityAlertRepository.deleteAll();
         attachmentRepository.deleteAll();
         reportRepository.deleteAll();
         deleteRecursively(uploadBase);
@@ -95,7 +107,9 @@ class ReportControllerAttachmentUploadTest {
                 content
         );
 
-        mockMvc.perform(multipart("/reports/{id}/attachments", report.getId()).file(file))
+        mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
+                        .file(file)
+                        .param("trackingCode", TRACKING_CODE))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").exists())
                 .andExpect(jsonPath("$[0].originalName").value("invoice.txt"))
@@ -132,7 +146,9 @@ class ReportControllerAttachmentUploadTest {
                 "not really executable".getBytes()
         );
 
-        String response = mockMvc.perform(multipart("/reports/{id}/attachments", report.getId()).file(file))
+        String response = mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
+                        .file(file)
+                        .param("trackingCode", TRACKING_CODE))
                 .andExpect(status().isBadRequest())
                 .andReturn()
                 .getResponse()
@@ -155,7 +171,9 @@ class ReportControllerAttachmentUploadTest {
                 content
         );
 
-        mockMvc.perform(multipart("/reports/{id}/attachments", report.getId()).file(file))
+        mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
+                        .file(file)
+                        .param("trackingCode", TRACKING_CODE))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").exists());
 
@@ -182,7 +200,9 @@ class ReportControllerAttachmentUploadTest {
                 oversizedContent
         );
 
-        String response = mockMvc.perform(multipart("/reports/{id}/attachments", report.getId()).file(file))
+        String response = mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
+                        .file(file)
+                        .param("trackingCode", TRACKING_CODE))
                 .andExpect(status().isBadRequest())
                 .andReturn()
                 .getResponse()
@@ -193,13 +213,61 @@ class ReportControllerAttachmentUploadTest {
         assertDoesNotExposeInternalData(response);
     }
 
+    @Test
+    void uploadRequiresMatchingTrackingCode() throws Exception {
+        Report report = createReport();
+        MockMultipartFile file = new MockMultipartFile(
+                "files",
+                "invoice.txt",
+                "text/plain",
+                "approved evidence".getBytes()
+        );
+
+        mockMvc.perform(multipart("/reports/{id}/attachments", report.getId()).file(file))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
+                        .file(file)
+                        .param("trackingCode", "GR-zzzzzzzzzzzzzzzzzzzz"))
+                .andExpect(status().isForbidden());
+
+        assertTrue(attachmentRepository.findByReportId(report.getId()).isEmpty());
+        assertEquals(0, countRegularFiles(uploadBase));
+    }
+
+    @Test
+    void repeatedRejectedUploadsCreateSecurityAlert() throws Exception {
+        Report report = createReport();
+
+        for (int i = 0; i < 3; i++) {
+            MockMultipartFile file = new MockMultipartFile(
+                    "files",
+                    "invoice-" + i + ".txt",
+                    "text/plain",
+                    "approved evidence".getBytes()
+            );
+
+            mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
+                            .file(file)
+                            .param("trackingCode", "GR-zzzzzzzzzzzzzzzzzzzz"))
+                    .andExpect(status().isForbidden());
+        }
+
+        assertTrue(
+                securityAlertRepository.findAll()
+                        .stream()
+                        .anyMatch(alert -> "SUSPICIOUS_UPLOAD_ACTIVITY".equals(alert.getAlertType()))
+        );
+        assertTrue(attachmentRepository.findByReportId(report.getId()).isEmpty());
+    }
+
     private Report createReport() {
         Report report = new Report();
         report.setTitle("Upload security test");
         report.setDescription("Controlled test report for attachment upload.");
         report.setCategory("Security");
         report.setStatus(ReportStatus.SUBMITTED);
-        report.setTrackingCodeHash("hash-" + UUID.randomUUID());
+        report.setTrackingCodeHash(passwordEncoder.encode(TRACKING_CODE));
 
         return reportRepository.save(report);
     }

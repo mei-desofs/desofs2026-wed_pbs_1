@@ -150,14 +150,6 @@
         return typeof API_BASE !== "undefined" ? API_BASE : "";
     }
 
-    function auditorBasicAuthHeader(username, password) {
-        if (typeof basicAuthHeader === "function") {
-            return basicAuthHeader(username, password);
-        }
-
-        return "Basic " + btoa(`${username}:${password}`);
-    }
-
     async function auditorHandleJsonResponse(response) {
         if (typeof handleJsonResponse === "function") {
             return handleJsonResponse(response);
@@ -167,7 +159,10 @@
         const data = text ? JSON.parse(text) : null;
 
         if (!response.ok) {
-            throw new Error(data?.message || data?.error || text || "Erro no pedido.");
+            const fields = data?.fields ? " " + Object.entries(data.fields)
+                .map(([field, message]) => `${field}: ${message}`)
+                .join("; ") : "";
+            throw new Error((data?.message || data?.error || text || "Erro no pedido.") + fields);
         }
 
         return data;
@@ -224,14 +219,22 @@
             return;
         }
 
-        auditorAuth = auditorBasicAuthHeader(username, password);
-
         try {
+            const loginResponse = await auditorSafeFetch(`${getApiBase()}/auth/login`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ username, password })
+            });
+            const loginData = await auditorHandleJsonResponse(loginResponse);
+            auditorAuth = `${loginData.tokenType} ${loginData.token}`;
+
             await validateAuditorSession();
 
             sessionStorage.setItem("auditorAuth", auditorAuth);
-            sessionStorage.setItem("auditorUsername", username);
-            auditorUsername = username;
+            sessionStorage.setItem("auditorUsername", loginData.username);
+            auditorUsername = loginData.username;
 
             showAuditorDashboard();
         } catch (error) {

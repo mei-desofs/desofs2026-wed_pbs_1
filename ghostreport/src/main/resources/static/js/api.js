@@ -13,7 +13,10 @@ async function handleJsonResponse(response) {
     }
 
     if (!response.ok) {
-        const errorMessage = data?.error || data?.message || JSON.stringify(data);
+        const fieldMessage = data?.fields
+            ? " " + Object.entries(data.fields).map(([field, message]) => `${field}: ${message}`).join("; ")
+            : "";
+        const errorMessage = (data?.error || data?.message || JSON.stringify(data)) + fieldMessage;
         throw new Error(errorMessage);
     }
 

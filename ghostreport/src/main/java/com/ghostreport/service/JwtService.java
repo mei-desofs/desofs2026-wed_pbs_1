@@ -27,9 +27,12 @@ public class JwtService {
 
     public JwtService(
             ObjectMapper objectMapper,
-            @Value("${ghostreport.jwt.secret:change-this-development-secret}") String secret,
+            @Value("${ghostreport.jwt.secret}") String secret,
             @Value("${ghostreport.jwt.expiration-seconds:3600}") long expirationSeconds
     ) {
+        if (secret == null || secret.length() < 32) {
+            throw new IllegalStateException("ghostreport.jwt.secret must be configured with at least 32 characters");
+        }
         this.objectMapper = objectMapper;
         this.secret = secret.getBytes(StandardCharsets.UTF_8);
         this.expirationSeconds = expirationSeconds;
