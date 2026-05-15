@@ -79,11 +79,22 @@
 
 	<build>
 		<plugins>
-
 			<plugin>
 				<groupId>org.owasp</groupId>
 				<artifactId>dependency-check-maven</artifactId>
 				<version>12.1.0</version>
+				<configuration>
+					<nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
+
+					<formats>
+						<format>HTML</format>
+						<format>XML</format>
+						<format>JSON</format>
+						<format>SARIF</format>
+					</formats>
+
+					<outputDirectory>${project.build.directory}/dependency-check-report</outputDirectory>
+				</configuration>
 			</plugin>
 
 			<plugin>
