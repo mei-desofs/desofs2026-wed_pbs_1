@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -15,7 +16,6 @@ import java.nio.file.Path;
 import java.util.Comparator;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -59,10 +59,10 @@ class AdminBackupControllerSecurityTest {
         mockMvc.perform(get("/admin/backups"))
                 .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(get("/admin/backups").with(httpBasic("analyst", "Analyst123!")))
+        mockMvc.perform(get("/admin/backups").header("Authorization", bearerToken("analyst", "Analyst123!")))
                 .andExpect(status().isForbidden());
 
-        mockMvc.perform(get("/admin/backups").with(httpBasic("admin", "Admin123!")))
+        mockMvc.perform(get("/admin/backups").header("Authorization", bearerToken("admin", "Admin123!")))
                 .andExpect(status().isOk());
 
         assertThat(securityAlertRepository.findAll())
@@ -71,7 +71,7 @@ class AdminBackupControllerSecurityTest {
 
     @Test
     void adminCanCreateAndVerifyBackupThroughEndpoints() throws Exception {
-        String body = mockMvc.perform(post("/admin/backups").with(httpBasic("admin", "Admin123!")))
+        String body = mockMvc.perform(post("/admin/backups").header("Authorization", bearerToken("admin", "Admin123!")))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -79,13 +79,13 @@ class AdminBackupControllerSecurityTest {
 
         String filename = body.replaceAll(".*\"filename\":\"([^\"]+)\".*", "$1");
 
-        mockMvc.perform(post("/admin/backups/{filename}/verify", filename).with(httpBasic("admin", "Admin123!")))
+        mockMvc.perform(post("/admin/backups/{filename}/verify", filename).header("Authorization", bearerToken("admin", "Admin123!")))
                 .andExpect(status().isOk());
     }
 
     @Test
     void pathTraversalInEndpointFilenameIsRejected() throws Exception {
-        mockMvc.perform(post("/admin/backups/{filename}/verify", "ghostreport-backup-20260507-154500..zip").with(httpBasic("admin", "Admin123!")))
+        mockMvc.perform(post("/admin/backups/{filename}/verify", "ghostreport-backup-20260507-154500..zip").header("Authorization", bearerToken("admin", "Admin123!")))
                 .andExpect(status().isBadRequest());
 
         assertThat(securityAlertRepository.findAll())
@@ -101,5 +101,24 @@ class AdminBackupControllerSecurityTest {
                 Files.deleteIfExists(path);
             }
         }
+    }
+
+    private String bearerToken(String username, String password) throws Exception {
+        String body = """
+                {"username":"%s","password":"%s"}
+                """.formatted(username, password);
+
+        String response = mockMvc.perform(
+                        post("/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(body)
+                )
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String token = response.replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
+        return "Bearer " + token;
     }
 }

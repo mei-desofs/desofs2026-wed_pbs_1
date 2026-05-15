@@ -96,7 +96,7 @@
 
                     <div>
                         <label>Password</label>
-                        <input id="newPassword" type="password" placeholder="Password inicial" autocomplete="new-password">
+                        <input id="newPassword" type="password" placeholder="Mín. 12 chars, maiúscula, minúscula, número e símbolo" autocomplete="new-password">
                     </div>
 
                     <div>
@@ -194,14 +194,6 @@
 
     function getApiBase() {
         return typeof API_BASE !== "undefined" ? API_BASE : "";
-    }
-
-    function adminBasicAuthHeader(username, password) {
-        if (typeof basicAuthHeader === "function") {
-            return basicAuthHeader(username, password);
-        }
-
-        return "Basic " + btoa(`${username}:${password}`);
     }
 
     async function adminHandleJsonResponse(response) {
@@ -336,14 +328,22 @@
             return;
         }
 
-        adminSessionAuth = adminBasicAuthHeader(username, password);
-
         try {
+            const loginResponse = await adminSafeFetch(`${getApiBase()}/auth/login`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ username, password })
+            });
+            const loginData = await adminHandleJsonResponse(loginResponse);
+            adminSessionAuth = `${loginData.tokenType} ${loginData.token}`;
+
             await adminValidateSession();
 
             sessionStorage.setItem("adminAuth", adminSessionAuth);
-            sessionStorage.setItem("adminUsername", username);
-            adminUsername = username;
+            sessionStorage.setItem("adminUsername", loginData.username);
+            adminUsername = loginData.username;
 
             showAdminDashboard();
         } catch (error) {

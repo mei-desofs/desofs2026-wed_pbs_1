@@ -64,6 +64,10 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload SpotBugs report
+      - name: Run SpotBugs SAST
+        run: ./mvnw com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs
+
+      - name: Upload SpotBugs SAST report
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -72,3 +76,96 @@ jobs:
             ghostreport/target/spotbugs*.xml
             ghostreport/target/site/spotbugs*
           if-no-files-found: warn
+
+      # Sprint 1 evidence mode: Dependency-Check is introduced without failing
+      # the build while the first report is reviewed and suppressions are triaged.
+      - name: Run OWASP Dependency-Check SCA
+        run: ./mvnw org.owasp:dependency-check-maven:12.1.0:check -Dformat=ALL
+        continue-on-error: true
+
+      - name: Upload Dependency-Check SCA report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-sca-report
+          path: |
+            ghostreport/target/dependency-check-report.*
+            ghostreport/target/site/dependency-check-report.*
+          if-no-files-found: warn
+
+      - name: Run Gitleaks secret scan
+        run: |
+          mkdir -p target/gitleaks
+          docker run --rm \
+            -v "$PWD/..:/repo:ro" \
+            -v "$PWD/target/gitleaks:/reports:rw" \
+            ghcr.io/gitleaks/gitleaks:latest \
+            dir /repo \
+            --config /repo/.gitleaks.toml \
+            --report-format json \
+            --report-path /reports/gitleaks-report.json \
+            --redact
+
+      - name: Upload Gitleaks secret scan report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gitleaks-secret-scan-report
+          path: ghostreport/target/gitleaks/**
+          if-no-files-found: warn
+
+      - name: Start GhostReport for DAST
+        run: |
+          mkdir -p target/zap-reports
+          nohup ./mvnw spring-boot:run \
+            -Dspring-boot.run.profiles=dev \
+            > target/ghostreport-dast-app.log 2>&1 &
+          echo $! > target/ghostreport-dast-app.pid
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/ghostreport
+          DB_USERNAME: postgres
+          DB_PASSWORD: user
+
+      - name: Wait for GhostReport
+        run: |
+          for i in {1..60}; do
+            if curl --fail --silent --show-error http://localhost:8081/index.html > /dev/null; then
+              echo "GhostReport is ready for DAST"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "GhostReport did not become ready"
+          cat target/ghostreport-dast-app.log
+          exit 1
+
+      - name: Run OWASP ZAP baseline DAST
+        run: |
+          docker run --rm --network host \
+            -v "$PWD/target/zap-reports:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+              -t http://localhost:8081 \
+              -r zap-baseline.html \
+              -x zap-baseline.xml \
+              -J zap-baseline.json \
+              -I
+        continue-on-error: true
+
+      - name: Upload OWASP ZAP reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-baseline-dast-reports
+          path: |
+            ghostreport/target/zap-reports/**
+            ghostreport/target/ghostreport-dast-app.log
+          if-no-files-found: warn
+
+      - name: Stop GhostReport DAST app
+        if: always()
+        run: |
+          if [ -f target/ghostreport-dast-app.pid ]; then
+            kill "$(cat target/ghostreport-dast-app.pid)" || true
+          fi

@@ -1,0 +1,17 @@
+title = "GhostReport Gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore generated local artifacts and documented non-production placeholders."
+paths = [
+  '''(^|/)ghostreport/target/''',
+  '''(^|/)ghostreport/uploads/''',
+  '''(^|/)ghostreport/backups/''',
+  '''(^|/)ghostreport/data/'''
+]
+regexes = [
+  '''dev-only-change-this-secret-32-chars''',
+  '''test-only-change-this-secret-32-chars'''
+]

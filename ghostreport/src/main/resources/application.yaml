@@ -11,7 +11,7 @@ spring:
 
   jpa:
     hibernate:
-    ddl-auto: validate
+      ddl-auto: validate
     show-sql: false
     open-in-view: false
     properties:
@@ -36,6 +36,23 @@ app:
   upload-dir: uploads
 
 ghostreport:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+  seed-users:
+    enabled: false
   backup-dir: backups
   backup-enabled: true
   backup-schedule-cron: "0 0 2 * * *"
+
+security:
+  rate-limit:
+    tracking:
+      max-attempts: 10
+      window-seconds: 60
+    upload:
+      max-attempts: 10
+      window-seconds: 60
+    download:
+      max-attempts: 10
+      window-seconds: 60

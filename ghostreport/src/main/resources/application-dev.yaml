@@ -8,17 +8,35 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
 
   h2:
     console:
-      enabled: true
+      enabled: false
       path: /h2-console
 
 server:
   error:
     include-stacktrace: never
 
+ghostreport:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-change-this-secret-32-chars}
+    expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+  seed-users:
+    enabled: ${GHOSTREPORT_SEED_USERS_ENABLED:true}
+
+security:
+  rate-limit:
+    tracking:
+      max-attempts: ${RATE_LIMIT_TRACKING_MAX_ATTEMPTS:10}
+      window-seconds: ${RATE_LIMIT_TRACKING_WINDOW_SECONDS:60}
+    upload:
+      max-attempts: ${RATE_LIMIT_UPLOAD_MAX_ATTEMPTS:10}
+      window-seconds: ${RATE_LIMIT_UPLOAD_WINDOW_SECONDS:60}
+    download:
+      max-attempts: ${RATE_LIMIT_DOWNLOAD_MAX_ATTEMPTS:10}
+      window-seconds: ${RATE_LIMIT_DOWNLOAD_WINDOW_SECONDS:60}

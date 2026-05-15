@@ -18,7 +18,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -116,15 +115,15 @@ class RbacAuthorizationMatrixTest {
     @Test
     void analystCanUseAnalysisEndpointsButCannotUseAdminOrRestrictedAuditEndpoints() throws Exception {
         mockMvc.perform(get("/analyst/panel")
-                        .with(httpBasic(analystUsername, PASSWORD)))
+                        .header("Authorization", bearerToken(analystUsername, PASSWORD)))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/analyst/reports")
-                        .with(httpBasic(analystUsername, PASSWORD)))
+                        .header("Authorization", bearerToken(analystUsername, PASSWORD)))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/analyst/reports/{id}/assign", reportId)
-                        .with(httpBasic(analystUsername, PASSWORD))
+                        .header("Authorization", bearerToken(analystUsername, PASSWORD))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isOk())
@@ -132,7 +131,7 @@ class RbacAuthorizationMatrixTest {
                 .andExpect(jsonPath("$.assignedAnalystUsername").value(analystUsername));
 
         mockMvc.perform(patch("/analyst/reports/{id}/status", reportId)
-                        .with(httpBasic(analystUsername, PASSWORD))
+                        .header("Authorization", bearerToken(analystUsername, PASSWORD))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -144,57 +143,57 @@ class RbacAuthorizationMatrixTest {
                 .andExpect(jsonPath("$.status").value("UNDER_REVIEW"));
 
         mockMvc.perform(get("/admin/panel")
-                        .with(httpBasic(analystUsername, PASSWORD)))
+                        .header("Authorization", bearerToken(analystUsername, PASSWORD)))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/admin/users")
-                        .with(httpBasic(analystUsername, PASSWORD)))
+                        .header("Authorization", bearerToken(analystUsername, PASSWORD)))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/audit/logs")
-                        .with(httpBasic(analystUsername, PASSWORD)))
+                        .header("Authorization", bearerToken(analystUsername, PASSWORD)))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void adminCanUseAdminEndpointsAndHasOversightAccess() throws Exception {
         mockMvc.perform(get("/admin/panel")
-                        .with(httpBasic(adminUsername, PASSWORD)))
+                        .header("Authorization", bearerToken(adminUsername, PASSWORD)))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/admin/users")
-                        .with(httpBasic(adminUsername, PASSWORD)))
+                        .header("Authorization", bearerToken(adminUsername, PASSWORD)))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/analyst/panel")
-                        .with(httpBasic(adminUsername, PASSWORD)))
+                        .header("Authorization", bearerToken(adminUsername, PASSWORD)))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/audit/logs")
-                        .with(httpBasic(adminUsername, PASSWORD)))
+                        .header("Authorization", bearerToken(adminUsername, PASSWORD)))
                 .andExpect(status().isOk());
     }
 
     @Test
     void auditorCanReadAuditEndpointsOnlyAndCannotChangeReportsOrRunAdminActions() throws Exception {
         mockMvc.perform(get("/audit/logs")
-                        .with(httpBasic(auditorUsername, PASSWORD)))
+                        .header("Authorization", bearerToken(auditorUsername, PASSWORD)))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/audit/security-alerts")
-                        .with(httpBasic(auditorUsername, PASSWORD)))
+                        .header("Authorization", bearerToken(auditorUsername, PASSWORD)))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/audit/cases/closed")
-                        .with(httpBasic(auditorUsername, PASSWORD)))
+                        .header("Authorization", bearerToken(auditorUsername, PASSWORD)))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/admin/panel")
-                        .with(httpBasic(auditorUsername, PASSWORD)))
+                        .header("Authorization", bearerToken(auditorUsername, PASSWORD)))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/admin/users")
-                        .with(httpBasic(auditorUsername, PASSWORD))
+                        .header("Authorization", bearerToken(auditorUsername, PASSWORD))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -207,7 +206,7 @@ class RbacAuthorizationMatrixTest {
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(patch("/analyst/reports/{id}/status", reportId)
-                        .with(httpBasic(auditorUsername, PASSWORD))
+                        .header("Authorization", bearerToken(auditorUsername, PASSWORD))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -217,7 +216,7 @@ class RbacAuthorizationMatrixTest {
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/analyst/reports/{id}/assign", reportId)
-                        .with(httpBasic(auditorUsername, PASSWORD))
+                        .header("Authorization", bearerToken(auditorUsername, PASSWORD))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isForbidden());
@@ -250,5 +249,23 @@ class RbacAuthorizationMatrixTest {
                 .getContentAsString();
 
         return objectMapper.readTree(body);
+    }
+    private String bearerToken(String username, String password) throws Exception {
+        String body = """
+                {"username":"%s","password":"%s"}
+                """.formatted(username, password);
+
+        String response = mockMvc.perform(
+                        post("/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(body)
+                )
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String token = response.replaceAll(".*\\\"token\\\":\\\"([^\\\"]+)\\\".*", "$1");
+        return "Bearer " + token;
     }
 }

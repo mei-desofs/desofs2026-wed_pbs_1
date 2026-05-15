@@ -6,9 +6,11 @@ import com.ghostreport.service.RateLimiterService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -37,7 +39,7 @@ public class ReportController {
     ) {
         String ip = httpRequest.getRemoteAddr();
 
-        rateLimiterService.checkLimit(ip + "_VERIFY");
+        rateLimiterService.checkTrackingLimit(ip);
 
         return reportService.verifyTrackingCodeOnly(request.getTrackingCode());
     }
@@ -46,17 +48,18 @@ public class ReportController {
     public List<AttachmentResponse> uploadAttachments(
             @PathVariable Long id,
             @RequestParam("files") MultipartFile[] files,
+            @RequestParam(name = "trackingCode", required = false) String trackingCode,
             HttpServletRequest httpRequest
     ) {
         String ip = httpRequest.getRemoteAddr();
 
-        rateLimiterService.checkLimit(ip + "_UPLOAD");
+        rateLimiterService.checkUploadLimit(ip);
 
         if (files == null || files.length == 0) {
-            throw new RuntimeException("Nenhum ficheiro enviado");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nenhum ficheiro enviado");
         }
 
-        return reportService.uploadMultipleAttachments(id, files);
+        return reportService.uploadMultipleAttachments(id, files, trackingCode);
     }
 
     @PostMapping("/download")
@@ -66,10 +69,10 @@ public class ReportController {
     ) {
         String ip = httpRequest.getRemoteAddr();
 
-        rateLimiterService.checkLimit(ip + "_DOWNLOAD");
+        rateLimiterService.checkDownloadLimit(ip);
 
         if (request.getAttachmentId() == null || request.getTrackingCode() == null) {
-            throw new RuntimeException("Dados inválidos");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dados inválidos");
         }
 
         return reportService.downloadAttachmentSecure(
