@@ -193,7 +193,8 @@ public class ReportService {
 
     public AttachmentResponse uploadAttachment(
             Long reportId,
-            MultipartFile file
+            MultipartFile file,
+            String trackingCode
     ) {
 
         logger.info("Attachment upload requested for report id={}", reportId);
@@ -205,6 +206,8 @@ public class ReportService {
                                 "Report not found"
                         )
                 );
+
+        validateTrackingCodeForReport(report, trackingCode);
 
         try {
 
@@ -281,7 +284,8 @@ public class ReportService {
 
     public List<AttachmentResponse> uploadMultipleAttachments(
             Long reportId,
-            MultipartFile[] files
+            MultipartFile[] files,
+            String trackingCode
     ) {
 
         Report report = reportRepository.findById(reportId)
@@ -290,6 +294,8 @@ public class ReportService {
                                 HttpStatus.NOT_FOUND
                         )
                 );
+
+        validateTrackingCodeForReport(report, trackingCode);
 
         List<AttachmentResponse> responses =
                 new ArrayList<>();
@@ -398,6 +404,8 @@ public class ReportService {
                         )
                 );
 
+        checkInternalAccessToReport(attachment.getReport().getId());
+
         Resource resource =
                 fileStorageService.loadFileAsResource(
                         attachment.getStoragePath()
@@ -475,6 +483,35 @@ public class ReportService {
                                 .toString()
                 )
                 .body(resource);
+    }
+
+    private void validateTrackingCodeForReport(Report report, String trackingCode) {
+        if (trackingCode == null || trackingCode.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Invalid tracking code"
+            );
+        }
+
+        String normalizedTrackingCode;
+        try {
+            normalizedTrackingCode = TrackingCode.from(trackingCode.trim()).value();
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Invalid tracking code"
+            );
+        }
+
+        if (!passwordEncoder.matches(
+                normalizedTrackingCode,
+                report.getTrackingCodeHash()
+        )) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Invalid tracking code"
+            );
+        }
     }
 
     private void checkInternalAccessToReport(

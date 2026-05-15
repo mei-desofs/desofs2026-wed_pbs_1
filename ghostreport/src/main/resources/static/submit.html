@@ -80,6 +80,7 @@
                 for (let i = 0; i < files.length; i++) {
                     const formData = new FormData();
                     formData.append("files", files[i]);
+                    formData.append("trackingCode", data.trackingCode);
 
                     const uploadResponse = await fetch(`${API_BASE}/reports/${data.id}/attachments`, {
                         method: "POST",

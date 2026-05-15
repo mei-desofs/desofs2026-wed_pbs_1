@@ -22,3 +22,8 @@ server:
   error:
     include-stacktrace: never
 
+ghostreport:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-change-this-secret-32-chars}
+    expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+

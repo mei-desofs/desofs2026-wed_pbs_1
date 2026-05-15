@@ -46,6 +46,7 @@ public class ReportController {
     public List<AttachmentResponse> uploadAttachments(
             @PathVariable Long id,
             @RequestParam("files") MultipartFile[] files,
+            @RequestParam("trackingCode") String trackingCode,
             HttpServletRequest httpRequest
     ) {
         String ip = httpRequest.getRemoteAddr();
@@ -56,7 +57,7 @@ public class ReportController {
             throw new RuntimeException("Nenhum ficheiro enviado");
         }
 
-        return reportService.uploadMultipleAttachments(id, files);
+        return reportService.uploadMultipleAttachments(id, files, trackingCode);
     }
 
     @PostMapping("/download")
