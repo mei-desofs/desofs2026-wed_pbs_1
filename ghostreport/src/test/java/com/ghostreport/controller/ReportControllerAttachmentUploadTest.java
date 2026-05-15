@@ -5,6 +5,7 @@ import com.ghostreport.model.Report;
 import com.ghostreport.model.ReportStatus;
 import com.ghostreport.repository.AttachmentRepository;
 import com.ghostreport.repository.ReportRepository;
+import com.ghostreport.repository.SecurityAlertRepository;
 import com.ghostreport.service.FileStorageService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,6 +67,9 @@ class ReportControllerAttachmentUploadTest {
     private AttachmentRepository attachmentRepository;
 
     @Autowired
+    private SecurityAlertRepository securityAlertRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Value("${app.upload-dir}")
@@ -77,6 +81,7 @@ class ReportControllerAttachmentUploadTest {
     void setup() throws Exception {
         uploadBase = Path.of(uploadDir).toAbsolutePath().normalize();
 
+        securityAlertRepository.deleteAll();
         attachmentRepository.deleteAll();
         reportRepository.deleteAll();
         deleteRecursively(uploadBase);
@@ -85,6 +90,7 @@ class ReportControllerAttachmentUploadTest {
 
     @AfterEach
     void cleanup() throws Exception {
+        securityAlertRepository.deleteAll();
         attachmentRepository.deleteAll();
         reportRepository.deleteAll();
         deleteRecursively(uploadBase);
@@ -227,6 +233,32 @@ class ReportControllerAttachmentUploadTest {
 
         assertTrue(attachmentRepository.findByReportId(report.getId()).isEmpty());
         assertEquals(0, countRegularFiles(uploadBase));
+    }
+
+    @Test
+    void repeatedRejectedUploadsCreateSecurityAlert() throws Exception {
+        Report report = createReport();
+
+        for (int i = 0; i < 3; i++) {
+            MockMultipartFile file = new MockMultipartFile(
+                    "files",
+                    "invoice-" + i + ".txt",
+                    "text/plain",
+                    "approved evidence".getBytes()
+            );
+
+            mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
+                            .file(file)
+                            .param("trackingCode", "GR-zzzzzzzzzzzzzzzzzzzz"))
+                    .andExpect(status().isForbidden());
+        }
+
+        assertTrue(
+                securityAlertRepository.findAll()
+                        .stream()
+                        .anyMatch(alert -> "SUSPICIOUS_UPLOAD_ACTIVITY".equals(alert.getAlertType()))
+        );
+        assertTrue(attachmentRepository.findByReportId(report.getId()).isEmpty());
     }
 
     private Report createReport() {

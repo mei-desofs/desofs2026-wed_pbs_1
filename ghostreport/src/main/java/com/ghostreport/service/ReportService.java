@@ -35,6 +35,7 @@ public class ReportService {
     private final FileStorageService fileStorageService;
     private final CaseReviewRepository caseReviewRepository;
     private final AuditLogService auditLogService;
+    private final SecurityMonitoringService securityMonitoringService;
 
     private final BCryptPasswordEncoder passwordEncoder =
             new BCryptPasswordEncoder();
@@ -44,13 +45,15 @@ public class ReportService {
             AttachmentRepository attachmentRepository,
             FileStorageService fileStorageService,
             CaseReviewRepository caseReviewRepository,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            SecurityMonitoringService securityMonitoringService
     ) {
         this.reportRepository = reportRepository;
         this.attachmentRepository = attachmentRepository;
         this.fileStorageService = fileStorageService;
         this.caseReviewRepository = caseReviewRepository;
         this.auditLogService = auditLogService;
+        this.securityMonitoringService = securityMonitoringService;
     }
 
     public CreateReportResponse createReport(CreateReportRequest request) {
@@ -116,6 +119,7 @@ public class ReportService {
     public ReportResponse verifyTrackingCodeOnly(String trackingCode) {
 
         if (trackingCode == null || trackingCode.isBlank()) {
+            securityMonitoringService.recordFailedTrackingCode(null);
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Código inválido"
@@ -126,6 +130,7 @@ public class ReportService {
         try {
             trackingCode = TrackingCode.from(trackingCode).value();
         } catch (IllegalArgumentException e) {
+            securityMonitoringService.recordFailedTrackingCode(null);
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Código inválido"
@@ -142,6 +147,8 @@ public class ReportService {
                 return toReportResponse(report);
             }
         }
+
+        securityMonitoringService.recordFailedTrackingCode(null);
 
         throw new ResponseStatusException(
                 HttpStatus.NOT_FOUND,
@@ -269,6 +276,7 @@ public class ReportService {
 
         } catch (ResponseStatusException e) {
 
+            securityMonitoringService.recordRejectedUpload(reportId, e.getReason());
             throw e;
 
         } catch (Exception e) {
@@ -358,6 +366,7 @@ public class ReportService {
 
             } catch (ResponseStatusException e) {
 
+                securityMonitoringService.recordRejectedUpload(reportId, e.getReason());
                 throw e;
 
             } catch (Exception e) {
@@ -487,6 +496,7 @@ public class ReportService {
 
     private void validateTrackingCodeForReport(Report report, String trackingCode) {
         if (trackingCode == null || trackingCode.isBlank()) {
+            securityMonitoringService.recordRejectedUpload(report.getId(), "Missing tracking code");
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Invalid tracking code"
@@ -497,6 +507,7 @@ public class ReportService {
         try {
             normalizedTrackingCode = TrackingCode.from(trackingCode.trim()).value();
         } catch (IllegalArgumentException e) {
+            securityMonitoringService.recordRejectedUpload(report.getId(), "Invalid tracking code format");
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Invalid tracking code"
@@ -507,6 +518,7 @@ public class ReportService {
                 normalizedTrackingCode,
                 report.getTrackingCodeHash()
         )) {
+            securityMonitoringService.recordRejectedUpload(report.getId(), "Tracking code mismatch");
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Invalid tracking code"

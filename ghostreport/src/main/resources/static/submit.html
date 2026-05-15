@@ -41,7 +41,7 @@
         <label for="files">Anexos</label>
         <input id="files" type="file" multiple>
 
-        <button type="submit">Submeter denúncia</button>
+        <button id="submitButton" type="submit">Submeter denúncia</button>
     </form>
 
     <div id="result"></div>
@@ -58,6 +58,9 @@
         const files = document.getElementById("files").files;
 
         const resultDiv = document.getElementById("result");
+        const submitButton = document.getElementById("submitButton");
+        submitButton.disabled = true;
+        resultDiv.innerHTML = `<div class="result">A criar denúncia...</div>`;
 
         try {
 
@@ -76,22 +79,23 @@
             const data = await handleJsonResponse(response);
 
             if (files.length > 0) {
+                resultDiv.innerHTML = `<div class="result">Denúncia criada. A enviar ${files.length} anexo(s)...</div>`;
 
+                const formData = new FormData();
                 for (let i = 0; i < files.length; i++) {
-                    const formData = new FormData();
                     formData.append("files", files[i]);
-                    formData.append("trackingCode", data.trackingCode);
+                }
+                formData.append("trackingCode", data.trackingCode);
 
-                    const uploadResponse = await fetch(`${API_BASE}/reports/${data.id}/attachments`, {
-                        method: "POST",
-                        body: formData
-                    });
+                const uploadResponse = await fetch(`${API_BASE}/reports/${data.id}/attachments`, {
+                    method: "POST",
+                    body: formData
+                });
 
-                    if (!uploadResponse.ok) {
-                        const errorText = await uploadResponse.text();
-                        console.error("Upload failed:", uploadResponse.status, errorText);
-                        throw new Error(`Erro ao guardar anexos: ${uploadResponse.status} - ${errorText}`);
-                    }
+                if (!uploadResponse.ok) {
+                    const errorText = await uploadResponse.text();
+                    console.error("Upload failed:", uploadResponse.status, errorText);
+                    throw new Error(`Erro ao guardar anexos: ${uploadResponse.status} - ${errorText}`);
                 }
             }
 
@@ -109,6 +113,7 @@
 
         } catch (error) {
             resultDiv.innerHTML = `<div class="error">${error.message}</div>`;
+            submitButton.disabled = false;
         }
     });
 </script>
