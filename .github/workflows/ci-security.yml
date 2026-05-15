@@ -77,6 +77,8 @@ jobs:
       - name: Run OWASP Dependency-Check SCA
         run: ./mvnw org.owasp:dependency-check-maven:12.1.0:check -Dformat=ALL
         continue-on-error: true
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
 
       - name: Upload Dependency-Check SCA report
         uses: actions/upload-artifact@v4
@@ -84,7 +86,7 @@ jobs:
         with:
           name: dependency-check-sca-report
           path: |
-            ghostreport/target/dependency-check-report.*
+            ghostreport/target/dependency-check-report/**
             ghostreport/target/site/dependency-check-report.*
           if-no-files-found: warn
 
@@ -138,6 +140,7 @@ jobs:
       - name: Run OWASP ZAP baseline DAST
         run: |
           docker run --rm --network host \
+            -w /zap/wrk \
             -v "$PWD/target/zap-reports:/zap/wrk:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
@@ -147,6 +150,18 @@ jobs:
               -J zap-baseline.json \
               -I
         continue-on-error: true
+
+      - name: List OWASP ZAP generated reports
+        if: always()
+        run: |
+          echo "Generated ZAP report files:"
+          find target/zap-reports -maxdepth 1 -type f -print -exec ls -lh {} \;
+
+          if [ ! -f target/zap-reports/zap-baseline.html ] || \
+             [ ! -f target/zap-reports/zap-baseline.xml ] || \
+             [ ! -f target/zap-reports/zap-baseline.json ]; then
+            echo "::warning::Expected ZAP HTML/XML/JSON reports were not all generated."
+          fi
 
       - name: Upload OWASP ZAP reports
         uses: actions/upload-artifact@v4
