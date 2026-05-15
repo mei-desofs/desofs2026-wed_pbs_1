@@ -1,5 +1,8 @@
 name: SAST SpotBugs
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
     branches: [ main, develop ]
@@ -27,7 +30,13 @@ jobs:
           cache-dependency-path: ghostreport/pom.xml
 
       - name: Run SpotBugs SAST
-        run: ./mvnw com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs
+        run: ./mvnw com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true
+
+      - name: List SpotBugs generated reports
+        if: always()
+        run: |
+          echo "Generated SpotBugs report files:"
+          find target -maxdepth 3 -type f \( -iname "*spotbugs*" -o -iname "*findbugs*" \) -print -exec ls -lh {} \;
 
       - name: Upload SpotBugs SAST report
         uses: actions/upload-artifact@v4
@@ -35,6 +44,7 @@ jobs:
         with:
           name: spotbugs-sast-report
           path: |
-            ghostreport/target/spotbugs*.xml
+            ghostreport/target/spotbugsXml.xml
+            ghostreport/target/*spotbugs*.xml
             ghostreport/target/site/spotbugs*
           if-no-files-found: warn
