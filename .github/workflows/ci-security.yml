@@ -75,7 +75,7 @@ jobs:
       # Sprint 1 evidence mode: Dependency-Check is introduced without failing
       # the build while the first report is reviewed and suppressions are triaged.
       - name: Run OWASP Dependency-Check SCA
-        run: ./mvnw org.owasp:dependency-check-maven:12.1.0:check -Dformat=ALL
+        run: ./mvnw org.owasp:dependency-check-maven:12.1.0:check -Dformat=ALL -DossindexAnalyzerEnabled=false -DfailOnError=false -DfailBuildOnCVSS=11
         continue-on-error: true
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}

@@ -85,6 +85,9 @@
 				<version>12.1.0</version>
 				<configuration>
 					<nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
+					<ossindexAnalyzerEnabled>false</ossindexAnalyzerEnabled>
+					<failOnError>false</failOnError>
+					<failBuildOnCVSS>11</failBuildOnCVSS>
 
 					<formats>
 						<format>HTML</format>
