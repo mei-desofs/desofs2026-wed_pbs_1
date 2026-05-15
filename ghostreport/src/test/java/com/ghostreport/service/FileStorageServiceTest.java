@@ -66,10 +66,12 @@ class FileStorageServiceTest {
         Resource resource = service.loadFileAsResource("reports/1/attachments/file.txt");
 
         assertTrue(resource.exists(), "Expected resource inside upload directory to exist");
-        assertEquals(
-                "allowed",
-                new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
-        );
+        try (var input = resource.getInputStream()) {
+            assertEquals(
+                    "allowed",
+                    new String(input.readAllBytes(), StandardCharsets.UTF_8)
+            );
+        }
     }
 
     @Test

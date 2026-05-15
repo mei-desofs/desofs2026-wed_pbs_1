@@ -27,7 +27,6 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -75,25 +74,25 @@ class AuditorAuthorizationTest {
 
     @Test
     void auditorCanReadAuditEndpoints() throws Exception {
-        mockMvc.perform(get("/audit/logs").with(httpBasic(auditorUsername, "password")))
+        mockMvc.perform(get("/audit/logs").header("Authorization", bearerToken(auditorUsername, "password")))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/audit/security-alerts").with(httpBasic(auditorUsername, "password")))
+        mockMvc.perform(get("/audit/security-alerts").header("Authorization", bearerToken(auditorUsername, "password")))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/audit/cases/closed").with(httpBasic(auditorUsername, "password")))
+        mockMvc.perform(get("/audit/cases/closed").header("Authorization", bearerToken(auditorUsername, "password")))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/audit/backups").with(httpBasic(auditorUsername, "password")))
+        mockMvc.perform(get("/audit/backups").header("Authorization", bearerToken(auditorUsername, "password")))
                 .andExpect(status().isOk());
     }
 
     @Test
     void adminCanReadAuditEndpoints() throws Exception {
-        mockMvc.perform(get("/audit/logs").with(httpBasic("admin", "Admin123!")))
+        mockMvc.perform(get("/audit/logs").header("Authorization", bearerToken("admin", "Admin123!")))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/audit/security-alerts").with(httpBasic("admin", "Admin123!")))
+        mockMvc.perform(get("/audit/security-alerts").header("Authorization", bearerToken("admin", "Admin123!")))
                 .andExpect(status().isOk());
     }
 
@@ -102,13 +101,13 @@ class AuditorAuthorizationTest {
         mockMvc.perform(get("/audit/logs"))
                 .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(get("/audit/logs").with(httpBasic(analystUsername, "password")))
+        mockMvc.perform(get("/audit/logs").header("Authorization", bearerToken(analystUsername, "password")))
                 .andExpect(status().isForbidden());
 
-        mockMvc.perform(get("/audit/cases/closed").with(httpBasic(analystUsername, "password")))
+        mockMvc.perform(get("/audit/cases/closed").header("Authorization", bearerToken(analystUsername, "password")))
                 .andExpect(status().isForbidden());
 
-        mockMvc.perform(get("/audit/backups").with(httpBasic(analystUsername, "password")))
+        mockMvc.perform(get("/audit/backups").header("Authorization", bearerToken(analystUsername, "password")))
                 .andExpect(status().isForbidden());
     }
 
@@ -124,38 +123,38 @@ class AuditorAuthorizationTest {
                 """;
 
         mockMvc.perform(post("/admin/users")
-                        .with(httpBasic(auditorUsername, "password"))
+                        .header("Authorization", bearerToken(auditorUsername, "password"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createUserJson))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/admin/backups/ghostreport-backup-20260507-165524.zip/restore")
-                        .with(httpBasic(auditorUsername, "password")))
+                        .header("Authorization", bearerToken(auditorUsername, "password")))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void auditorCannotUseAnalystWriteEndpoints() throws Exception {
         mockMvc.perform(patch("/analyst/reports/1/status")
-                        .with(httpBasic(auditorUsername, "password"))
+                        .header("Authorization", bearerToken(auditorUsername, "password"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"RESOLVED\"}"))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(patch("/analyst/reports/1/priority")
-                        .with(httpBasic(auditorUsername, "password"))
+                        .header("Authorization", bearerToken(auditorUsername, "password"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"priority\":\"HIGH\"}"))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(patch("/analyst/reports/1/notes")
-                        .with(httpBasic(auditorUsername, "password"))
+                        .header("Authorization", bearerToken(auditorUsername, "password"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"notes\":\"changed\"}"))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/analyst/reports/1/assign")
-                        .with(httpBasic(auditorUsername, "password"))
+                        .header("Authorization", bearerToken(auditorUsername, "password"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isForbidden());
@@ -167,7 +166,7 @@ class AuditorAuthorizationTest {
         User analyst = userRepository.findByUsername(analystUsername).orElseThrow();
         createCaseReview(report, analyst);
 
-        String body = mockMvc.perform(get("/audit/cases/closed").with(httpBasic(auditorUsername, "password")))
+        String body = mockMvc.perform(get("/audit/cases/closed").header("Authorization", bearerToken(auditorUsername, "password")))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -208,7 +207,7 @@ class AuditorAuthorizationTest {
                 """.formatted(report.getId(), storedName, hash));
 
         String body = mockMvc.perform(get("/audit/cases/{id}/evidence-package/verify", report.getId())
-                        .with(httpBasic(auditorUsername, "password")))
+                        .header("Authorization", bearerToken(auditorUsername, "password")))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -223,7 +222,7 @@ class AuditorAuthorizationTest {
 
     @Test
     void auditorCanVerifyBackupButCannotCreateOrRestoreBackup() throws Exception {
-        String body = mockMvc.perform(post("/admin/backups").with(httpBasic("admin", "Admin123!")))
+        String body = mockMvc.perform(post("/admin/backups").header("Authorization", bearerToken("admin", "Admin123!")))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -232,18 +231,18 @@ class AuditorAuthorizationTest {
         String filename = body.replaceAll(".*\"filename\":\"([^\"]+)\".*", "$1");
 
         mockMvc.perform(get("/audit/backups/{filename}/verify", filename)
-                        .with(httpBasic(auditorUsername, "password")))
+                        .header("Authorization", bearerToken(auditorUsername, "password")))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/audit/backups/{filename}/manifest", filename)
-                        .with(httpBasic(auditorUsername, "password")))
+                        .header("Authorization", bearerToken(auditorUsername, "password")))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(post("/admin/backups").with(httpBasic(auditorUsername, "password")))
+        mockMvc.perform(post("/admin/backups").header("Authorization", bearerToken(auditorUsername, "password")))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/admin/backups/{filename}/restore", filename)
-                        .with(httpBasic(auditorUsername, "password")))
+                        .header("Authorization", bearerToken(auditorUsername, "password")))
                 .andExpect(status().isForbidden());
     }
 
@@ -284,5 +283,23 @@ class AuditorAuthorizationTest {
     private String sha256(byte[] bytes) throws Exception {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         return HexFormat.of().formatHex(digest.digest(bytes));
+    }
+    private String bearerToken(String username, String password) throws Exception {
+        String body = """
+                {"username":"%s","password":"%s"}
+                """.formatted(username, password);
+
+        String response = mockMvc.perform(
+                        post("/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(body)
+                )
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String token = response.replaceAll(".*\\\"token\\\":\\\"([^\\\"]+)\\\".*", "$1");
+        return "Bearer " + token;
     }
 }

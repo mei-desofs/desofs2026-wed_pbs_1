@@ -15,8 +15,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
@@ -72,9 +72,28 @@ class AdminAuthorizationTest {
 
         mockMvc.perform(
                         get("/admin/panel")
-                                .with(httpBasic(username, "password"))
+                                .header("Authorization", bearerToken(username, "password"))
                                 .contentType(MediaType.APPLICATION_JSON)
                 )
                 .andExpect(status().isForbidden());
+    }
+
+    private String bearerToken(String username, String password) throws Exception {
+        String body = """
+                {"username":"%s","password":"%s"}
+                """.formatted(username, password);
+
+        String response = mockMvc.perform(
+                        post("/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(body)
+                )
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String token = response.replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
+        return "Bearer " + token;
     }
 }

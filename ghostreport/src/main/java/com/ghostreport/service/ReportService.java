@@ -151,6 +151,15 @@ public class ReportService {
 
     public List<ReportResponse> getAllReports() {
 
+        if (SecurityUtils.hasRole("ANALYST") && !SecurityUtils.hasRole("ADMIN")) {
+            String currentUsername = SecurityUtils.getCurrentUsername();
+
+            return reportRepository.findVisibleToAnalyst(currentUsername)
+                    .stream()
+                    .map(this::toReportResponse)
+                    .toList();
+        }
+
         return reportRepository.findAll()
                 .stream()
                 .map(this::toReportResponse)
