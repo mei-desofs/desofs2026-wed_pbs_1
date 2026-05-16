@@ -30,7 +30,7 @@ jobs:
           cache-dependency-path: ghostreport/pom.xml
 
       - name: Run SpotBugs SAST
-        run: ./mvnw com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true
+        run: ./mvnw -DskipTests compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true
 
       - name: List SpotBugs generated reports
         if: always()
@@ -47,4 +47,4 @@ jobs:
             ghostreport/target/spotbugsXml.xml
             ghostreport/target/*spotbugs*.xml
             ghostreport/target/site/spotbugs*
-          if-no-files-found: warn
+          if-no-files-found: error
