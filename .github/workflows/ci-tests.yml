@@ -48,7 +48,7 @@ jobs:
         run: ./mvnw clean compile
 
       - name: Run tests
-        run: ./mvnw test
+        run: ./mvnw test jacoco:report
         env:
           DB_URL: jdbc:postgresql://localhost:5432/ghostreport
           DB_USERNAME: postgres
@@ -60,4 +60,14 @@ jobs:
         with:
           name: surefire-test-reports
           path: ghostreport/target/surefire-reports/**
+          if-no-files-found: warn
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jacoco-coverage-report
+          path: |
+            ghostreport/target/site/jacoco/**
+            ghostreport/target/jacoco.exec
           if-no-files-found: warn
