@@ -24,21 +24,23 @@ DESOFS secure software development coursework.
 | Anonymous reporter | Submit reports, verify tracking codes and upload evidence. |
 | Analyst | View eligible cases, claim cases, update assigned cases and generate evidence packages for closed cases. |
 | Auditor | View audit/security evidence and verify evidence packages and backups. |
-| Admin | Create/list users, view audit/security information and manage backup operations. |
+| Admin | Create/list/activate/deactivate users, view audit/security information and manage backup operations. |
 
-Admin user management is intentionally described as create/list only in the
-current implementation. Editing, deactivation, deletion, role changes and
-password resets are planned hardening work for Sprint 2/final delivery.
+Admin user management is intentionally described as basic lifecycle management
+in the current implementation. Editing user details, deleting users, changing
+roles and password resets are planned future hardening work.
 
 ## Security Controls
 
 - Stateless JWT authentication.
+- Login rate limiting and brute-force security alerts.
+- Inactive users are blocked from login.
 - BCrypt password hashing.
 - Centralized Spring Security authorization rules.
 - Domain validation for tracking codes, report descriptions and filenames.
 - Upload restrictions for size, extension, MIME type and file signatures.
 - Path traversal and zip slip protections.
-- In-memory rate limiting for public abuse-sensitive flows.
+- In-memory rate limiting for login and public abuse-sensitive flows.
 - SHA-256 hashes for attachments, evidence packages and backup manifests.
 - Security headers configured in Spring Security.
 - Audit logs for critical operations.
@@ -75,6 +77,7 @@ cd ghostreport
 - [Contribution guide](CONTRIBUTING.md)
 - [DevSecOps pipeline evidence](docs/DEVSECOPS_PIPELINE.md)
 - [ASVS evidence mapping](docs/ASVS_EVIDENCE.md)
+- [Security controls mapping](docs/SECURITY_CONTROLS.md)
 - [Phase 2 evidence folder](Deliverables/Phase%202/Evidence/README.md)
 
 ## Authors
