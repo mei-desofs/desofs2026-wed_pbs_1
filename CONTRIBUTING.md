@@ -43,6 +43,13 @@ Each pull request should include:
 - Evidence artifacts or screenshots when relevant.
 - ASVS controls affected, if applicable.
 
+For DevSecOps/documentation pull requests, also include:
+
+- workflows changed;
+- expected artifacts;
+- whether the workflow is blocking or evidence/manual triage;
+- documentation updated to match the pipeline behavior.
+
 Before requesting review, run the relevant command:
 
 ```powershell
@@ -51,6 +58,18 @@ cd ghostreport
 ```
 
 For pipeline/documentation branches, verify YAML indentation and artifact paths.
+
+Useful validation command:
+
+```powershell
+python - <<'PY'
+import yaml
+from pathlib import Path
+for path in Path('.github/workflows').glob('*.yml'):
+    yaml.safe_load(path.read_text(encoding='utf-8'))
+    print(f'valid yaml: {path}')
+PY
+```
 
 ## Review Checklist
 
@@ -66,6 +85,8 @@ When a security control is added or changed, update at least one of:
 
 - `docs/ASVS_EVIDENCE.md`
 - `docs/DEVSECOPS_PIPELINE.md`
+- `docs/PIPELINE_FLOW.md`
+- `docs/PIPELINE_ARTIFACTS.md`
 - final report chapter
 - ASVS tracker spreadsheet
 
