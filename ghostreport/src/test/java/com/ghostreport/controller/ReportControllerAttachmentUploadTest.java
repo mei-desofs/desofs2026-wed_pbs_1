@@ -37,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -141,6 +142,43 @@ class ReportControllerAttachmentUploadTest {
         assertTrue(storedPath.startsWith(uploadBase), "Stored file must remain inside upload base");
         assertTrue(Files.exists(storedPath), "Stored file should exist on disk");
         assertEquals(content.length, Files.size(storedPath));
+    }
+
+    @Test
+    void publicAttachmentListRequiresMatchingTrackingCodeAndReturnsMetadata() throws Exception {
+        Report report = createReport();
+        MockMultipartFile file = new MockMultipartFile(
+                "files",
+                "invoice.txt",
+                "text/plain",
+                "approved evidence".getBytes()
+        );
+
+        mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
+                        .file(file)
+                        .param("trackingCode", TRACKING_CODE))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/reports/{id}/attachments/list", report.getId())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "trackingCode": "%s"
+                                }
+                                """.formatted(TRACKING_CODE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").exists())
+                .andExpect(jsonPath("$[0].originalName").value("invoice.txt"))
+                .andExpect(jsonPath("$[0].mimeType").value("text/plain"));
+
+        mockMvc.perform(post("/reports/{id}/attachments/list", report.getId())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "trackingCode": "GR-zzzzzzzzzzzzzzzzzzzz"
+                                }
+                                """))
+                .andExpect(status().isForbidden());
     }
 
     @Test
