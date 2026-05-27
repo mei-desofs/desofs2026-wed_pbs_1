@@ -9,6 +9,7 @@ with the code and avoids overclaiming features that are not implemented yet.
 | --- | --- |
 | Admin functionality | Say that ADMIN can create/list users, view audit/security data and manage backup operations. Do not claim full user lifecycle unless implemented. |
 | DevSecOps pipeline | Describe separate workflows: CI tests/coverage, SpotBugs, Dependency-Check, Gitleaks and ZAP. |
+| Pipeline flow | Explain the sequence: secret scanning, CI build/tests/coverage, SAST/SCA, DAST and evidence collection. |
 | ASVS | Reference `docs/ASVS_EVIDENCE.md` and the Sprint 2 tracker. |
 | Testing | Include Maven tests, JaCoCo coverage, security tests and pipeline artifacts. |
 | DAST | State that GhostReport runs on `localhost:8081` on the GitHub runner and ZAP runs in Docker with host networking. |
@@ -47,6 +48,7 @@ Avoid:
 
 - GitHub Actions run summary screenshots.
 - Artifact list screenshots for CI, SpotBugs, Dependency-Check, Gitleaks and ZAP.
+- Pipeline flow diagram from `docs/PIPELINE_FLOW.md`.
 - JaCoCo coverage screenshot.
 - Maven test success screenshot.
 - ASVS tracker screenshot or export.
@@ -61,3 +63,15 @@ Frame Sprint 2 as consolidation and hardening:
    report claims and implemented code.
 3. Remaining production-grade controls are listed as future work rather than
    claimed as complete.
+
+## DevSecOps Flow Wording
+
+Use:
+
+> The pipeline strategy follows a staged DevSecOps flow: repository secret
+> scanning, build/tests/coverage, SAST/SCA evidence, baseline DAST and artifact
+> collection for ASVS and report evidence.
+
+Avoid:
+
+> All security pipelines fully block vulnerable code.

@@ -2,18 +2,34 @@
 
 GhostReport uses separate GitHub Actions workflows so that build/test, SAST,
 SCA, secret scanning and DAST can run independently and produce clear evidence.
+The intended orchestration is documented in [PIPELINE_FLOW.md](PIPELINE_FLOW.md),
+and the artifact-to-evidence mapping is documented in
+[PIPELINE_ARTIFACTS.md](PIPELINE_ARTIFACTS.md).
 
 ## Workflow Overview
 
 | Workflow | Purpose | Main artifact evidence |
 | --- | --- | --- |
-| `ci-tests.yml` | Compile, run automated tests and generate JaCoCo coverage. | Surefire reports and JaCoCo HTML/exec report. |
-| `sast-spotbugs.yml` | Run SpotBugs static analysis over Java code. | SpotBugs XML report. |
-| `sca-dependency-check.yml` | Run OWASP Dependency-Check over Maven dependencies. | HTML, JSON, XML and SARIF reports. |
-| `secret-scan-gitleaks.yml` | Detect hardcoded secrets in the repository. | Gitleaks JSON report. |
-| `dast-zap.yml` | Start GhostReport and run OWASP ZAP baseline DAST. | ZAP HTML, JSON, XML and application log. |
+| `secret-scan-gitleaks.yml` | Stage 00: detect hardcoded secrets in the repository. | Gitleaks JSON report. |
+| `ci-tests.yml` | Stage 01: compile, run automated tests and generate JaCoCo coverage. | Surefire reports and JaCoCo HTML/exec report. |
+| `sast-spotbugs.yml` | Stage 02A: run SpotBugs static analysis over Java code. | SpotBugs XML report. |
+| `sca-dependency-check.yml` | Stage 02B: run OWASP Dependency-Check over Maven dependencies. | HTML, JSON, XML and SARIF reports. |
+| `dast-zap.yml` | Stage 03: start GhostReport and run OWASP ZAP baseline DAST. | ZAP HTML, JSON, XML and application log. |
 
-All workflows run on `push` and `pull_request` for `main` and `develop`.
+All workflows run on `push` and `pull_request` for `main` and `develop`, and
+also support `workflow_dispatch` for manual evidence regeneration.
+
+## Orchestration Summary
+
+The validation flow is:
+
+```text
+Secret scanning -> CI build/tests/coverage -> SAST/SCA -> DAST -> evidence collection
+```
+
+The workflows are separate because this makes each validation activity easier
+to rerun and explain. CI is the main blocking baseline; SAST, SCA and DAST are
+currently evidence/manual triage workflows.
 
 ## CI Tests and Coverage
 
@@ -85,9 +101,10 @@ Authenticated scans and active/full scans are future hardening work.
 When describing the pipeline in the report, use precise wording:
 
 > The project uses separate GitHub Actions workflows for build/test, SAST,
-> SCA, secret scanning and baseline DAST. SAST and SCA currently operate as
-> evidence-producing workflows with manual triage, while CI tests validate
-> compilation, automated tests and JaCoCo coverage.
+> SCA, secret scanning and baseline DAST. The intended flow is secret scanning,
+> CI build/tests/coverage, SAST/SCA, DAST and evidence collection. SAST, SCA and
+> DAST currently operate as evidence-producing workflows with manual triage,
+> while CI tests validate compilation, automated tests and JaCoCo coverage.
 
 Avoid claiming:
 

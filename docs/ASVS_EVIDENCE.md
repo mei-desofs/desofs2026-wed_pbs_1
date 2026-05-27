@@ -16,7 +16,7 @@ formal tracker, but this file explains how each claim can be defended.
 | Logging and monitoring | Partial/strong | `AuditLogService`, `SecurityMonitoringService`, audit/security tests. Logs are not tamper-proof. |
 | Rate limiting | Partial | `RateLimiterService`, public tracking/upload/download limits. Login rate limiting not implemented yet. |
 | Backup integrity | Strong baseline | `BackupService`, manifests, SHA-256, restore staging, integration tests. |
-| DevSecOps | Strong evidence | CI, SpotBugs, Dependency-Check, Gitleaks, ZAP and JaCoCo artifacts. |
+| DevSecOps | Strong evidence | CI, SpotBugs, Dependency-Check, Gitleaks, ZAP and JaCoCo artifacts mapped in `docs/PIPELINE_ARTIFACTS.md`. |
 
 ## Suggested ASVS Control Evidence
 
@@ -36,6 +36,19 @@ formal tracker, but this file explains how each claim can be defended.
 | Dependency monitoring | OWASP Dependency-Check workflow and artifacts. | Implemented |
 | Static analysis | SpotBugs workflow and XML artifacts. | Implemented |
 | Dynamic analysis | OWASP ZAP baseline workflow and reports. | Implemented |
+
+## Pipeline Evidence by ASVS Area
+
+| ASVS evidence area | Artifact evidence |
+| --- | --- |
+| Secure verification | `ci-surefire-test-reports`, `ci-jacoco-coverage-report` |
+| Static analysis | `sast-spotbugs-report` |
+| Dependency management | `dependency-check-sca-html`, `dependency-check-sca-json`, `dependency-check-sca-xml`, `dependency-check-sca-sarif` |
+| Secret management | `secret-scan-gitleaks-json` |
+| Dynamic analysis | `dast-zap-baseline-html`, `dast-zap-baseline-json`, `dast-zap-baseline-xml` |
+| Runtime evidence | `dast-ghostreport-app-log` |
+
+The full artifact map is maintained in `docs/PIPELINE_ARTIFACTS.md`.
 
 ## Known Gaps to Track Honestly
 

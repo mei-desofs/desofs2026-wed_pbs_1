@@ -131,3 +131,22 @@ Do not claim a control as implemented unless it exists in code and has evidence.
 Use "planned" or "future work" for malware scanning, storage quotas, distributed
 rate limiting, MFA, tamper-proof logs and full admin user lifecycle management
 until those features are actually implemented.
+
+## Workflow and Documentation Standards
+
+GitHub Actions workflows should:
+
+- use clear stage-oriented names;
+- include `workflow_dispatch` for manual evidence regeneration;
+- use minimum required permissions;
+- publish artifacts with stable names;
+- explain whether the workflow is blocking or evidence/manual triage;
+- avoid changing backend code in DevSecOps-only branches.
+
+Documentation should link claims to one of:
+
+- source code;
+- automated tests;
+- GitHub Actions artifacts;
+- ASVS evidence;
+- known limitations/future work.
