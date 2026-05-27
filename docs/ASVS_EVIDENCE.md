@@ -8,13 +8,13 @@ formal tracker, but this file explains how each claim can be defended.
 
 | Area | Status | Evidence |
 | --- | --- | --- |
-| Authentication | Partially strong | `AuthController`, `AuthService`, `JwtService`, `JwtAuthenticationFilter`, BCrypt, JWT tests to add. |
+| Authentication | Strong baseline | `AuthController`, `AuthService`, `JwtService`, `JwtAuthenticationFilter`, BCrypt, inactive-user checks, login rate limiting and JWT security tests. |
 | Authorization / RBAC | Strong | `SecurityConfig`, `AdminAuthorizationTest`, `AuditorAuthorizationTest`, `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`. |
 | Input validation | Strong | DTO validation, `ReportDescription`, `SafeFilename`, `TrackingCode`, controller/service tests. |
 | File upload security | Strong baseline | `FileStorageService`, MIME/extension/magic byte checks, path normalization, upload tests. |
-| Error handling | Partial | Existing safe responses should be documented and tested more explicitly. |
-| Logging and monitoring | Partial/strong | `AuditLogService`, `SecurityMonitoringService`, audit/security tests. Logs are not tamper-proof. |
-| Rate limiting | Partial | `RateLimiterService`, public tracking/upload/download limits. Login rate limiting not implemented yet. |
+| Error handling | Strong baseline | Controlled JSON errors and tests for malformed/unauthorized responses without stack traces. |
+| Logging and monitoring | Partial/strong | `AuditLogService`, `SecurityMonitoringService`, audit/security tests and brute-force alerts. Logs are not tamper-proof. |
+| Rate limiting | Strong baseline | `RateLimiterService`, public tracking/upload/download limits and login rate limiting. |
 | Backup integrity | Strong baseline | `BackupService`, manifests, SHA-256, restore staging, integration tests. |
 | DevSecOps | Strong evidence | CI, SpotBugs, Dependency-Check, Gitleaks, ZAP and JaCoCo artifacts mapped in `docs/PIPELINE_ARTIFACTS.md`. |
 
@@ -23,14 +23,14 @@ formal tracker, but this file explains how each claim can be defended.
 | ASVS topic | GhostReport evidence | Status |
 | --- | --- | --- |
 | Password storage | BCrypt `PasswordEncoder`; password complexity in `CreateUserRequest`. | Implemented |
-| Session management | Stateless JWT; no server-side session state for API authentication. | Implemented |
-| Access control | Centralized RBAC in `SecurityConfig`; ownership checks in services. | Implemented |
-| Generic error handling | Generic responses for unauthorized/forbidden flows; add explicit tests for stack trace absence. | Partial |
+| Session management | Stateless JWT; no server-side session state for API authentication; signature, expiry and role validation tested. | Implemented |
+| Access control | Centralized RBAC in `SecurityConfig`; ownership checks in services; admin activate/deactivate tests. | Implemented |
+| Generic error handling | Generic responses for unauthorized/forbidden/malformed flows; tests check absence of internals. | Implemented |
 | Input validation | Bean Validation DTOs and domain primitives. | Implemented |
 | File upload validation | Size, MIME, extension, magic bytes, safe names and controlled storage. | Implemented |
 | Path traversal prevention | `SafeFilename`, normalized paths and storage boundary checks. | Implemented |
 | Logging | Audit logs for critical operations; sanitization of log details. | Implemented |
-| Monitoring | Security alerts for suspicious tracking, upload, path traversal, backup and ownership events. | Partial |
+| Monitoring | Security alerts for suspicious tracking, upload, path traversal, backup, ownership and brute-force login events. | Implemented baseline |
 | Data integrity | SHA-256 hashes for evidence and backups. | Implemented |
 | Secret management | GitHub Actions secrets and Gitleaks workflow. | Implemented |
 | Dependency monitoring | OWASP Dependency-Check workflow and artifacts. | Implemented |
@@ -58,7 +58,7 @@ The full artifact map is maintained in `docs/PIPELINE_ARTIFACTS.md`.
 | Storage quotas | Not implemented; future work for abuse and capacity control. |
 | Tamper-proof audit logs | Audit logs exist but are not append-only/hash-chained. |
 | Distributed rate limiting | Current implementation is in-memory and suitable for single-instance/dev use. |
-| Full admin lifecycle | Admin currently creates/lists users; edit/deactivate/delete/role changes are not complete unless Sprint 2 implements them. |
+| Full admin lifecycle | Admin currently creates/lists/activates/deactivates users; edit/delete/role changes/password resets are not implemented. |
 | Authenticated DAST | ZAP baseline is unauthenticated and passive. |
 | MFA | Not implemented. |
 
@@ -66,10 +66,10 @@ The full artifact map is maintained in `docs/PIPELINE_ARTIFACTS.md`.
 
 | Improvement | Why it matters | Evidence to add |
 | --- | --- | --- |
-| Login rate limiting | Strengthens authentication abuse protection. | Unit/integration test and security alert. |
-| Inactive users | Makes admin user management more credible. | Admin endpoint tests and login rejection test. |
-| JWT tamper/expired tests | Proves token validation behavior. | Security integration tests. |
-| Error response tests | Supports information disclosure controls. | Tests for no stack traces/internal messages. |
+| Login rate limiting | Strengthens authentication abuse protection. | `LoginRateLimitSecurityTest` and `BRUTE_FORCE_LOGIN_ATTEMPT` alert. |
+| Inactive users | Makes admin user management more credible. | `AdminUserManagementSecurityTest` verifies deactivate/reactivate and login rejection. |
+| JWT tamper/expired tests | Proves token validation behavior. | `JwtServiceSecurityTest`. |
+| Error response tests | Supports information disclosure controls. | `ErrorHandlingSecurityTest`. |
 | ASVS screenshots/artifacts | Makes tracker defensible. | Link workflow artifacts and test output. |
 
 ## Evidence Storage

@@ -50,6 +50,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/reports").permitAll()
                         .requestMatchers(HttpMethod.POST, "/reports/verify").permitAll()
                         .requestMatchers(HttpMethod.POST, "/reports/{id}/attachments").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/reports/{id}/attachments/list").permitAll()
 
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/analyst/**").hasAnyRole("ANALYST", "ADMIN")

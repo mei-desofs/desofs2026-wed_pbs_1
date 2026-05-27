@@ -7,10 +7,11 @@ with the code and avoids overclaiming features that are not implemented yet.
 
 | Report section | Required update |
 | --- | --- |
-| Admin functionality | Say that ADMIN can create/list users, view audit/security data and manage backup operations. Do not claim full user lifecycle unless implemented. |
+| Admin functionality | Say that ADMIN can create/list/activate/deactivate users, view audit/security data and manage backup operations. Do not claim edit/delete/role changes/password reset. |
 | DevSecOps pipeline | Describe separate workflows: CI tests/coverage, SpotBugs, Dependency-Check, Gitleaks and ZAP. |
 | Pipeline flow | Explain the sequence: secret scanning, CI build/tests/coverage, SAST/SCA, DAST and evidence collection. |
 | ASVS | Reference `docs/ASVS_EVIDENCE.md` and the Sprint 2 tracker. |
+| Security controls | Reference `docs/SECURITY_CONTROLS.md` for control-to-code/test mapping. |
 | Testing | Include Maven tests, JaCoCo coverage, security tests and pipeline artifacts. |
 | DAST | State that GhostReport runs on `localhost:8081` on the GitHub runner and ZAP runs in Docker with host networking. |
 | Limitations | Keep malware scanning, quotas, MFA, tamper-proof logs, distributed rate limiting and authenticated DAST as future work. |
@@ -20,11 +21,22 @@ with the code and avoids overclaiming features that are not implemented yet.
 Use:
 
 > The administrator can create and list users, access administrative audit and
-> security information, and execute protected backup operations.
+> security information, activate or deactivate users, and execute protected
+> backup operations.
 
 Avoid:
 
 > The administrator fully manages users and permissions.
+
+Use:
+
+> Login protection includes generic authentication errors, rate limiting for
+> repeated failed attempts, audit logging for inactive-user login attempts and
+> security alerts for brute-force patterns.
+
+Avoid:
+
+> The authentication system has enterprise-grade account protection.
 
 Use:
 

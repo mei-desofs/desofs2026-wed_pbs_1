@@ -62,6 +62,19 @@ public class ReportController {
         return reportService.uploadMultipleAttachments(id, files, trackingCode);
     }
 
+    @PostMapping("/{id}/attachments/list")
+    public List<AttachmentListResponse> listAttachments(
+            @PathVariable Long id,
+            @Valid @RequestBody VerifyTrackingCodeRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        String ip = httpRequest.getRemoteAddr();
+
+        rateLimiterService.checkTrackingLimit(ip);
+
+        return reportService.listAttachmentsSecure(id, request.getTrackingCode());
+    }
+
     @PostMapping("/download")
     public ResponseEntity<Resource> downloadAttachment(
             @Valid @RequestBody DownloadRequest request,

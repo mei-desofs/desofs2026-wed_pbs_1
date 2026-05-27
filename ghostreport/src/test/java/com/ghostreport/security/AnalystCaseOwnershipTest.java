@@ -145,6 +145,31 @@ class AnalystCaseOwnershipTest {
     }
 
     @Test
+    @WithMockUser(username = "owner_analyst", roles = "ANALYST")
+    void analystCanReadAttachmentMetadataFromUnassignedCase() throws Exception {
+        createAttachment(unassignedReport);
+
+        assertThat(reportService.listAttachments(unassignedReport.getId()))
+                .hasSize(1)
+                .first()
+                .extracting("originalName")
+                .isEqualTo("owned-evidence.txt");
+    }
+
+    @Test
+    @WithMockUser(username = "other_analyst", roles = "ANALYST")
+    void analystCannotReadAttachmentMetadataFromCaseAssignedToAnotherAnalyst() throws Exception {
+        createAttachment(ownerReport);
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> reportService.listAttachments(ownerReport.getId())
+        );
+
+        assertThat(exception.getStatusCode().value()).isEqualTo(403);
+    }
+
+    @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
     void adminCanDownloadAttachmentWithoutOwnership() throws Exception {
         Attachment attachment = createAttachment(otherReport);

@@ -394,7 +394,52 @@ public class ReportService {
             Long reportId
     ) {
 
-        checkInternalAccessToReport(reportId);
+        checkInternalReadAccessToReport(reportId);
+
+        return attachmentRepository.findByReportId(reportId)
+                .stream()
+                .map(a -> new AttachmentListResponse(
+                        a.getId(),
+                        a.getOriginalName(),
+                        a.getMimeType(),
+                        a.getSize()
+                ))
+                .toList();
+    }
+
+    public List<AttachmentListResponse> listAttachmentsSecure(
+            Long reportId,
+            String trackingCode
+    ) {
+
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.FORBIDDEN
+                        )
+                );
+
+        String normalizedTrackingCode;
+
+        try {
+            normalizedTrackingCode = TrackingCode.from(trackingCode).value();
+        } catch (IllegalArgumentException e) {
+            securityMonitoringService.recordFailedTrackingCode(reportId);
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Código inválido"
+            );
+        }
+
+        if (!passwordEncoder.matches(
+                normalizedTrackingCode,
+                report.getTrackingCodeHash()
+        )) {
+            securityMonitoringService.recordFailedTrackingCode(reportId);
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN
+            );
+        }
 
         return attachmentRepository.findByReportId(reportId)
                 .stream()
@@ -444,6 +489,39 @@ public class ReportService {
                                 .toString()
                 )
                 .body(resource);
+    }
+
+    private void checkInternalReadAccessToReport(
+            Long reportId
+    ) {
+
+        if (SecurityUtils.hasRole("ADMIN")) {
+            return;
+        }
+
+        CaseReview caseReview =
+                caseReviewRepository.findByReportId(
+                        reportId
+                ).orElse(null);
+
+        if (caseReview == null || caseReview.getAssignedAnalyst() == null) {
+            return;
+        }
+
+        String currentUser =
+                SecurityUtils.getCurrentUsername();
+
+        if (!caseReview.getAssignedAnalyst()
+                .getUsername()
+                .equals(currentUser)) {
+
+            auditLogService.log("ANALYST_ACCESS_DENIED", "REPORT", reportId, "Analyst attempted to read a report without ownership");
+            securityMonitoringService.recordUnauthorizedAnalystAccess(reportId);
+
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN
+            );
+        }
     }
 
     public ResponseEntity<Resource> downloadAttachmentSecure(

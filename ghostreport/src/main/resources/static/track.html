@@ -2,25 +2,25 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <title>GhostReport - Acompanhar Denúncia</title>
+    <title>GhostReport - Acompanhar Denuncia</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
 <div class="topnav">
     <a class="brand" href="/index.html">GhostReport</a>
-    <a href="/submit.html">Submeter denúncia</a>
-    <a href="/track.html">Acompanhar denúncia</a>
+    <a href="/submit.html">Submeter denuncia</a>
+    <a href="/track.html">Acompanhar denuncia</a>
     <a href="/analyst.html">Painel Analista</a>
     <a href="/auditor.html">Painel Auditor</a>
     <a href="/admin.html">Painel Admin</a>
 </div>
 
 <div class="container">
-    <h1>Acompanhar Denúncia</h1>
+    <h1>Acompanhar Denuncia</h1>
 
     <form id="verifyForm">
-        <label for="trackingCode">Código de acompanhamento</label>
+        <label for="trackingCode">Codigo de acompanhamento</label>
         <input id="trackingCode" type="text" required>
         <button type="submit">Consultar</button>
     </form>
@@ -30,7 +30,6 @@
 
 <script src="/js/api.js"></script>
 <script>
-
     const params = new URLSearchParams(window.location.search);
     document.getElementById("trackingCode").value = params.get("code") || "";
 
@@ -52,51 +51,83 @@
             const data = await handleJsonResponse(response);
 
             resultDiv.innerHTML = `
-            <div class="result">
-                <strong>Denúncia encontrada</strong><br><br>
+                <div class="result">
+                    <strong>Denuncia encontrada</strong><br><br>
 
-                <b>Categoria:</b> ${data.category}<br>
-                <b>Estado:</b> ${data.status}<br>
+                    <b>Categoria:</b> ${escapeHtml(data.category)}<br>
+                    <b>Estado:</b> ${escapeHtml(data.status)}<br>
 
-                <hr>
+                    <hr>
 
-                <h3>Anexos</h3>
-                <div id="attachmentsList">A carregar...</div>
-            </div>
-        `;
+                    <h3>Anexos</h3>
+                    <div id="attachmentsList">A carregar...</div>
+                </div>
+            `;
 
-            loadAttachments(data.id);
+            loadAttachments(data.id, trackingCode);
 
         } catch (error) {
-            resultDiv.innerHTML = `<div class="error">${error.message}</div>`;
+            resultDiv.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
         }
     });
 
-    async function loadAttachments(reportId) {
-
+    async function loadAttachments(reportId, trackingCode) {
         const listDiv = document.getElementById("attachmentsList");
 
         try {
-            const response = await fetch(`${API_BASE}/analyst/reports/${reportId}/attachments`);
+            const response = await fetch(`${API_BASE}/reports/${reportId}/attachments/list`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ trackingCode })
+            });
 
-            const data = await response.json();
+            const data = await handleJsonResponse(response);
 
             if (!data.length) {
                 listDiv.innerHTML = "Sem anexos.";
                 return;
             }
 
-            listDiv.innerHTML = `
+            listDiv.innerHTML = data.map(a => `
                 <div class="card">
-                    📎 ${data.length} anexo(s) associado(s) à denúncia
+                    <strong>${escapeHtml(a.originalName || `Anexo #${a.id}`)}</strong><br>
+                    Tipo: ${escapeHtml(a.mimeType || "desconhecido")}<br>
+                    Tamanho: ${formatBytes(a.size)}
                 </div>
-            `;
+            `).join("");
 
         } catch (err) {
             listDiv.innerHTML = "Erro ao carregar anexos";
         }
     }
 
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    function formatBytes(bytes) {
+        if (!bytes) {
+            return "0 B";
+        }
+
+        const units = ["B", "KB", "MB"];
+        let size = Number(bytes);
+        let unit = 0;
+
+        while (size >= 1024 && unit < units.length - 1) {
+            size = size / 1024;
+            unit++;
+        }
+
+        return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+    }
 </script>
 
 </body>
