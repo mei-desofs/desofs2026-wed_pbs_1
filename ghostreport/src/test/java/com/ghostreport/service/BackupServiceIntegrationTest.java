@@ -33,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.jpa.show-sql=false",
+        "spring.jpa.open-in-view=false",
         "ghostreport.backup-dir=target/test-backups/service",
         "app.upload-dir=target/test-uploads/service",
         "ghostreport.backup-enabled=true"
