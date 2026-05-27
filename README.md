@@ -1,93 +1,84 @@
-# Ghost Report
+# GhostReport
 
-## Descrição da Plataforma
+GhostReport is a Spring Boot web application for anonymous reporting, internal
+case analysis and audit evidence management. The project was developed for the
+DESOFS secure software development coursework.
 
-O **GhostReport** é uma plataforma web para **submissão e acompanhamento de denúncias anónimas** dentro de uma organização.
+## Main Capabilities
 
-A aplicação permite que utilizadores reportem situações como fraude, corrupção, assédio ou vulnerabilidades de segurança, garantindo que a sua identidade permanece protegida durante todo o processo.
+- Anonymous report submission.
+- Tracking code based report verification.
+- Evidence upload with file validation and safe storage.
+- JWT based authentication for internal users.
+- Role based access control for `ADMIN`, `ANALYST` and `AUDITOR`.
+- Analyst case ownership controls.
+- Audit logs and security alerts.
+- Evidence package generation for closed cases.
+- Backup generation and integrity verification.
+- DevSecOps evidence through GitHub Actions.
 
-O sistema foi desenvolvido com um forte foco em **segurança**, assegurando:
+## Current Role Model
 
-- anonimato do denunciante
-- integridade dos dados submetidos
-- controlo de acessos
-- rastreabilidade das ações
+| Role | Implemented capabilities |
+| --- | --- |
+| Anonymous reporter | Submit reports, verify tracking codes and upload evidence. |
+| Analyst | View eligible cases, claim cases, update assigned cases and generate evidence packages for closed cases. |
+| Auditor | View audit/security evidence and verify evidence packages and backups. |
+| Admin | Create/list users, view audit/security information and manage backup operations. |
 
-## Objetivos da Aplicação
+Admin user management is intentionally described as create/list only in the
+current implementation. Editing, deactivation, deletion, role changes and
+password resets are planned hardening work for Sprint 2/final delivery.
 
-- Garantir o anonimato dos utilizadores
-- Proteger a integridade das denúncias 
-- Permitir auditoria e rastreabilidade
-- Facilitar deteção de incidentes de segurança
+## Security Controls
 
-> Este projeto foi desenvolvido no âmbito da unidade curricular de Desenvolvimento de Software Seguro (DESOFS).
+- Stateless JWT authentication.
+- BCrypt password hashing.
+- Centralized Spring Security authorization rules.
+- Domain validation for tracking codes, report descriptions and filenames.
+- Upload restrictions for size, extension, MIME type and file signatures.
+- Path traversal and zip slip protections.
+- In-memory rate limiting for public abuse-sensitive flows.
+- SHA-256 hashes for attachments, evidence packages and backup manifests.
+- Security headers configured in Spring Security.
+- Audit logs for critical operations.
 
-# Descrição do Sistema
+Known limitations are documented in the report and ASVS evidence: malware
+scanning, storage quotas, tamper-proof audit logs and distributed rate limiting
+are not implemented yet.
 
-## Tipo de Utilizadores
+## Running Locally
 
-### Denunciante Anónimo
-- Submete denúncias sem autenticação
-- Consulta estado através de código
+From the Spring Boot module:
 
-### Analista
-- Analisa e gere denúncias
-- Atualiza estados e adiciona notas
+```powershell
+cd ghostreport
+$env:DB_PASSWORD="user"
+.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
+```
 
-### Administrador
-- Gere utilizadores e permissões
-- Controla o sistema
+The application uses port `8081` by default.
 
----
+## Test and Evidence Commands
 
-## Funcionalidades Principais
-- Submissão de denúncias anónimas
-- Upload de ficheiros (evidências)
-- Consulta de denúncia por código
-- Gestão de denúncias (analista)
-- Gestão de utilizadores (administrador)
-- Armazenamento seguro de ficheiros
+```powershell
+cd ghostreport
+.\mvnw.cmd test
+.\mvnw.cmd test jacoco:report
+.\mvnw.cmd -DskipTests compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true
+.\mvnw.cmd org.owasp:dependency-check-maven:12.1.0:check -Dformat=ALL -DossindexAnalyzerEnabled=false -DfailOnError=false -DfailBuildOnCVSS=11
+```
 
----
+## Documentation
 
-## Arquitetura 
-O sistema é composto por:
-- Denunciante
-- Cliente Interno
-- API Backend
-- Base de dados relacional
-- Sistema de ficheiros 
-- Sistema de logs/auditoria
+- [Coding standards](docs/CODING_STANDARDS.md)
+- [Contribution guide](CONTRIBUTING.md)
+- [DevSecOps pipeline evidence](docs/DEVSECOPS_PIPELINE.md)
+- [ASVS evidence mapping](docs/ASVS_EVIDENCE.md)
+- [Phase 2 evidence folder](Deliverables/Phase%202/Evidence/README.md)
 
----
-
-## Segurança
-O GhostReport foi desenvolvido seguindo os princípios de **Secure Software Development Life Cycle (SSDLC)**.
-
-### Principais medidas:
-- Autenticação Segura
-- RBAC
-- Comunicação segura (HTTPS/TLS)
-- Anonimização de dados
-- Proteção contra path traversal
-- Validação de uploads
-- Minimização de dados
-- Logging e Auditoria
-- Backups e recuperação
-
----
-
-## Testes de Segurança
-O sistema inclui testes para:
-- autenticação e autorização
-- validação de inputs
-- upload de ficheiros
-- brute force e enumeração
-- logging
-- recuperação de falhas
-
-## Autores
+## Authors
 
 - Alexandre Vieira
-- Bárbara Silva
+- Barbara Silva
 - Sofia Marques
