@@ -83,12 +83,40 @@ public class UserService {
                 "User created with role " + saved.getRole()
         );
 
+        return toResponse(saved);
+    }
+
+    public UserResponse setActive(Long userId, boolean active) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (user.isActive() == active) {
+            return toResponse(user);
+        }
+
+        if (!active
+                && user.getRole() == UserRole.ADMIN
+                && userRepository.countByRoleAndActiveTrue(UserRole.ADMIN) <= 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "At least one active administrator is required");
+        }
+
+        user.setActive(active);
+        User saved = userRepository.save(user);
+
+        String action = active ? "USER_ACTIVATED" : "USER_DEACTIVATED";
+        auditLogService.log(action, "USER", saved.getId(), "User active status changed");
+        logger.info("{} for user id={}", action, saved.getId());
+
+        return toResponse(saved);
+    }
+
+    private UserResponse toResponse(User user) {
         return new UserResponse(
-                saved.getId(),
-                saved.getUsername(),
-                saved.getEmail(),
-                saved.getRole().name(),
-                saved.isActive()
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getRole().name(),
+                user.isActive()
         );
     }
 }
