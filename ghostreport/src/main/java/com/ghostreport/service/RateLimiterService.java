@@ -45,6 +45,41 @@ public class RateLimiterService {
         check("default:" + ip, properties.getTracking());
     }
 
+    public void checkLoginAllowed(String clientKey) {
+        RateLimitProperties.Limit limit = properties.getLogin();
+        validateLimit(limit);
+        Instant now = Instant.now(clock);
+        Duration window = Duration.ofSeconds(limit.getWindowSeconds());
+
+        WindowCounter counter = attempts.computeIfPresent("login:" + clientKey, (ignored, existing) ->
+                now.isBefore(existing.windowStart.plus(window)) ? existing : null
+        );
+
+        if (counter != null && counter.count >= limit.getMaxAttempts()) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many requests");
+        }
+    }
+
+    public boolean recordLoginFailure(String clientKey) {
+        RateLimitProperties.Limit limit = properties.getLogin();
+        validateLimit(limit);
+        Instant now = Instant.now(clock);
+        Duration window = Duration.ofSeconds(limit.getWindowSeconds());
+        WindowCounter counter = attempts.compute("login:" + clientKey, (ignored, existing) -> {
+            if (existing == null || !now.isBefore(existing.windowStart.plus(window))) {
+                return new WindowCounter(1, now);
+            }
+            existing.count++;
+            return existing;
+        });
+        cleanupExpired(now);
+        return counter.count == limit.getMaxAttempts();
+    }
+
+    public void clearLoginFailures(String clientKey) {
+        attempts.remove("login:" + clientKey);
+    }
+
     private void check(String key, RateLimitProperties.Limit limit) {
         validateLimit(limit);
 
@@ -89,6 +124,9 @@ public class RateLimiterService {
         }
         if (key.startsWith("download:")) {
             return properties.getDownload();
+        }
+        if (key.startsWith("login:")) {
+            return properties.getLogin();
         }
         return properties.getTracking();
     }
