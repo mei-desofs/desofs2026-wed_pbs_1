@@ -4,6 +4,7 @@ import com.ghostreport.service.SecurityMonitoringService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -62,13 +63,17 @@ public class SecurityConfig {
                                 securityMonitoringService.recordUnauthorizedBackupAccess(request.getRequestURI());
                             }
                             response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer realm=\"GhostReport\"");
-                            response.sendError(401, "Unauthorized");
+                            response.setStatus(401);
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            response.getWriter().write("{\"status\":401,\"error\":\"Unauthorized\"}");
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             if (request.getRequestURI().startsWith("/admin/backups")) {
                                 securityMonitoringService.recordUnauthorizedBackupAccess(request.getRequestURI());
                             }
-                            response.sendError(403, "Access denied");
+                            response.setStatus(403);
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            response.getWriter().write("{\"status\":403,\"error\":\"Access denied\"}");
                         })
                 )
                 .httpBasic(httpBasic -> httpBasic.disable())

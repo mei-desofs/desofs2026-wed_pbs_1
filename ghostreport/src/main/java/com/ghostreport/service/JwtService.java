@@ -9,9 +9,11 @@ import org.springframework.stereotype.Service;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -30,7 +32,7 @@ public class JwtService {
             @Value("${ghostreport.jwt.secret}") String secret,
             @Value("${ghostreport.jwt.expiration-seconds:3600}") long expirationSeconds
     ) {
-        if (secret == null || secret.length() < 32) {
+        if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
             throw new IllegalStateException("ghostreport.jwt.secret must be configured with at least 32 characters");
         }
         this.objectMapper = objectMapper;
@@ -59,7 +61,7 @@ public class JwtService {
     }
 
     public String extractUsername(String token) {
-        return readPayload(token).get("sub").toString();
+        return readVerifiedClaims(token).subject();
     }
 
     public long getExpirationSeconds() {
@@ -68,13 +70,17 @@ public class JwtService {
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         try {
-            Map<String, Object> payload = readPayload(token);
-            String username = payload.get("sub").toString();
-            long exp = ((Number) payload.get("exp")).longValue();
+            JwtClaims claims = readVerifiedClaims(token);
+            List<String> expectedRoles = userDetails.getAuthorities().stream()
+                    .map(authority -> authority.getAuthority().replaceFirst("^ROLE_", ""))
+                    .toList();
 
-            return username.equals(userDetails.getUsername())
-                    && exp > Instant.now().getEpochSecond()
-                    && signatureMatches(token);
+            return userDetails.isEnabled()
+                    && userDetails.isAccountNonExpired()
+                    && userDetails.isAccountNonLocked()
+                    && userDetails.isCredentialsNonExpired()
+                    && claims.subject().equals(userDetails.getUsername())
+                    && expectedRoles.contains(claims.role());
         } catch (RuntimeException e) {
             return false;
         }
@@ -88,28 +94,57 @@ public class JwtService {
         }
     }
 
-    private Map<String, Object> readPayload(String token) {
+    private JwtClaims readVerifiedClaims(String token) {
         try {
-            String[] parts = token.split("\\.");
+            String[] parts = token.split("\\.", -1);
             if (parts.length != 3) {
                 throw new IllegalArgumentException("Invalid JWT structure");
             }
 
+            if (!signatureMatches(token)) {
+                throw new IllegalArgumentException("Invalid JWT signature");
+            }
+
+            Map<String, Object> header = objectMapper.readValue(
+                    BASE64_URL_DECODER.decode(parts[0]),
+                    new TypeReference<>() {
+                    }
+            );
+            if (!"HS256".equals(header.get("alg")) || !"JWT".equals(header.get("typ"))) {
+                throw new IllegalArgumentException("Invalid JWT header");
+            }
+
             byte[] payloadBytes = BASE64_URL_DECODER.decode(parts[1]);
-            return objectMapper.readValue(payloadBytes, new TypeReference<>() {
+            Map<String, Object> payload = objectMapper.readValue(payloadBytes, new TypeReference<>() {
             });
+            Object subject = payload.get("sub");
+            Object role = payload.get("role");
+            Object expiration = payload.get("exp");
+            Object issuedAt = payload.get("iat");
+            if (!(subject instanceof String username) || username.isBlank()
+                    || !(role instanceof String authorityRole) || authorityRole.isBlank()
+                    || !(expiration instanceof Number exp)
+                    || !(issuedAt instanceof Number)) {
+                throw new IllegalArgumentException("Invalid JWT claims");
+            }
+            if (exp.longValue() <= Instant.now().getEpochSecond()) {
+                throw new IllegalArgumentException("Expired JWT");
+            }
+            return new JwtClaims(username, authorityRole);
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid JWT", e);
         }
     }
 
     private boolean signatureMatches(String token) {
-        String[] parts = token.split("\\.");
+        String[] parts = token.split("\\.", -1);
         if (parts.length != 3) {
             return false;
         }
 
-        return sign(parts[0] + "." + parts[1]).equals(parts[2]);
+        byte[] expected = sign(parts[0] + "." + parts[1]).getBytes(StandardCharsets.US_ASCII);
+        byte[] supplied = parts[2].getBytes(StandardCharsets.US_ASCII);
+        return MessageDigest.isEqual(expected, supplied);
     }
 
     private String sign(String value) {
@@ -120,5 +155,8 @@ public class JwtService {
         } catch (Exception e) {
             throw new IllegalStateException("Could not sign JWT", e);
         }
+    }
+
+    private record JwtClaims(String subject, String role) {
     }
 }

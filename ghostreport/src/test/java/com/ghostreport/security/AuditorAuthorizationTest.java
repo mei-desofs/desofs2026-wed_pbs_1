@@ -89,10 +89,10 @@ class AuditorAuthorizationTest {
 
     @Test
     void adminCanReadAuditEndpoints() throws Exception {
-        mockMvc.perform(get("/audit/logs").header("Authorization", bearerToken("admin", "Admin123!")))
+        mockMvc.perform(get("/audit/logs").header("Authorization", bearerToken("admin", "AdminPassword123!")))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/audit/security-alerts").header("Authorization", bearerToken("admin", "Admin123!")))
+        mockMvc.perform(get("/audit/security-alerts").header("Authorization", bearerToken("admin", "AdminPassword123!")))
                 .andExpect(status().isOk());
     }
 
@@ -222,7 +222,7 @@ class AuditorAuthorizationTest {
 
     @Test
     void auditorCanVerifyBackupButCannotCreateOrRestoreBackup() throws Exception {
-        String body = mockMvc.perform(post("/admin/backups").header("Authorization", bearerToken("admin", "Admin123!")))
+        String body = mockMvc.perform(post("/admin/backups").header("Authorization", bearerToken("admin", "AdminPassword123!")))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()

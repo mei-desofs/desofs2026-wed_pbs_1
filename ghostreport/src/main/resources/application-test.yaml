@@ -45,3 +45,6 @@ security:
     download:
       max-attempts: 10
       window-seconds: 60
+    login:
+      max-attempts: 5
+      window-seconds: 600

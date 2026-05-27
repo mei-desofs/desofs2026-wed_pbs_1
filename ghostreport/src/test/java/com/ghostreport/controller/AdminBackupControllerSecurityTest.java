@@ -59,10 +59,10 @@ class AdminBackupControllerSecurityTest {
         mockMvc.perform(get("/admin/backups"))
                 .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(get("/admin/backups").header("Authorization", bearerToken("analyst", "Analyst123!")))
+        mockMvc.perform(get("/admin/backups").header("Authorization", bearerToken("analyst", "AnalystPassword123!")))
                 .andExpect(status().isForbidden());
 
-        mockMvc.perform(get("/admin/backups").header("Authorization", bearerToken("admin", "Admin123!")))
+        mockMvc.perform(get("/admin/backups").header("Authorization", bearerToken("admin", "AdminPassword123!")))
                 .andExpect(status().isOk());
 
         assertThat(securityAlertRepository.findAll())
@@ -71,7 +71,7 @@ class AdminBackupControllerSecurityTest {
 
     @Test
     void adminCanCreateAndVerifyBackupThroughEndpoints() throws Exception {
-        String body = mockMvc.perform(post("/admin/backups").header("Authorization", bearerToken("admin", "Admin123!")))
+        String body = mockMvc.perform(post("/admin/backups").header("Authorization", bearerToken("admin", "AdminPassword123!")))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -79,13 +79,13 @@ class AdminBackupControllerSecurityTest {
 
         String filename = body.replaceAll(".*\"filename\":\"([^\"]+)\".*", "$1");
 
-        mockMvc.perform(post("/admin/backups/{filename}/verify", filename).header("Authorization", bearerToken("admin", "Admin123!")))
+        mockMvc.perform(post("/admin/backups/{filename}/verify", filename).header("Authorization", bearerToken("admin", "AdminPassword123!")))
                 .andExpect(status().isOk());
     }
 
     @Test
     void pathTraversalInEndpointFilenameIsRejected() throws Exception {
-        mockMvc.perform(post("/admin/backups/{filename}/verify", "ghostreport-backup-20260507-154500..zip").header("Authorization", bearerToken("admin", "Admin123!")))
+        mockMvc.perform(post("/admin/backups/{filename}/verify", "ghostreport-backup-20260507-154500..zip").header("Authorization", bearerToken("admin", "AdminPassword123!")))
                 .andExpect(status().isBadRequest());
 
         assertThat(securityAlertRepository.findAll())

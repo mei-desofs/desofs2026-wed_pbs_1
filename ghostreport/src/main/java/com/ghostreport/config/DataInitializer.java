@@ -22,7 +22,7 @@ public class DataInitializer {
                 User admin = new User();
                 admin.setUsername("admin");
                 admin.setEmail("admin@ghostreport.local");
-                admin.setPasswordHash(passwordEncoder.encode("Admin123!"));
+                admin.setPasswordHash(passwordEncoder.encode("AdminPassword123!"));
                 admin.setRole(UserRole.ADMIN);
                 admin.setActive(true);
                 userRepository.save(admin);
@@ -32,7 +32,7 @@ public class DataInitializer {
                 User analyst = new User();
                 analyst.setUsername("analyst");
                 analyst.setEmail("analyst@ghostreport.local");
-                analyst.setPasswordHash(passwordEncoder.encode("Analyst123!"));
+                analyst.setPasswordHash(passwordEncoder.encode("AnalystPassword123!"));
                 analyst.setRole(UserRole.ANALYST);
                 analyst.setActive(true);
                 userRepository.save(analyst);
@@ -49,7 +49,7 @@ public class DataInitializer {
                 User auditor = new User();
                 auditor.setUsername("auditor");
                 auditor.setEmail("auditor@ghostreport.local");
-                auditor.setPasswordHash(passwordEncoder.encode("Auditor123!"));
+                auditor.setPasswordHash(passwordEncoder.encode("AuditorPassword123!"));
                 auditor.setRole(UserRole.AUDITOR);
                 auditor.setActive(true);
                 userRepository.save(auditor);
