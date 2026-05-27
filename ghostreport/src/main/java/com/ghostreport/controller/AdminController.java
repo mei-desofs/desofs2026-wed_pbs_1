@@ -12,8 +12,6 @@ import com.ghostreport.repository.SecurityAlertRepository;
 import com.ghostreport.model.AuditLog;
 import java.util.List;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/admin")
 public class AdminController {
@@ -52,5 +50,15 @@ public class AdminController {
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse createUser(@Valid @RequestBody CreateUserRequest request) {
         return userService.createUser(request);
+    }
+
+    @PatchMapping("/users/{id}/activate")
+    public UserResponse activateUser(@PathVariable Long id) {
+        return userService.setActive(id, true);
+    }
+
+    @PatchMapping("/users/{id}/deactivate")
+    public UserResponse deactivateUser(@PathVariable Long id) {
+        return userService.setActive(id, false);
     }
 }

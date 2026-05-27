@@ -118,6 +118,16 @@ public class SecurityMonitoringService {
         );
     }
 
+    public void recordBruteForceLoginAttempt() {
+        createAlert(
+                "BRUTE_FORCE_LOGIN_ATTEMPT",
+                "HIGH",
+                "AUTHENTICATION",
+                null,
+                "Repeated failed login attempts detected"
+        );
+    }
+
     public void createAlert(String alertType, String severity, String targetType, Long targetId, String description) {
         SecurityAlert alert = new SecurityAlert();
         alert.setAlertType(alertType);
