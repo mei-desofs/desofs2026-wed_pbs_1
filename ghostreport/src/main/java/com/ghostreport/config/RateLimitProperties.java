@@ -10,6 +10,7 @@ public class RateLimitProperties {
     private Limit tracking = new Limit(10, 60);
     private Limit upload = new Limit(10, 60);
     private Limit download = new Limit(10, 60);
+    private Limit login = new Limit(5, 600);
 
     public Limit getTracking() {
         return tracking;
@@ -33,6 +34,14 @@ public class RateLimitProperties {
 
     public void setDownload(Limit download) {
         this.download = download;
+    }
+
+    public Limit getLogin() {
+        return login;
+    }
+
+    public void setLogin(Limit login) {
+        this.login = login;
     }
 
     public static class Limit {
