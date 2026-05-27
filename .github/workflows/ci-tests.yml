@@ -1,4 +1,4 @@
-name: CI Tests
+name: CI - Build, Tests and Coverage
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -10,9 +10,12 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  build-and-test:
+  compile-test-and-coverage:
+    name: Compile, test and publish coverage evidence
     runs-on: ubuntu-latest
 
+    # PostgreSQL mirrors the database used by the application more closely than
+    # an in-memory test database and gives the CI tests more realistic coverage.
     services:
       postgres:
         image: postgres:16
@@ -33,10 +36,10 @@ jobs:
         working-directory: ./ghostreport
 
     steps:
-      - name: Checkout repository
+      - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up Java 17 with Maven cache
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -44,29 +47,29 @@ jobs:
           cache: maven
           cache-dependency-path: ghostreport/pom.xml
 
-      - name: Build project
+      - name: Compile Spring Boot application
         run: ./mvnw clean compile
 
-      - name: Run tests
+      - name: Run automated tests and generate JaCoCo coverage
         run: ./mvnw test jacoco:report
         env:
           DB_URL: jdbc:postgresql://localhost:5432/ghostreport
           DB_USERNAME: postgres
           DB_PASSWORD: user
 
-      - name: Upload test reports
+      - name: Upload Surefire test reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: surefire-test-reports
+          name: ci-surefire-test-reports
           path: ghostreport/target/surefire-reports/**
           if-no-files-found: warn
 
-      - name: Upload coverage report
+      - name: Upload JaCoCo coverage report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: jacoco-coverage-report
+          name: ci-jacoco-coverage-report
           path: |
             ghostreport/target/site/jacoco/**
             ghostreport/target/jacoco.exec

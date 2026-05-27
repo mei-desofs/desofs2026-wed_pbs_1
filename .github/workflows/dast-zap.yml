@@ -1,4 +1,4 @@
-name: DAST OWASP ZAP
+name: DAST - OWASP ZAP Baseline
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -10,9 +10,12 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  zap-baseline:
+  dast-zap-baseline:
+    name: Baseline dynamic analysis
     runs-on: ubuntu-latest
 
+    # The application is started directly on the GitHub runner and ZAP runs in a
+    # Docker container using host networking, scanning http://localhost:8081.
     services:
       postgres:
         image: postgres:16
@@ -33,10 +36,10 @@ jobs:
         working-directory: ./ghostreport
 
     steps:
-      - name: Checkout repository
+      - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up Java 17 with Maven cache
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -44,7 +47,7 @@ jobs:
           cache: maven
           cache-dependency-path: ghostreport/pom.xml
 
-      - name: Start GhostReport for DAST
+      - name: Start GhostReport on localhost:8081 for DAST
         run: |
           mkdir -p target/zap-reports
           chmod 777 target/zap-reports
@@ -57,7 +60,7 @@ jobs:
           DB_USERNAME: postgres
           DB_PASSWORD: user
 
-      - name: Wait for GhostReport
+      - name: Wait for GhostReport readiness
         run: |
           for i in {1..60}; do
             if curl --fail --silent --show-error http://localhost:8081/index.html > /dev/null; then
@@ -71,7 +74,9 @@ jobs:
           cat target/ghostreport-dast-app.log
           exit 1
 
-      - name: Run OWASP ZAP baseline DAST
+      # Baseline/passive DAST is intentionally non-intrusive and unauthenticated.
+      # Findings are uploaded as evidence and triaged manually.
+      - name: Run OWASP ZAP baseline scan
         run: |
           docker run --rm --network host \
             --user root \
@@ -86,7 +91,7 @@ jobs:
               -I
         continue-on-error: true
 
-      - name: List OWASP ZAP generated reports
+      - name: Show generated OWASP ZAP reports
         if: always()
         run: |
           echo "Generated ZAP report files:"
@@ -102,7 +107,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: zap-baseline-dast-html
+          name: dast-zap-baseline-html
           path: ghostreport/target/zap-reports/zap-baseline.html
           if-no-files-found: warn
 
@@ -110,7 +115,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: zap-baseline-dast-json
+          name: dast-zap-baseline-json
           path: ghostreport/target/zap-reports/zap-baseline.json
           if-no-files-found: warn
 
@@ -118,7 +123,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: zap-baseline-dast-xml
+          name: dast-zap-baseline-xml
           path: ghostreport/target/zap-reports/zap-baseline.xml
           if-no-files-found: warn
 
@@ -126,11 +131,11 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ghostreport-dast-app-log
+          name: dast-ghostreport-app-log
           path: ghostreport/target/ghostreport-dast-app.log
           if-no-files-found: warn
 
-      - name: Stop GhostReport DAST app
+      - name: Stop GhostReport background process
         if: always()
         run: |
           if [ -f target/ghostreport-dast-app.pid ]; then

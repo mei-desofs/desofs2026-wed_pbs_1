@@ -1,4 +1,4 @@
-name: SAST SpotBugs
+name: SAST - SpotBugs
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -10,7 +10,8 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  spotbugs:
+  sast-spotbugs-analysis:
+    name: Static analysis with SpotBugs
     runs-on: ubuntu-latest
 
     defaults:
@@ -18,10 +19,10 @@ jobs:
         working-directory: ./ghostreport
 
     steps:
-      - name: Checkout repository
+      - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up Java 17 with Maven cache
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -29,10 +30,12 @@ jobs:
           cache: maven
           cache-dependency-path: ghostreport/pom.xml
 
-      - name: Run SpotBugs SAST
+      # SpotBugs is used as SAST evidence. Findings are triaged manually from
+      # the XML artifact instead of blocking every build during Sprint 2.
+      - name: Run SpotBugs static analysis
         run: ./mvnw -DskipTests compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true
 
-      - name: List SpotBugs generated reports
+      - name: Show generated SpotBugs reports
         if: always()
         run: |
           echo "Generated SpotBugs report files:"
@@ -42,7 +45,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: spotbugs-sast-report
+          name: sast-spotbugs-report
           path: |
             ghostreport/target/spotbugsXml.xml
             ghostreport/target/*spotbugs*.xml

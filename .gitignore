@@ -5,6 +5,9 @@ target/
 !**/src/test/**/target/
 
 uploads/
+backups/
+ghostreport/backups/
+*_extracted.txt
 
 ### STS ###
 .apt_generated
