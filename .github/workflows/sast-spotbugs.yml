@@ -1,13 +1,24 @@
-name: SAST - SpotBugs
+# DevSecOps stage 02A.
+# Evidence workflow: runs after/alongside the CI baseline. Findings are reviewed
+# manually during Sprint 2 instead of failing every build.
+name: 02A - SAST SpotBugs
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sast-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   sast-spotbugs-analysis:
@@ -51,3 +62,16 @@ jobs:
             ghostreport/target/*spotbugs*.xml
             ghostreport/target/site/spotbugs*
           if-no-files-found: error
+
+      - name: Publish SAST evidence summary
+        if: always()
+        run: |
+          {
+            echo "## SAST - SpotBugs"
+            echo ""
+            echo "| Evidence | Artifact |"
+            echo "| --- | --- |"
+            echo "| SpotBugs XML/static analysis report | sast-spotbugs-report |"
+            echo ""
+            echo "Sprint 2 mode: evidence/manual triage."
+          } >> "$GITHUB_STEP_SUMMARY"

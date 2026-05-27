@@ -1,13 +1,24 @@
-name: DAST - OWASP ZAP Baseline
+# DevSecOps stage 03.
+# Runtime evidence workflow: starts GhostReport on the runner and scans it with
+# OWASP ZAP in Docker. The scan is passive/baseline and unauthenticated.
+name: 03 - DAST OWASP ZAP Baseline
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dast-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   dast-zap-baseline:
@@ -134,6 +145,22 @@ jobs:
           name: dast-ghostreport-app-log
           path: ghostreport/target/ghostreport-dast-app.log
           if-no-files-found: warn
+
+      - name: Publish DAST evidence summary
+        if: always()
+        run: |
+          {
+            echo "## DAST - OWASP ZAP Baseline"
+            echo ""
+            echo "| Evidence | Artifact |"
+            echo "| --- | --- |"
+            echo "| ZAP HTML report | dast-zap-baseline-html |"
+            echo "| ZAP JSON report | dast-zap-baseline-json |"
+            echo "| ZAP XML report | dast-zap-baseline-xml |"
+            echo "| Application runtime log | dast-ghostreport-app-log |"
+            echo ""
+            echo "GhostReport runs on the GitHub runner at http://localhost:8081; ZAP runs in Docker with host networking."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Stop GhostReport background process
         if: always()

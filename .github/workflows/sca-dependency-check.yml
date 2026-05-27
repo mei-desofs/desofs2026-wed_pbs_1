@@ -1,13 +1,24 @@
-name: SCA - OWASP Dependency-Check
+# DevSecOps stage 02B.
+# Evidence workflow: checks vulnerable dependencies and publishes reports for
+# triage. It is non-blocking while the team validates CVEs and false positives.
+name: 02B - SCA OWASP Dependency-Check
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sca-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   sca-dependency-check-analysis:
@@ -69,3 +80,19 @@ jobs:
           name: dependency-check-sca-sarif
           path: ghostreport/target/dependency-check-report/dependency-check-report.sarif
           if-no-files-found: warn
+
+      - name: Publish SCA evidence summary
+        if: always()
+        run: |
+          {
+            echo "## SCA - OWASP Dependency-Check"
+            echo ""
+            echo "| Evidence | Artifact |"
+            echo "| --- | --- |"
+            echo "| HTML report | dependency-check-sca-html |"
+            echo "| JSON report | dependency-check-sca-json |"
+            echo "| XML report | dependency-check-sca-xml |"
+            echo "| SARIF report | dependency-check-sca-sarif |"
+            echo ""
+            echo "Sprint 2 mode: evidence/manual triage. OSS Index is disabled to avoid unrelated 401 failures."
+          } >> "$GITHUB_STEP_SUMMARY"

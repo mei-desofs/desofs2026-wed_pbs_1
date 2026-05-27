@@ -1,13 +1,24 @@
-name: CI - Build, Tests and Coverage
+# DevSecOps stage 01.
+# Blocking workflow: the application must compile and tests must pass before
+# SAST, SCA and DAST evidence is considered meaningful.
+name: 01 - CI Build, Tests and Coverage
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   compile-test-and-coverage:
@@ -74,3 +85,17 @@ jobs:
             ghostreport/target/site/jacoco/**
             ghostreport/target/jacoco.exec
           if-no-files-found: warn
+
+      - name: Publish CI evidence summary
+        if: always()
+        run: |
+          {
+            echo "## CI Build, Tests and Coverage"
+            echo ""
+            echo "| Evidence | Artifact |"
+            echo "| --- | --- |"
+            echo "| Maven test results | ci-surefire-test-reports |"
+            echo "| JaCoCo coverage | ci-jacoco-coverage-report |"
+            echo ""
+            echo "This is the blocking baseline workflow for the DevSecOps validation flow."
+          } >> "$GITHUB_STEP_SUMMARY"
