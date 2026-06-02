@@ -16,6 +16,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
 
+import java.io.IOException;
+import java.util.UUID;
+
 @Configuration
 public class SecurityConfig {
 
@@ -69,23 +72,31 @@ public class SecurityConfig {
                                 securityMonitoringService.recordUnauthorizedBackupAccess(request.getRequestURI());
                             }
                             response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer realm=\"GhostReport\"");
-                            response.setStatus(401);
-                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                            response.getWriter().write("{\"status\":401,\"error\":\"Unauthorized\"}");
+                            writeSecurityError(response, 401, "Unauthorized");
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             if (request.getRequestURI().startsWith("/admin/backups")) {
                                 securityMonitoringService.recordUnauthorizedBackupAccess(request.getRequestURI());
                             }
-                            response.setStatus(403);
-                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                            response.getWriter().write("{\"status\":403,\"error\":\"Access denied\"}");
+                            writeSecurityError(response, 403, "Access denied");
                         })
                 )
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    private void writeSecurityError(
+            jakarta.servlet.http.HttpServletResponse response,
+            int status,
+            String error
+    ) throws IOException {
+        response.setStatus(status);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.getWriter().write("""
+                {"status":%d,"error":"%s","correlationId":"%s"}
+                """.formatted(status, error, UUID.randomUUID()));
     }
 
     @Bean

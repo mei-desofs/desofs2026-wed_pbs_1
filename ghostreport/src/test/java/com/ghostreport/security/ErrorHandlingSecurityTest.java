@@ -40,6 +40,7 @@ class ErrorHandlingSecurityTest {
                         .content("{ invalid json"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Malformed request"))
+                .andExpect(jsonPath("$.correlationId").isString())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -52,6 +53,7 @@ class ErrorHandlingSecurityTest {
         String response = mockMvc.perform(get("/admin/users"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.correlationId").isString())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
