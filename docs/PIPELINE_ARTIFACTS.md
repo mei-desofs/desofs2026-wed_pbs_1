@@ -15,10 +15,13 @@ and technical evidence folders.
 | `02B - SCA OWASP Dependency-Check` | `dependency-check-sca-json` | Machine-readable dependency vulnerability evidence. |
 | `02B - SCA OWASP Dependency-Check` | `dependency-check-sca-xml` | Structured report for external tooling or archiving. |
 | `02B - SCA OWASP Dependency-Check` | `dependency-check-sca-sarif` | Future code scanning integration evidence. |
+| `02C - SAST CodeQL` | GitHub Code Scanning alerts | Semantic SAST evidence for Java security patterns. |
+| `02D - SBOM CycloneDX` | `sbom-cyclonedx` | Software bill of materials for dependency inventory. |
 | `03 - DAST OWASP ZAP Baseline` | `dast-zap-baseline-html` | Human-readable runtime security report. |
 | `03 - DAST OWASP ZAP Baseline` | `dast-zap-baseline-json` | Machine-readable DAST evidence. |
 | `03 - DAST OWASP ZAP Baseline` | `dast-zap-baseline-xml` | Structured DAST evidence. |
 | `03 - DAST OWASP ZAP Baseline` | `dast-ghostreport-app-log` | Evidence that the application started during DAST. |
+| `04 - Mutation Testing PIT` | `pit-mutation-testing-report` | Mutation testing evidence for test strength. |
 
 ## Recommended Evidence Folder Placement
 
@@ -28,9 +31,12 @@ and technical evidence folders.
 | Surefire/JUnit summaries | `Deliverables/Phase 2/Evidence/testing/` |
 | JaCoCo screenshots/export | `Deliverables/Phase 2/Evidence/testing/` |
 | SpotBugs report | `Deliverables/Phase 2/Evidence/sast/` |
+| CodeQL alerts/screenshots | `Deliverables/Phase 2/Evidence/sast/` |
 | Dependency-Check report | `Deliverables/Phase 2/Evidence/sca/` |
+| CycloneDX SBOM | `Deliverables/Phase 2/Evidence/sca/` |
 | Gitleaks JSON | `Deliverables/Phase 2/Evidence/secret-scanning/` |
 | ZAP reports/logs | `Deliverables/Phase 2/Evidence/dast/` |
+| PIT report | `Deliverables/Phase 2/Evidence/testing/` |
 | ASVS tracker exports | `Deliverables/Phase 2/Evidence/asvs/` |
 
 ## ASVS Evidence Mapping
@@ -38,10 +44,11 @@ and technical evidence folders.
 | ASVS evidence area | Pipeline support |
 | --- | --- |
 | Secure build and verification | CI build/tests workflow. |
-| Automated security testing | SpotBugs, Dependency-Check, Gitleaks and ZAP workflows. |
-| Dependency risk management | Dependency-Check reports. |
+| Automated security testing | SpotBugs, CodeQL, Dependency-Check, Gitleaks and ZAP workflows. |
+| Dependency risk management | Dependency-Check reports and CycloneDX SBOM. |
 | Secret management | Gitleaks report and GitHub Actions secrets. |
 | Dynamic runtime testing | ZAP baseline reports. |
+| Test quality | JaCoCo and PIT mutation testing reports. |
 | Security regression evidence | Repeated workflow runs on push and pull request. |
 
 ## Report Wording
@@ -49,7 +56,8 @@ and technical evidence folders.
 Use precise wording:
 
 > The pipeline produces separate artifacts for build/test results, coverage,
-> static analysis, dependency analysis, secret scanning and baseline DAST. These
+> static analysis, dependency analysis, SBOM, secret scanning, mutation testing
+> and baseline DAST. These
 > artifacts are used as technical evidence for the ASVS tracker and final
 > report.
 

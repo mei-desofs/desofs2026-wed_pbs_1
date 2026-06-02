@@ -12,7 +12,7 @@ This assessment summarizes the current security posture of GhostReport for Phase
 | File handling | Upload validation, path traversal controls, attachment access, evidence packages. |
 | Audit and monitoring | Audit logs and security alerts for relevant events. |
 | Configuration | Profiles, environment variables, JWT secret validation, seed users, upload/backup paths. |
-| DevSecOps | CI tests, JaCoCo, SpotBugs, Dependency-Check, Gitleaks and ZAP baseline. |
+| DevSecOps | CI tests, JaCoCo, PIT, SpotBugs, CodeQL, Dependency-Check, CycloneDX SBOM, Gitleaks and ZAP baseline. |
 
 ## Evidence Matrix
 
@@ -34,10 +34,13 @@ This assessment summarizes the current security posture of GhostReport for Phase
 | Backup integrity | `BackupService`, `BackupServiceIntegrationTest`, admin/auditor backup endpoints. | Manifests and SHA-256 validation are implemented. | Restore is staged/validated; full operational DR runbook is future work. | Implemented baseline |
 | Evidence packages | `CasePackageService`, `CasePackageServiceIntegrationTest`. | Closed-case package generation and verification are tested. | Chain-of-custody is basic, not legally certified. | Implemented baseline |
 | SAST | `sast-spotbugs.yml`, SpotBugs artifacts. | Static analysis runs as evidence. | Findings require manual triage. | Evidence mode |
+| Semantic SAST | `sast-codeql.yml`, GitHub Code Scanning alerts. | CodeQL semantic analysis runs as complementary SAST evidence. | Findings require manual triage and GitHub code scanning access. | Evidence mode |
 | SCA | `sca-dependency-check.yml`, Dependency-Check artifacts. | CVE reports are generated. | Dependency-Check false positives/negatives require triage. | Evidence mode |
+| SBOM | `sbom-cyclonedx.yml`, CycloneDX artifacts. | Dependency inventory is generated for supply-chain evidence. | SBOM is inventory, not vulnerability remediation. | Evidence mode |
 | Secret scanning | `secret-scan-gitleaks.yml`, Gitleaks artifact. | Repository secret scan runs. | Does not replace key rotation or GitHub secret management. | Evidence mode |
 | DAST | `dast-zap.yml`, ZAP baseline artifacts. | Passive baseline scan runs against a live app. | Scan is unauthenticated and not a full active attack scan. | Evidence mode |
 | Test coverage | JaCoCo in Maven and CI artifacts. | Coverage reports are generated and conservative bundle thresholds prevent major regressions. | Thresholds are intentionally baseline and should rise over time. | Implemented baseline |
+| Mutation testing | `mutation-pit.yml`, PIT artifacts. | Mutation testing measures test strength beyond line coverage. | Evidence mode because mutation score needs gradual improvement. | Evidence mode |
 
 ## Build Blocking vs Evidence Mode
 
@@ -47,9 +50,12 @@ This assessment summarizes the current security posture of GhostReport for Phase
 | Security configuration validator tests | Build blocking | Unsafe config behavior is directly testable. |
 | JaCoCo report generation and baseline thresholds | Build blocking as part of tests | Coverage report must be produced and minimum bundle coverage must not regress below the baseline. |
 | SpotBugs | Evidence mode | Findings require triage to avoid blocking on false positives during coursework hardening. |
+| CodeQL | Evidence mode | Semantic findings require manual review and may depend on exploitability context. |
 | Dependency-Check | Evidence mode | CVE matching can include false positives and external feed instability. |
+| CycloneDX SBOM | Evidence mode | Inventory artifact supports SCA and ASVS but is not a pass/fail security result. |
 | Gitleaks | Build blocking if leaks are found | Hardcoded secrets should not enter the repository. |
 | ZAP Baseline | Evidence mode | Passive unauthenticated findings need manual review before becoming gates. |
+| PIT mutation testing | Evidence mode | Mutation score guides test improvements and should be raised gradually. |
 
 ## Findings and Residual Risks
 

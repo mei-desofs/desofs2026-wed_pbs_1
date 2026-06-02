@@ -11,9 +11,15 @@ flowchart TD
     A["00 - Secret Scanning"] --> B["01 - CI Build, Tests and Coverage"]
     B --> C["02A - SAST SpotBugs"]
     B --> D["02B - SCA Dependency-Check"]
+    B --> G["02C - SAST CodeQL"]
+    B --> H["02D - SBOM CycloneDX"]
     C --> E["03 - DAST OWASP ZAP Baseline"]
     D --> E
-    E --> F["Evidence for ASVS and Final Report"]
+    G --> E
+    H --> F["Evidence for ASVS and Final Report"]
+    E --> F
+    B --> I["04 - Mutation Testing PIT"]
+    I --> F
 ```
 
 ## Stage 00 - Secret Scanning
@@ -83,6 +89,35 @@ Recommended interpretation:
   positives;
 - `NVD_API_KEY` is provided through GitHub Actions secrets.
 
+## Stage 02C - SAST CodeQL
+
+Workflow: `.github/workflows/sast-codeql.yml`
+
+Purpose:
+
+- run semantic code analysis for Java;
+- complement SpotBugs with GitHub Code Scanning alerts;
+- identify vulnerability patterns that pure bytecode/static bug rules may miss.
+
+Recommended interpretation:
+
+- Sprint 2 mode is evidence/manual triage;
+- CodeQL alerts should be reviewed together with SpotBugs findings.
+
+## Stage 02D - SBOM CycloneDX
+
+Workflow: `.github/workflows/sbom-cyclonedx.yml`
+
+Purpose:
+
+- generate a CycloneDX software bill of materials;
+- provide supply-chain evidence for dependency inventory and SCA review.
+
+Recommended interpretation:
+
+- the SBOM is evidence for ASVS/dependency management;
+- the SBOM does not replace vulnerability triage.
+
 ## Stage 03 - DAST OWASP ZAP Baseline
 
 Workflow: `.github/workflows/dast-zap.yml`
@@ -100,6 +135,20 @@ Recommended interpretation:
 - warnings are triaged manually;
 - authenticated DAST and active scans are future work.
 
+## Stage 04 - Mutation Testing PIT
+
+Workflow: `.github/workflows/mutation-pit.yml`
+
+Purpose:
+
+- measure test strength beyond line coverage;
+- identify code paths where tests execute lines but do not detect behavioral changes.
+
+Recommended interpretation:
+
+- Sprint 2 mode is evidence/manual triage;
+- mutation score should guide future test improvements, not block every build yet.
+
 ## Blocking vs Evidence Mode
 
 | Stage | Blocking? | Reason |
@@ -109,7 +158,10 @@ Recommended interpretation:
 | JaCoCo | Yes for baseline threshold regressions | Coverage is measured, published and kept above conservative minimum thresholds. |
 | SpotBugs | Evidence | Findings need manual triage during Sprint 2. |
 | Dependency-Check | Evidence | CVEs require false-positive and applicability analysis. |
+| CodeQL | Evidence | Semantic findings require manual review and may depend on context. |
+| CycloneDX SBOM | Evidence | Inventory evidence supports SCA and ASVS but is not a vulnerability gate. |
 | ZAP baseline | Evidence | Baseline warnings are hardening opportunities, not necessarily exploitable vulnerabilities. |
+| PIT mutation testing | Evidence | Mutation score guides test quality improvement without blocking near delivery. |
 
 ## Why Workflows Are Separate
 

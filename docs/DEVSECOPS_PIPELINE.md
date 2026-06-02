@@ -1,7 +1,7 @@
 # DevSecOps Pipeline Evidence
 
 GhostReport uses separate GitHub Actions workflows so that build/test, SAST,
-SCA, secret scanning and DAST can run independently and produce clear evidence.
+SCA, SBOM, mutation testing, secret scanning and DAST can run independently and produce clear evidence.
 The intended orchestration is documented in [PIPELINE_FLOW.md](PIPELINE_FLOW.md),
 and the artifact-to-evidence mapping is documented in
 [PIPELINE_ARTIFACTS.md](PIPELINE_ARTIFACTS.md).
@@ -14,7 +14,10 @@ and the artifact-to-evidence mapping is documented in
 | `ci-tests.yml` | Stage 01: compile, run automated tests and generate JaCoCo coverage. | Surefire reports and JaCoCo HTML/exec report. |
 | `sast-spotbugs.yml` | Stage 02A: run SpotBugs static analysis over Java code. | SpotBugs XML report. |
 | `sca-dependency-check.yml` | Stage 02B: run OWASP Dependency-Check over Maven dependencies. | HTML, JSON, XML and SARIF reports. |
+| `sast-codeql.yml` | Stage 02C: run CodeQL semantic static analysis. | GitHub Code Scanning alerts. |
+| `sbom-cyclonedx.yml` | Stage 02D: generate CycloneDX software bill of materials. | CycloneDX JSON/XML SBOM. |
 | `dast-zap.yml` | Stage 03: start GhostReport and run OWASP ZAP baseline DAST. | ZAP HTML, JSON, XML and application log. |
+| `mutation-pit.yml` | Stage 04: run PIT mutation testing. | PIT mutation report. |
 
 All workflows run on `push` and `pull_request` for `main` and `develop`, and
 also support `workflow_dispatch` for manual evidence regeneration.
@@ -24,12 +27,12 @@ also support `workflow_dispatch` for manual evidence regeneration.
 The validation flow is:
 
 ```text
-Secret scanning -> CI build/tests/coverage -> SAST/SCA -> DAST -> evidence collection
+Secret scanning -> CI build/tests/coverage -> SAST/SCA/SBOM -> DAST -> PIT -> evidence collection
 ```
 
 The workflows are separate because this makes each validation activity easier
-to rerun and explain. CI is the main blocking baseline; SAST, SCA and DAST are
-currently evidence/manual triage workflows.
+to rerun and explain. CI is the main blocking baseline; SAST, SCA, SBOM, DAST
+and PIT are currently evidence/manual triage workflows.
 
 ## CI Tests and Coverage
 
@@ -55,6 +58,12 @@ SpotBugs is executed as SAST evidence:
 Current use is evidence/manual triage. Findings should be reviewed and either
 fixed, documented as accepted risk, or justified as framework-managed behavior.
 
+## SAST - CodeQL
+
+CodeQL complements SpotBugs with semantic analysis and publishes results through
+GitHub Code Scanning. It is used as additional SAST evidence and findings should
+be triaged manually.
+
 ## SCA - OWASP Dependency-Check
 
 Dependency-Check is executed in evidence mode:
@@ -69,6 +78,12 @@ Notes:
 - OSS Index is disabled to avoid unrelated 401 failures.
 - The build is not blocked automatically while the team triages CVEs.
 - Reports are generated in HTML, JSON, XML and SARIF.
+
+## SBOM - CycloneDX
+
+CycloneDX generates a software bill of materials for the Maven project. The SBOM
+supports dependency inventory, SCA review and ASVS evidence, but it does not
+replace vulnerability triage.
 
 ## Secret Scanning - Gitleaks
 
@@ -96,15 +111,22 @@ The current DAST mode is:
 
 Authenticated scans and active/full scans are future hardening work.
 
+## Mutation Testing - PIT
+
+PIT mutation testing is executed as test quality evidence. It helps identify
+tests that execute code without detecting behavioral changes. Mutation score is
+not currently a blocking threshold.
+
 ## Reporting Guidance
 
 When describing the pipeline in the report, use precise wording:
 
 > The project uses separate GitHub Actions workflows for build/test, SAST,
-> SCA, secret scanning and baseline DAST. The intended flow is secret scanning,
-> CI build/tests/coverage, SAST/SCA, DAST and evidence collection. SAST, SCA and
-> DAST currently operate as evidence-producing workflows with manual triage,
-> while CI tests validate compilation, automated tests and JaCoCo coverage.
+> SCA, SBOM, secret scanning, mutation testing and baseline DAST. The intended
+> flow is secret scanning, CI build/tests/coverage, SAST/SCA/SBOM, DAST, PIT and
+> evidence collection. Security analysis workflows currently operate as
+> evidence-producing workflows with manual triage, while CI tests validate
+> compilation, automated tests and JaCoCo coverage thresholds.
 
 Avoid claiming:
 

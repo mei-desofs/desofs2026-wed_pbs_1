@@ -1,0 +1,69 @@
+# DevSecOps stage 04.
+# Test quality workflow: mutation testing gives stronger evidence than line coverage alone.
+name: 04 - Mutation Testing PIT
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pit-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stage_04_mutation_testing:
+    name: Stage 04 - PIT mutation testing evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        working-directory: ./ghostreport
+
+    steps:
+      - name: Checkout repository content
+        uses: actions/checkout@v4
+
+      - name: Prepare Java 17 with Maven cache
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: ghostreport/pom.xml
+
+      - name: Run PIT mutation testing in evidence mode
+        run: ./mvnw -DskipTests=false org.pitest:pitest-maven:mutationCoverage
+        continue-on-error: true
+
+      - name: Upload PIT mutation testing report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pit-mutation-testing-report
+          path: ghostreport/target/pit-reports/**
+          if-no-files-found: warn
+
+      - name: Publish PIT evidence summary
+        if: always()
+        run: |
+          {
+            echo "## Mutation Testing - PIT"
+            echo ""
+            echo "| Evidence | Artifact |"
+            echo "| --- | --- |"
+            echo "| PIT mutation testing report | pit-mutation-testing-report |"
+            echo "| Gate mode | Evidence/manual triage |"
+            echo ""
+            echo "PIT is used to assess test strength beyond JaCoCo line coverage."
+          } >> "$GITHUB_STEP_SUMMARY"
+

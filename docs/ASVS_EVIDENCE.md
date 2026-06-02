@@ -16,7 +16,7 @@ formal tracker, but this file explains how each claim can be defended.
 | Logging and monitoring | Partial/strong | `AuditLogService`, `SecurityMonitoringService`, audit/security tests, login events, invalid JWT alerts and brute-force alerts. Logs are not tamper-proof. |
 | Rate limiting | Strong baseline | `RateLimiterService`, public tracking/upload/download limits and login rate limiting. |
 | Backup integrity | Strong baseline | `BackupService`, manifests, SHA-256, restore staging, integration tests. |
-| DevSecOps | Strong evidence | CI, SpotBugs, Dependency-Check, Gitleaks, ZAP and JaCoCo artifacts mapped in `docs/PIPELINE_ARTIFACTS.md`. |
+| DevSecOps | Strong evidence | CI, JaCoCo, PIT, SpotBugs, CodeQL, Dependency-Check, CycloneDX SBOM, Gitleaks and ZAP artifacts mapped in `docs/PIPELINE_ARTIFACTS.md`. |
 
 ## Suggested ASVS Control Evidence
 
@@ -36,6 +36,8 @@ formal tracker, but this file explains how each claim can be defended.
 | Secure configuration | `.env.example`, `docs/SECURE_INSTALLATION.md`, `SecurityConfigurationValidator`, fail-fast configuration tests. | Implemented |
 | Dependency monitoring | OWASP Dependency-Check workflow and artifacts. | Implemented |
 | Static analysis | SpotBugs workflow and XML artifacts. | Implemented |
+| Semantic static analysis | CodeQL workflow and GitHub Code Scanning alerts. | Implemented evidence |
+| Software inventory | CycloneDX SBOM workflow and artifacts. | Implemented evidence |
 | Dynamic analysis | OWASP ZAP baseline workflow and reports. | Implemented |
 
 ## Pipeline Evidence by ASVS Area
@@ -44,10 +46,12 @@ formal tracker, but this file explains how each claim can be defended.
 | --- | --- |
 | Secure verification | `ci-surefire-test-reports`, `ci-jacoco-coverage-report` |
 | Static analysis | `sast-spotbugs-report` |
-| Dependency management | `dependency-check-sca-html`, `dependency-check-sca-json`, `dependency-check-sca-xml`, `dependency-check-sca-sarif` |
+| Semantic static analysis | GitHub Code Scanning alerts from CodeQL |
+| Dependency management | `dependency-check-sca-html`, `dependency-check-sca-json`, `dependency-check-sca-xml`, `dependency-check-sca-sarif`, `sbom-cyclonedx` |
 | Secret management | `secret-scan-gitleaks-json` |
 | Dynamic analysis | `dast-zap-baseline-html`, `dast-zap-baseline-json`, `dast-zap-baseline-xml` |
 | Runtime evidence | `dast-ghostreport-app-log` |
+| Test quality | `ci-jacoco-coverage-report`, `pit-mutation-testing-report` |
 
 The full artifact map is maintained in `docs/PIPELINE_ARTIFACTS.md`.
 
