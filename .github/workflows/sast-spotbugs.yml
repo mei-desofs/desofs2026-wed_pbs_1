@@ -5,9 +5,10 @@ env:
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, admin ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, admin ]
+  workflow_dispatch:
 
 jobs:
   spotbugs:
@@ -30,7 +31,10 @@ jobs:
           cache-dependency-path: ghostreport/pom.xml
 
       - name: Run SpotBugs SAST
-        run: ./mvnw -DskipTests compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true
+        run: ./mvnw -DskipTests compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true -Dspotbugs.effort=Max -Dspotbugs.threshold=Low
+
+      - name: Enforce SpotBugs findings gate
+        run: ./mvnw com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:check -Dspotbugs.xmlOutput=true -Dspotbugs.effort=Max -Dspotbugs.threshold=Medium
 
       - name: List SpotBugs generated reports
         if: always()

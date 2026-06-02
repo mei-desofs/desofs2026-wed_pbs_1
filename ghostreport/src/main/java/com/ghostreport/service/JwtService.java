@@ -131,7 +131,7 @@ public class JwtService {
                 throw new IllegalArgumentException("Expired JWT");
             }
             return new JwtClaims(username, authorityRole);
-        } catch (Exception e) {
+        } catch (RuntimeException | java.io.IOException e) {
             throw new IllegalArgumentException("Invalid JWT", e);
         }
     }

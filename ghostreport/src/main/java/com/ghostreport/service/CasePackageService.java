@@ -113,18 +113,15 @@ public class CasePackageService {
             manifest.append("  ]\n");
             manifest.append("}\n");
 
-            String summary = """
-                    GhostReport - Case Package
-                    
-                    Report ID: %s
-                    Status: %s
-                    Category: %s
-                    Description:
-                    %s
-                    
-                    Internal Notes:
-                    %s
-                    """.formatted(
+            String summary = String.format(
+                    "GhostReport - Case Package%n%n" +
+                            "Report ID: %s%n" +
+                            "Status: %s%n" +
+                            "Category: %s%n" +
+                            "Description:%n" +
+                            "%s%n%n" +
+                            "Internal Notes:%n" +
+                            "%s%n",
                     reportId,
                     status.name(),
                     caseReview.getReport().getCategory(),

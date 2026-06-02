@@ -5,9 +5,10 @@ env:
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, admin ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, admin ]
+  workflow_dispatch:
 
 jobs:
   build-and-test:
@@ -47,12 +48,13 @@ jobs:
       - name: Build project
         run: ./mvnw clean compile
 
-      - name: Run tests
-        run: ./mvnw test jacoco:report
+      - name: Run tests and enforce coverage thresholds
+        run: ./mvnw verify
         env:
           DB_URL: jdbc:postgresql://localhost:5432/ghostreport
           DB_USERNAME: postgres
           DB_PASSWORD: user
+          JWT_SECRET: ci-only-change-this-secret-32-chars
 
       - name: Upload test reports
         uses: actions/upload-artifact@v4

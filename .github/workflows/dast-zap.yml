@@ -5,9 +5,10 @@ env:
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, admin ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, admin ]
+  workflow_dispatch:
 
 jobs:
   zap-baseline:
@@ -56,6 +57,7 @@ jobs:
           DB_URL: jdbc:postgresql://localhost:5432/ghostreport
           DB_USERNAME: postgres
           DB_PASSWORD: user
+          JWT_SECRET: dast-only-change-this-secret-32-chars
 
       - name: Wait for GhostReport
         run: |
@@ -84,7 +86,6 @@ jobs:
               -x zap-baseline.xml \
               -J zap-baseline.json \
               -I
-        continue-on-error: true
 
       - name: List OWASP ZAP generated reports
         if: always()
