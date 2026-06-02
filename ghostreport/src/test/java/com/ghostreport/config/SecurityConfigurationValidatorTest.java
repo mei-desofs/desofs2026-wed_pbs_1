@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SecurityConfigurationValidatorTest {
 
-    private static final String STRONG_SECRET = "strong-secret-with-at-least-32-characters";
+    private static final String VALID_TEST_VALUE = "valid-test-value-with-at-least-32-chars";
 
     @Test
     void productionLikeConfigurationRejectsDevelopmentJwtSecret() {
@@ -30,7 +30,7 @@ class SecurityConfigurationValidatorTest {
     void productionLikeConfigurationRejectsSeedUsers() {
         SecurityConfigurationValidator validator = validator(
                 new MockEnvironment(),
-                STRONG_SECRET,
+                VALID_TEST_VALUE,
                 3600,
                 true,
                 "uploads",
@@ -96,7 +96,7 @@ class SecurityConfigurationValidatorTest {
     void rejectsNonPositiveJwtExpiration() {
         SecurityConfigurationValidator validator = validator(
                 new MockEnvironment(),
-                STRONG_SECRET,
+                VALID_TEST_VALUE,
                 0,
                 false,
                 "uploads",
@@ -112,7 +112,7 @@ class SecurityConfigurationValidatorTest {
     void rejectsSameUploadAndBackupDirectory() {
         SecurityConfigurationValidator validator = validator(
                 new MockEnvironment(),
-                STRONG_SECRET,
+                VALID_TEST_VALUE,
                 3600,
                 false,
                 "storage",
