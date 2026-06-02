@@ -21,19 +21,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  sast-spotbugs-analysis:
-    name: Static analysis with SpotBugs
+  stage_02a_sast_spotbugs:
+    name: Stage 02A - SpotBugs SAST evidence
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     defaults:
       run:
         working-directory: ./ghostreport
 
     steps:
-      - name: Checkout source code
+      - name: Checkout repository content
         uses: actions/checkout@v4
 
-      - name: Set up Java 17 with Maven cache
+      - name: Prepare Java 17 and Maven dependency cache
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -43,16 +44,16 @@ jobs:
 
       # SpotBugs is used as SAST evidence. Findings are triaged manually from
       # the XML artifact instead of blocking every build during Sprint 2.
-      - name: Run SpotBugs static analysis
+      - name: Run SpotBugs static analysis in evidence mode
         run: ./mvnw -DskipTests compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true
 
-      - name: Show generated SpotBugs reports
+      - name: List generated SpotBugs report files
         if: always()
         run: |
           echo "Generated SpotBugs report files:"
           find target -maxdepth 3 -type f \( -iname "*spotbugs*" -o -iname "*findbugs*" \) -print -exec ls -lh {} \;
 
-      - name: Upload SpotBugs SAST report
+      - name: Upload SpotBugs XML evidence artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -72,6 +73,7 @@ jobs:
             echo "| Evidence | Artifact |"
             echo "| --- | --- |"
             echo "| SpotBugs XML/static analysis report | sast-spotbugs-report |"
+            echo "| Gate mode | Evidence/manual triage |"
             echo ""
             echo "Sprint 2 mode: evidence/manual triage."
           } >> "$GITHUB_STEP_SUMMARY"

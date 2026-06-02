@@ -21,19 +21,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  sca-dependency-check-analysis:
-    name: Dependency vulnerability analysis
+  stage_02b_sca_dependency_check:
+    name: Stage 02B - Dependency-Check SCA evidence
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     defaults:
       run:
         working-directory: ./ghostreport
 
     steps:
-      - name: Checkout source code
+      - name: Checkout repository content
         uses: actions/checkout@v4
 
-      - name: Set up Java 17 with Maven cache
+      - name: Prepare Java 17 and Maven dependency cache
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -49,7 +50,7 @@ jobs:
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
 
-      - name: Upload Dependency-Check HTML report
+      - name: Upload Dependency-Check HTML evidence artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -57,7 +58,7 @@ jobs:
           path: ghostreport/target/dependency-check-report/dependency-check-report.html
           if-no-files-found: warn
 
-      - name: Upload Dependency-Check JSON report
+      - name: Upload Dependency-Check JSON evidence artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -65,7 +66,7 @@ jobs:
           path: ghostreport/target/dependency-check-report/dependency-check-report.json
           if-no-files-found: warn
 
-      - name: Upload Dependency-Check XML report
+      - name: Upload Dependency-Check XML evidence artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -73,7 +74,7 @@ jobs:
           path: ghostreport/target/dependency-check-report/dependency-check-report.xml
           if-no-files-found: warn
 
-      - name: Upload Dependency-Check SARIF report
+      - name: Upload Dependency-Check SARIF evidence artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -93,6 +94,7 @@ jobs:
             echo "| JSON report | dependency-check-sca-json |"
             echo "| XML report | dependency-check-sca-xml |"
             echo "| SARIF report | dependency-check-sca-sarif |"
+            echo "| Gate mode | Evidence/manual triage |"
             echo ""
             echo "Sprint 2 mode: evidence/manual triage. OSS Index is disabled to avoid unrelated 401 failures."
           } >> "$GITHUB_STEP_SUMMARY"

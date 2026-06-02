@@ -21,9 +21,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  compile-test-and-coverage:
-    name: Compile, test and publish coverage evidence
+  stage_01_build_test_coverage:
+    name: Stage 01 - Build, test and coverage (blocking)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     # PostgreSQL mirrors the database used by the application more closely than
     # an in-memory test database and gives the CI tests more realistic coverage.
@@ -47,10 +48,10 @@ jobs:
         working-directory: ./ghostreport
 
     steps:
-      - name: Checkout source code
+      - name: Checkout repository content
         uses: actions/checkout@v4
 
-      - name: Set up Java 17 with Maven cache
+      - name: Prepare Java 17 and Maven dependency cache
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -58,17 +59,17 @@ jobs:
           cache: maven
           cache-dependency-path: ghostreport/pom.xml
 
-      - name: Compile Spring Boot application
+      - name: Compile GhostReport Spring Boot module
         run: ./mvnw clean compile
 
-      - name: Run automated tests and generate JaCoCo coverage
+      - name: Run automated tests and generate JaCoCo coverage evidence
         run: ./mvnw test jacoco:report
         env:
           DB_URL: jdbc:postgresql://localhost:5432/ghostreport
           DB_USERNAME: postgres
           DB_PASSWORD: user
 
-      - name: Upload Surefire test reports
+      - name: Upload Surefire test report artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -76,7 +77,7 @@ jobs:
           path: ghostreport/target/surefire-reports/**
           if-no-files-found: warn
 
-      - name: Upload JaCoCo coverage report
+      - name: Upload JaCoCo coverage artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -96,6 +97,7 @@ jobs:
             echo "| --- | --- |"
             echo "| Maven test results | ci-surefire-test-reports |"
             echo "| JaCoCo coverage | ci-jacoco-coverage-report |"
+            echo "| Gate mode | Blocking |"
             echo ""
             echo "This is the blocking baseline workflow for the DevSecOps validation flow."
           } >> "$GITHUB_STEP_SUMMARY"
