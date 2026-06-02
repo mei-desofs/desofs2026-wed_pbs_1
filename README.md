@@ -55,8 +55,10 @@ From the Spring Boot module:
 
 ```powershell
 cd ghostreport
+$env:SPRING_PROFILES_ACTIVE="dev"
 $env:DB_PASSWORD="user"
-.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
+$env:JWT_SECRET="dev-local-secret-with-at-least-32-chars"
+.\mvnw.cmd spring-boot:run
 ```
 
 The application uses port `8081` by default.
@@ -75,9 +77,11 @@ cd ghostreport
 
 - [Coding standards](docs/CODING_STANDARDS.md)
 - [Contribution guide](CONTRIBUTING.md)
+- [Secure installation](docs/SECURE_INSTALLATION.md)
+- [Security assessment](docs/SECURITY_ASSESSMENT.md)
+- [IAST and runtime security instrumentation](docs/IAST_RUNTIME_SECURITY.md)
 - [DevSecOps pipeline evidence](docs/DEVSECOPS_PIPELINE.md)
 - [ASVS evidence mapping](docs/ASVS_EVIDENCE.md)
-- [Security controls mapping](docs/SECURITY_CONTROLS.md)
 - [Phase 2 evidence folder](Deliverables/Phase%202/Evidence/README.md)
 
 ## Authors

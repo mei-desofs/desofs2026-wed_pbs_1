@@ -8,12 +8,12 @@ formal tracker, but this file explains how each claim can be defended.
 
 | Area | Status | Evidence |
 | --- | --- | --- |
-| Authentication | Strong baseline | `AuthController`, `AuthService`, `JwtService`, `JwtAuthenticationFilter`, BCrypt, inactive-user checks, login rate limiting and JWT security tests. |
+| Authentication | Strong baseline | `AuthController`, `AuthService`, `JwtService`, `JwtAuthenticationFilter`, BCrypt, inactive-user checks, login rate limiting, runtime auth events and JWT security tests. |
 | Authorization / RBAC | Strong | `SecurityConfig`, `AdminAuthorizationTest`, `AuditorAuthorizationTest`, `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`. |
 | Input validation | Strong | DTO validation, `ReportDescription`, `SafeFilename`, `TrackingCode`, controller/service tests. |
 | File upload security | Strong baseline | `FileStorageService`, MIME/extension/magic byte checks, path normalization, upload tests. |
 | Error handling | Strong baseline | Controlled JSON errors and tests for malformed/unauthorized responses without stack traces. |
-| Logging and monitoring | Partial/strong | `AuditLogService`, `SecurityMonitoringService`, audit/security tests and brute-force alerts. Logs are not tamper-proof. |
+| Logging and monitoring | Partial/strong | `AuditLogService`, `SecurityMonitoringService`, audit/security tests, login events, invalid JWT alerts and brute-force alerts. Logs are not tamper-proof. |
 | Rate limiting | Strong baseline | `RateLimiterService`, public tracking/upload/download limits and login rate limiting. |
 | Backup integrity | Strong baseline | `BackupService`, manifests, SHA-256, restore staging, integration tests. |
 | DevSecOps | Strong evidence | CI, SpotBugs, Dependency-Check, Gitleaks, ZAP and JaCoCo artifacts mapped in `docs/PIPELINE_ARTIFACTS.md`. |
@@ -33,6 +33,7 @@ formal tracker, but this file explains how each claim can be defended.
 | Monitoring | Security alerts for suspicious tracking, upload, path traversal, backup, ownership and brute-force login events. | Implemented baseline |
 | Data integrity | SHA-256 hashes for evidence and backups. | Implemented |
 | Secret management | GitHub Actions secrets and Gitleaks workflow. | Implemented |
+| Secure configuration | `.env.example`, `docs/SECURE_INSTALLATION.md`, `SecurityConfigurationValidator`, fail-fast configuration tests. | Implemented |
 | Dependency monitoring | OWASP Dependency-Check workflow and artifacts. | Implemented |
 | Static analysis | SpotBugs workflow and XML artifacts. | Implemented |
 | Dynamic analysis | OWASP ZAP baseline workflow and reports. | Implemented |
@@ -61,6 +62,7 @@ The full artifact map is maintained in `docs/PIPELINE_ARTIFACTS.md`.
 | Full admin lifecycle | Admin currently creates/lists/activates/deactivates users; edit/delete/role changes/password resets are not implemented. |
 | Authenticated DAST | ZAP baseline is unauthenticated and passive. |
 | MFA | Not implemented. |
+| Full IAST agent | Not implemented; runtime security instrumentation is documented separately. |
 
 ## Sprint 2 High-Value ASVS Improvements
 
@@ -70,6 +72,7 @@ The full artifact map is maintained in `docs/PIPELINE_ARTIFACTS.md`.
 | Inactive users | Makes admin user management more credible. | `AdminUserManagementSecurityTest` verifies deactivate/reactivate and login rejection. |
 | JWT tamper/expired tests | Proves token validation behavior. | `JwtServiceSecurityTest`. |
 | Error response tests | Supports information disclosure controls. | `ErrorHandlingSecurityTest`. |
+| Runtime security events | Supports monitoring and assessment evidence. | `RuntimeSecurityEventLoggingTest`, `LOGIN_SUCCESS`, `LOGIN_FAILED`, `INVALID_JWT_TOKEN`. |
 | ASVS screenshots/artifacts | Makes tracker defensible. | Link workflow artifacts and test output. |
 
 ## Evidence Storage
