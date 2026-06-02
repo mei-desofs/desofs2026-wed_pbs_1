@@ -2,6 +2,7 @@ package com.ghostreport.controller;
 
 import com.ghostreport.dto.AuthResponse;
 import com.ghostreport.dto.LoginRequest;
+import com.ghostreport.service.AuditLogService;
 import com.ghostreport.service.AuthService;
 import com.ghostreport.service.RateLimiterService;
 import com.ghostreport.service.SecurityMonitoringService;
@@ -20,15 +21,18 @@ public class AuthController {
     private final AuthService authService;
     private final RateLimiterService rateLimiterService;
     private final SecurityMonitoringService securityMonitoringService;
+    private final AuditLogService auditLogService;
 
     public AuthController(
             AuthService authService,
             RateLimiterService rateLimiterService,
-            SecurityMonitoringService securityMonitoringService
+            SecurityMonitoringService securityMonitoringService,
+            AuditLogService auditLogService
     ) {
         this.authService = authService;
         this.rateLimiterService = rateLimiterService;
         this.securityMonitoringService = securityMonitoringService;
+        this.auditLogService = auditLogService;
     }
 
     @PostMapping("/login")
@@ -43,6 +47,7 @@ public class AuthController {
             if (rateLimiterService.recordLoginFailure(clientKey)) {
                 securityMonitoringService.recordBruteForceLoginAttempt();
             }
+            auditLogService.log("LOGIN_FAILED", "AUTHENTICATION", null, "Login failed");
             throw ex;
         }
     }

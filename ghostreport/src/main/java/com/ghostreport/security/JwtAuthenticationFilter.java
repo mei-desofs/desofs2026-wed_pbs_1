@@ -1,6 +1,7 @@
 package com.ghostreport.security;
 
 import com.ghostreport.service.JwtService;
+import com.ghostreport.service.SecurityMonitoringService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,10 +24,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final SecurityMonitoringService securityMonitoringService;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(
+            JwtService jwtService,
+            UserDetailsService userDetailsService,
+            SecurityMonitoringService securityMonitoringService
+    ) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
+        this.securityMonitoringService = securityMonitoringService;
     }
 
     @Override
@@ -61,6 +68,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         } catch (RuntimeException ignored) {
             SecurityContextHolder.clearContext();
+            securityMonitoringService.recordInvalidJwt(request.getRequestURI());
         }
 
         filterChain.doFilter(request, response);
