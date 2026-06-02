@@ -29,6 +29,10 @@ ghostreport:
   seed-users:
     enabled: ${GHOSTREPORT_SEED_USERS_ENABLED:true}
 
+app:
+  upload:
+    max-files-per-request: ${APP_UPLOAD_MAX_FILES_PER_REQUEST:5}
+
 security:
   rate-limit:
     tracking:

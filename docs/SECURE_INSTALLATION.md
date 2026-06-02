@@ -21,6 +21,7 @@ The default `application.yaml` is production-like. If no profile is active, the 
 | `DB_PASSWORD` | Yes | Database password. |
 | `JWT_SECRET` | Yes | HMAC signing secret for JWT tokens. Must be at least 32 characters. |
 | `JWT_EXPIRATION_SECONDS` | No | Token lifetime. Defaults to `3600`. |
+| `APP_UPLOAD_MAX_FILES_PER_REQUEST` | No | Maximum number of files accepted in a single public upload request. Defaults to `5`. |
 
 Use `.env.example` as a template, but never commit real values.
 
@@ -82,7 +83,7 @@ Development seed accounts are only for local testing:
 
 ## Upload Configuration
 
-Uploads are stored under `app.upload-dir`. The application validates file size, extension, MIME type, magic bytes and normalized paths. The current multipart limit is 10 MB per file/request.
+Uploads are stored under `app.upload-dir`. The application validates file size, extension, MIME type, magic bytes, normalized paths and the maximum number of files per request. The current multipart limit is 10 MB per file/request and the default application-level upload count limit is 5 files per request.
 
 Operational guidance:
 

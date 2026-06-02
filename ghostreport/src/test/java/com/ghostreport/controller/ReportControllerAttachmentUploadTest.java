@@ -145,6 +145,28 @@ class ReportControllerAttachmentUploadTest {
     }
 
     @Test
+    void uploadRejectsTooManyFilesInSingleRequest() throws Exception {
+        Report report = createReport();
+        var request = multipart("/reports/{id}/attachments", report.getId());
+        request.param("trackingCode", TRACKING_CODE);
+
+        for (int i = 0; i < 6; i++) {
+            request.file(new MockMultipartFile(
+                    "files",
+                    "evidence-" + i + ".txt",
+                    "text/plain",
+                    ("approved evidence " + i).getBytes()
+            ));
+        }
+
+        mockMvc.perform(request)
+                .andExpect(status().isBadRequest());
+
+        assertTrue(attachmentRepository.findByReportId(report.getId()).isEmpty());
+        assertEquals(0, countRegularFiles(uploadBase));
+    }
+
+    @Test
     void publicAttachmentListRequiresMatchingTrackingCodeAndReturnsMetadata() throws Exception {
         Report report = createReport();
         MockMultipartFile file = new MockMultipartFile(

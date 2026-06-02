@@ -41,6 +41,7 @@ Purpose:
 - compile the Spring Boot application;
 - run automated tests;
 - generate JaCoCo coverage evidence;
+- enforce conservative JaCoCo baseline thresholds;
 - use PostgreSQL 16 as a service container.
 
 Recommended interpretation:
@@ -105,7 +106,7 @@ Recommended interpretation:
 | --- | --- | --- |
 | Secret scanning | Yes for confirmed secrets | Secrets must not enter the repository. |
 | CI build/tests | Yes | Broken builds or failing tests block delivery confidence. |
-| JaCoCo | Evidence | Coverage is measured and reviewed, not used as a hard threshold yet. |
+| JaCoCo | Yes for baseline threshold regressions | Coverage is measured, published and kept above conservative minimum thresholds. |
 | SpotBugs | Evidence | Findings need manual triage during Sprint 2. |
 | Dependency-Check | Evidence | CVEs require false-positive and applicability analysis. |
 | ZAP baseline | Evidence | Baseline warnings are hardening opportunities, not necessarily exploitable vulnerabilities. |

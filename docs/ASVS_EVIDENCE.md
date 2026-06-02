@@ -11,7 +11,7 @@ formal tracker, but this file explains how each claim can be defended.
 | Authentication | Strong baseline | `AuthController`, `AuthService`, `JwtService`, `JwtAuthenticationFilter`, BCrypt, inactive-user checks, login rate limiting, runtime auth events and JWT security tests. |
 | Authorization / RBAC | Strong | `SecurityConfig`, `AdminAuthorizationTest`, `AuditorAuthorizationTest`, `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`. |
 | Input validation | Strong | DTO validation, `ReportDescription`, `SafeFilename`, `TrackingCode`, controller/service tests. |
-| File upload security | Strong baseline | `FileStorageService`, MIME/extension/magic byte checks, path normalization, upload tests. |
+| File upload security | Strong baseline | `FileStorageService`, `ReportController`, MIME/extension/magic byte checks, path normalization, upload count limit and upload tests. |
 | Error handling | Strong baseline | Controlled JSON errors and tests for malformed/unauthorized responses without stack traces. |
 | Logging and monitoring | Partial/strong | `AuditLogService`, `SecurityMonitoringService`, audit/security tests, login events, invalid JWT alerts and brute-force alerts. Logs are not tamper-proof. |
 | Rate limiting | Strong baseline | `RateLimiterService`, public tracking/upload/download limits and login rate limiting. |
@@ -27,7 +27,7 @@ formal tracker, but this file explains how each claim can be defended.
 | Access control | Centralized RBAC in `SecurityConfig`; ownership checks in services; admin activate/deactivate tests. | Implemented |
 | Generic error handling | Generic responses for unauthorized/forbidden/malformed flows; tests check absence of internals. | Implemented |
 | Input validation | Bean Validation DTOs and domain primitives. | Implemented |
-| File upload validation | Size, MIME, extension, magic bytes, safe names and controlled storage. | Implemented |
+| File upload validation | Size, MIME, extension, magic bytes, upload count limit, safe names and controlled storage. | Implemented |
 | Path traversal prevention | `SafeFilename`, normalized paths and storage boundary checks. | Implemented |
 | Logging | Audit logs for critical operations; sanitization of log details. | Implemented |
 | Monitoring | Security alerts for suspicious tracking, upload, path traversal, backup, ownership and brute-force login events. | Implemented baseline |

@@ -26,7 +26,7 @@ This assessment summarizes the current security posture of GhostReport for Phase
 | RBAC | `SecurityConfig`, `RbacAuthorizationMatrixTest`. | ADMIN/ANALYST/AUDITOR access is verified. | Future endpoints require matrix updates. | Implemented |
 | Analyst ownership | `AnalystCaseOwnershipTest`, service ownership checks. | Analysts cannot access cases owned by another analyst. | Admin oversight remains intentionally broad. | Implemented |
 | Public report confidentiality | `TrackingCode`, `TrackingCodeEnumerationTest`, `ReportControllerAttachmentUploadTest`. | Tracking codes and public attachment listing require valid codes. | No CAPTCHA or distributed anti-automation. | Implemented baseline |
-| Upload validation | `FileStorageService`, `ReportControllerAttachmentUploadTest`, `FileStorageServiceTest`. | Size, MIME, extension, magic bytes and safe paths are tested. | No real malware scanning. | Implemented baseline |
+| Upload validation | `FileStorageService`, `ReportController`, `ReportControllerAttachmentUploadTest`, `FileStorageServiceTest`. | Size, MIME, extension, magic bytes, request file count and safe paths are tested. | No real malware scanning or storage quota. | Implemented baseline |
 | Path traversal protection | `SafeFilename`, storage boundary checks, backup path checks. | Malicious names and paths are rejected. | Must remain covered for new file features. | Implemented |
 | Error handling | `GlobalExceptionHandler`, `ErrorHandlingSecurityTest`. | Stack traces/internal details are not exposed in tested flows. | Error format could be expanded with correlation IDs in future. | Implemented baseline |
 | Audit logs | `AuditLogService`, audit/security tests. | Critical operations are logged with sanitized details. | Logs are not append-only or hash-chained. | Implemented baseline |
@@ -37,7 +37,7 @@ This assessment summarizes the current security posture of GhostReport for Phase
 | SCA | `sca-dependency-check.yml`, Dependency-Check artifacts. | CVE reports are generated. | Dependency-Check false positives/negatives require triage. | Evidence mode |
 | Secret scanning | `secret-scan-gitleaks.yml`, Gitleaks artifact. | Repository secret scan runs. | Does not replace key rotation or GitHub secret management. | Evidence mode |
 | DAST | `dast-zap.yml`, ZAP baseline artifacts. | Passive baseline scan runs against a live app. | Scan is unauthenticated and not a full active attack scan. | Evidence mode |
-| Test coverage | JaCoCo in Maven and CI artifacts. | Coverage reports are generated. | Coverage thresholds may be tuned over time. | Implemented baseline |
+| Test coverage | JaCoCo in Maven and CI artifacts. | Coverage reports are generated and conservative bundle thresholds prevent major regressions. | Thresholds are intentionally baseline and should rise over time. | Implemented baseline |
 
 ## Build Blocking vs Evidence Mode
 
@@ -45,7 +45,7 @@ This assessment summarizes the current security posture of GhostReport for Phase
 |---|---|---|
 | Maven compile/test | Build blocking | Functional and security regression tests must pass. |
 | Security configuration validator tests | Build blocking | Unsafe config behavior is directly testable. |
-| JaCoCo report generation | Build blocking as part of tests | Coverage report must be produced; strict thresholds can be increased gradually. |
+| JaCoCo report generation and baseline thresholds | Build blocking as part of tests | Coverage report must be produced and minimum bundle coverage must not regress below the baseline. |
 | SpotBugs | Evidence mode | Findings require triage to avoid blocking on false positives during coursework hardening. |
 | Dependency-Check | Evidence mode | CVE matching can include false positives and external feed instability. |
 | Gitleaks | Build blocking if leaks are found | Hardcoded secrets should not enter the repository. |
