@@ -63,6 +63,14 @@ $env:JWT_SECRET="dev-local-secret-with-at-least-32-chars"
 
 The application uses port `8081` by default.
 
+For local Docker execution with PostgreSQL:
+
+```powershell
+$env:DB_PASSWORD="<local-database-password>"
+$env:JWT_SECRET="<random-secret-at-least-32-characters>"
+docker compose up --build
+```
+
 ## Test and Evidence Commands
 
 ```powershell

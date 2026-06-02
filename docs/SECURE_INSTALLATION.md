@@ -61,6 +61,20 @@ $env:JWT_EXPIRATION_SECONDS="3600"
 
 The application should fail during startup if critical variables are missing or unsafe.
 
+## Docker Local Startup
+
+The repository includes a local Docker setup:
+
+```powershell
+$env:DB_PASSWORD="<local-database-password>"
+$env:JWT_SECRET="<random-secret-at-least-32-characters>"
+docker compose up --build
+```
+
+The Docker image is built in two stages and runs the application as a non-root user. The compose file starts PostgreSQL 16, stores uploads/backups in named volumes and applies `no-new-privileges`.
+
+Current limitation: the project does not yet include Flyway/Liquibase migrations. For that reason, the provided compose setup defaults to the `dev` profile for local execution with schema update behavior and seed users disabled. A production deployment should use the default/`prod` profile only after the database schema has been provisioned through an operational migration process.
+
 ## JWT Configuration
 
 JWT tokens are signed using HMAC SHA-256. The secret must be unique per environment and must not be reused between development, CI and production. The code validates minimum secret length, and the production-like configuration requires the value to be provided externally.

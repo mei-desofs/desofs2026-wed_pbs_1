@@ -1,0 +1,6 @@
+target/
+uploads/
+backups/
+*.log
+*.mv.db
+*.trace.db
