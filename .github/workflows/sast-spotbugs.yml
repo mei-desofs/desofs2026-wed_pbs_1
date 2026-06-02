@@ -9,9 +9,9 @@ env:
 on:
   workflow_dispatch:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, admin ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, admin ]
 
 permissions:
   contents: read
@@ -41,10 +41,12 @@ jobs:
           cache: maven
           cache-dependency-path: ghostreport/pom.xml
 
-      # SpotBugs is used as SAST evidence. Findings are triaged manually from
-      # the XML artifact instead of blocking every build during Sprint 2.
+      # SpotBugs produces full Low+ evidence; the following check gates Medium+ findings.
       - name: Run SpotBugs static analysis
-        run: ./mvnw -DskipTests compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true
+        run: ./mvnw -DskipTests compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true -Dspotbugs.effort=Max -Dspotbugs.threshold=Low
+
+      - name: Enforce SpotBugs findings gate
+        run: ./mvnw com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:check -Dspotbugs.xmlOutput=true -Dspotbugs.effort=Max -Dspotbugs.threshold=Medium
 
       - name: Show generated SpotBugs reports
         if: always()
@@ -73,5 +75,5 @@ jobs:
             echo "| --- | --- |"
             echo "| SpotBugs XML/static analysis report | sast-spotbugs-report |"
             echo ""
-            echo "Sprint 2 mode: evidence/manual triage."
+            echo "Low findings are kept as evidence; Medium or higher findings block the workflow."
           } >> "$GITHUB_STEP_SUMMARY"

@@ -9,9 +9,9 @@ env:
 on:
   workflow_dispatch:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, admin ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, admin ]
 
 permissions:
   contents: read
@@ -70,6 +70,7 @@ jobs:
           DB_URL: jdbc:postgresql://localhost:5432/ghostreport
           DB_USERNAME: postgres
           DB_PASSWORD: user
+          JWT_SECRET: dast-only-change-this-secret-32-chars
 
       - name: Wait for GhostReport readiness
         run: |
@@ -86,7 +87,7 @@ jobs:
           exit 1
 
       # Baseline/passive DAST is intentionally non-intrusive and unauthenticated.
-      # Findings are uploaded as evidence and triaged manually.
+      # The workflow fails if ZAP detects blocking baseline findings.
       - name: Run OWASP ZAP baseline scan
         run: |
           docker run --rm --network host \
@@ -100,7 +101,6 @@ jobs:
               -x zap-baseline.xml \
               -J zap-baseline.json \
               -I
-        continue-on-error: true
 
       - name: Show generated OWASP ZAP reports
         if: always()
