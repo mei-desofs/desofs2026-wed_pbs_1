@@ -101,6 +101,31 @@ class LoginRateLimitSecurityTest {
         failedLogin("WrongPassword123!").andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void loginRateLimitIsScopedToUsernameAndClientAddress() throws Exception {
+        failedLogin("WrongPassword123!").andExpect(status().isUnauthorized());
+        failedLogin("WrongPassword123!").andExpect(status().isUnauthorized());
+        failedLogin("WrongPassword123!").andExpect(status().isTooManyRequests());
+
+        String secondUsername = username + "_second";
+        User secondUser = new User();
+        secondUser.setUsername(secondUsername);
+        secondUser.setEmail(secondUsername + "@ghostreport.test");
+        secondUser.setPasswordHash(passwordEncoder.encode("Password123!"));
+        secondUser.setRole(UserRole.ANALYST);
+        secondUser.setActive(true);
+        userRepository.save(secondUser);
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(request -> {
+                            request.setRemoteAddr(clientIp);
+                            return request;
+                        })
+                        .content(loginBody(secondUsername, "Password123!")))
+                .andExpect(status().isOk());
+    }
+
     private org.springframework.test.web.servlet.ResultActions failedLogin(String password) throws Exception {
         return mockMvc.perform(post("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -112,11 +137,15 @@ class LoginRateLimitSecurityTest {
     }
 
     private String loginBody(String password) {
+        return loginBody(username, password);
+    }
+
+    private String loginBody(String loginUsername, String password) {
         return """
                 {
                   "username": "%s",
                   "password": "%s"
                 }
-                """.formatted(username, password);
+                """.formatted(loginUsername, password);
     }
 }
