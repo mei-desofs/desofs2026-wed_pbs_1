@@ -59,7 +59,7 @@ $env:JWT_EXPIRATION_SECONDS="3600"
 .\mvnw.cmd spring-boot:run
 ```
 
-The application should fail during startup if critical variables are missing or unsafe.
+The application should fail during startup if critical variables are not provided or are unsafe.
 
 ## Docker Local Startup
 
@@ -73,7 +73,7 @@ docker compose up --build
 
 The Docker image is built in two stages and runs the application as a non-root user. The compose file starts PostgreSQL 16, stores uploads/backups in named volumes and applies `no-new-privileges`.
 
-Current limitation: the project does not yet include Flyway/Liquibase migrations. For that reason, the provided compose setup defaults to the `dev` profile for local execution with schema update behavior and seed users disabled. A production deployment should use the default/`prod` profile only after the database schema has been provisioned through an operational migration process.
+For local containerized execution, the provided compose setup defaults to the `dev` profile with seed users disabled. A production deployment should use the default/`prod` profile after the database schema has been provisioned through the team's operational migration process.
 
 ## JWT Configuration
 

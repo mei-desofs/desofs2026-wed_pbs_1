@@ -1,21 +1,20 @@
 # Code Review Guidelines
 
-These guidelines define how GhostReport pull requests should be reviewed during
-Sprint 2 and final delivery.
+These guidelines define how GhostReport Pull Requests are reviewed.
 
 ## Required Review Rules
 
-| Rule | Requirement | Evaluation value |
-| --- | --- | --- |
-| Mandatory approval | At least one teammate must approve before merge. | Shows governance and review discipline. |
-| CI required | Build, tests and coverage workflow must pass. | Demonstrates the pipeline running on PRs. |
-| Security evidence | Security workflows must run or be manually triggered for evidence. | Addresses the Sprint 1 pipeline criticism. |
-| No self-merge without review | Author cannot be the only reviewer. | Makes review meaningful. |
-| Document residual risk | Unfixed SAST/SCA/DAST findings must be triaged. | Avoids unsupported security claims. |
+| Rule | Requirement |
+| --- | --- |
+| Mandatory approval | At least one teammate approves before merge. |
+| CI required | Build, tests and coverage workflow passes. |
+| Security evidence | Relevant security workflows run or are manually triggered. |
+| No self-merge without review | The author is not the only reviewer. |
+| Finding review | SAST, SCA, DAST and IAST findings are reviewed before claims are made. |
 
 ## Secure Review Checklist
 
-Reviewers should check:
+Reviewers check:
 
 - Controllers expose DTOs, not entities.
 - Request DTOs use `@Valid` and validation annotations.
@@ -33,14 +32,14 @@ Reviewers should check:
 | Outcome | Meaning |
 | --- | --- |
 | Approve | Requirements and security checks are satisfied. |
-| Request changes | A bug, security risk or missing evidence must be fixed. |
+| Request changes | A bug, security risk or unsupported claim must be corrected. |
 | Comment | Clarification or minor improvement that does not block merge. |
 
 ## Evidence to Capture
 
-For the final presentation, keep screenshots or artifacts showing:
+For assessment, keep screenshots or artifacts showing:
 
 - PR checks running.
 - CI build/tests/coverage result.
-- SAST/SCA/secret scanning/DAST artifacts.
+- SAST/SCA/secret scanning/DAST/IAST artifacts.
 - Reviewer approval and branch protection status.

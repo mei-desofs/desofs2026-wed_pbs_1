@@ -22,4 +22,4 @@
 - [ ] Reviewer checked authorization rules for new/changed endpoints.
 - [ ] Reviewer checked validation, sanitization and safe error handling.
 - [ ] Reviewer checked that the DevSecOps workflows produced evidence artifacts.
-- [ ] Any residual risk is documented as accepted risk or future work.
+- [ ] Any residual risk is documented as accepted risk or project scope boundary.
