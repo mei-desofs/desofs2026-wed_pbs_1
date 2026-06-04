@@ -140,7 +140,11 @@ let analystAuth = sessionStorage.getItem("analystAuth");
         }
     }
 
-    function logout(reload = true) {
+    async function logout(reload = true) {
+        if (typeof revokeCurrentToken === "function") {
+            await revokeCurrentToken(analystAuth);
+        }
+
         sessionStorage.removeItem("analystAuth");
         sessionStorage.removeItem("analystUsername");
 

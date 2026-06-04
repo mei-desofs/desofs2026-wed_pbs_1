@@ -18,17 +18,22 @@ import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class JwtService {
 
     private static final String HMAC_ALGORITHM = "HmacSHA256";
+    private static final String ISSUER = "ghostreport";
+    private static final String AUDIENCE = "ghostreport-api";
     private static final Base64.Encoder BASE64_URL_ENCODER = Base64.getUrlEncoder().withoutPadding();
     private static final Base64.Decoder BASE64_URL_DECODER = Base64.getUrlDecoder();
 
     private final ObjectMapper objectMapper;
     private final byte[] secret;
     private final long expirationSeconds;
+    private final Map<String, Long> revokedTokenExpirations = new ConcurrentHashMap<>();
 
     public JwtService(
             ObjectMapper objectMapper,
@@ -52,6 +57,9 @@ public class JwtService {
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("sub", userDetails.getUsername());
+        payload.put("iss", ISSUER);
+        payload.put("aud", AUDIENCE);
+        payload.put("jti", UUID.randomUUID().toString());
         payload.put("role", userDetails.getAuthorities().stream()
                 .findFirst()
                 .map(authority -> authority.getAuthority().replace("ROLE_", ""))
@@ -71,6 +79,11 @@ public class JwtService {
         return expirationSeconds;
     }
 
+    public void revokeToken(String token) {
+        JwtClaims claims = readVerifiedClaims(token);
+        revokedTokenExpirations.put(claims.tokenId(), claims.expiration());
+    }
+
     public boolean isTokenValid(String token, UserDetails userDetails) {
         try {
             JwtClaims claims = readVerifiedClaims(token);
@@ -82,6 +95,7 @@ public class JwtService {
                     && userDetails.isAccountNonExpired()
                     && userDetails.isAccountNonLocked()
                     && userDetails.isCredentialsNonExpired()
+                    && !isTokenRevoked(claims)
                     && claims.subject().equals(userDetails.getUsername())
                     && expectedRoles.contains(claims.role());
         } catch (RuntimeException e) {
@@ -121,10 +135,16 @@ public class JwtService {
             Map<String, Object> payload = objectMapper.readValue(payloadBytes, new TypeReference<>() {
             });
             Object subject = payload.get("sub");
+            Object issuer = payload.get("iss");
+            Object audience = payload.get("aud");
+            Object tokenId = payload.get("jti");
             Object role = payload.get("role");
             Object expiration = payload.get("exp");
             Object issuedAt = payload.get("iat");
             if (!(subject instanceof String username) || username.isBlank()
+                    || !ISSUER.equals(issuer)
+                    || !AUDIENCE.equals(audience)
+                    || !(tokenId instanceof String jti) || jti.isBlank()
                     || !(role instanceof String authorityRole) || authorityRole.isBlank()
                     || !(expiration instanceof Number exp)
                     || !(issuedAt instanceof Number)) {
@@ -133,10 +153,21 @@ public class JwtService {
             if (exp.longValue() <= Instant.now().getEpochSecond()) {
                 throw new IllegalArgumentException("Expired JWT");
             }
-            return new JwtClaims(username, authorityRole);
+            return new JwtClaims(username, authorityRole, jti, exp.longValue());
         } catch (IOException e) {
             throw new IllegalArgumentException("Invalid JWT", e);
         }
+    }
+
+    private boolean isTokenRevoked(JwtClaims claims) {
+        purgeExpiredRevocations();
+        Long revokedUntil = revokedTokenExpirations.get(claims.tokenId());
+        return revokedUntil != null && revokedUntil > Instant.now().getEpochSecond();
+    }
+
+    private void purgeExpiredRevocations() {
+        long now = Instant.now().getEpochSecond();
+        revokedTokenExpirations.entrySet().removeIf(entry -> entry.getValue() <= now);
     }
 
     private boolean signatureMatches(String token) {
@@ -160,6 +191,6 @@ public class JwtService {
         }
     }
 
-    private record JwtClaims(String subject, String role) {
+    private record JwtClaims(String subject, String role, String tokenId, long expiration) {
     }
 }

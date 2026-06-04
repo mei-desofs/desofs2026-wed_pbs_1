@@ -23,6 +23,24 @@ async function handleJsonResponse(response) {
     return data;
 }
 
+async function revokeCurrentToken(authHeader) {
+    if (!authHeader) {
+        return;
+    }
+
+    try {
+        await fetch(`${API_BASE}/auth/logout`, {
+            method: "POST",
+            headers: {
+                "Authorization": authHeader
+            },
+            credentials: "omit"
+        });
+    } catch {
+        // Local logout still removes the browser-side token if the network is unavailable.
+    }
+}
+
 async function login() {
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
@@ -52,7 +70,9 @@ async function login() {
     }
 }
 
-function logout() {
+async function logout() {
+    await revokeCurrentToken(adminAuth);
+
     localStorage.removeItem("adminAuth");
     adminAuth = null;
 

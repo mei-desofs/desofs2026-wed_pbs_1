@@ -9,7 +9,7 @@ downloaded artifacts.
 
 | Folder | Tool/evidence | DESOFS rubric | ASVS chapters | Current limitation / residual risk |
 | --- | --- | --- | --- | --- |
-| `testing/` | Surefire/JUnit, JaCoCo, runtime security evidence, PIT | Build and Test, ASVS | V2, V5, V6, V7, V8, V9, V16 | PIT is configured for HTML/XML reports in CI Java 17; local Java 23 failure is documented separately. |
+| `testing/` | Surefire/JUnit, JaCoCo, runtime security evidence, PIT | Build and Test, ASVS | V2, V5, V6, V7, V8, V9, V16 | Runtime tests now include JWT logout/revocation locally; download a fresh CI artifact after pushing. PIT is configured for HTML/XML reports in CI Java 17; local Java 23 failure is documented separately. |
 | `sast/` | SpotBugs and CodeQL summary | Development, Pipeline Automation | V15, V16 | CodeQL primary evidence is GitHub Code Scanning; SpotBugs remediation is documented in `docs/SPOTBUGS_TRIAGE.md` pending a fresh scan. |
 | `sca/` | OWASP Dependency-Check and CycloneDX SBOM | Build and Test, Pipeline Automation | V13, V15 | Existing reports are pre-remediation evidence; `docs/SCA_TRIAGE.md` records dependency updates and residual risk pending a fresh scan. |
 | `secret-scanning/` | Gitleaks JSON report | Pipeline Automation, Production | V13, V14, V15 | Empty `[]` report means no leaked secrets were found in the scanned scope. |

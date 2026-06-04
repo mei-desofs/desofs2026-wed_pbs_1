@@ -123,7 +123,11 @@ let auditorAuth = sessionStorage.getItem("auditorAuth");
         loadSecurityAlerts();
     }
 
-    function auditorLogout(reload = true) {
+    async function auditorLogout(reload = true) {
+        if (typeof revokeCurrentToken === "function") {
+            await revokeCurrentToken(auditorAuth);
+        }
+
         sessionStorage.removeItem("auditorAuth");
         sessionStorage.removeItem("auditorUsername");
 

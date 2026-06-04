@@ -174,7 +174,11 @@ let adminSessionAuth = sessionStorage.getItem("adminAuth");
         }
     }
 
-    function adminLogout(reload = true) {
+    async function adminLogout(reload = true) {
+        if (typeof revokeCurrentToken === "function") {
+            await revokeCurrentToken(adminSessionAuth);
+        }
+
         sessionStorage.removeItem("adminAuth");
         sessionStorage.removeItem("adminUsername");
 

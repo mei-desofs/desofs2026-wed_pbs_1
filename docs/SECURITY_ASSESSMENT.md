@@ -7,7 +7,7 @@ evidence used to verify them.
 
 | Area | Scope |
 | --- | --- |
-| Authentication | JWT login flow, BCrypt password hashing, inactive-user checks and login rate limiting. |
+| Authentication | JWT login/logout flow, BCrypt password hashing, inactive-user checks and login rate limiting. |
 | Authorization | RBAC for ADMIN, ANALYST and AUDITOR, plus analyst ownership controls. |
 | Input validation | DTO validation, domain primitives and upload validation. |
 | File handling | Safe upload storage, attachment access, evidence packages and backup verification. |
@@ -20,7 +20,7 @@ evidence used to verify them.
 | Control | Evidence | Result | Status |
 | --- | --- | --- | --- |
 | Password hashing | `SecurityConfig.passwordEncoder()`, user creation tests | Passwords are stored with BCrypt. | Implemented |
-| JWT signing and validation | `JwtService`, `JwtServiceSecurityTest` | Signature, expiry and role validation are tested. | Implemented |
+| JWT signing, validation and revocation | `JwtService`, `AuthController`, `JwtServiceSecurityTest`, `RuntimeSecurityEventLoggingTest` | Signature, expiry, issuer, audience, role validation and logout-driven token revocation are tested. | Implemented with residual risk |
 | JWT secret validation | `SecurityConfigurationValidator`, `.env.example`, validator tests | Unsafe production-like JWT configuration fails fast. | Implemented |
 | Login abuse protection | `RateLimiterService`, `LoginRateLimitSecurityTest` | Repeated failures trigger rate limiting and alerts. | Implemented |
 | Runtime auth monitoring | `RuntimeSecurityEventLoggingTest`, `AuditLogService`, `SecurityMonitoringService` | Auth events are recorded without passwords or tokens. | Implemented |
@@ -56,7 +56,7 @@ evidence used to verify them.
 
 The assessment covers the implemented coursework application and its automated
 security evidence. Additional production operations such as external SIEM,
-privileged-user MFA, centralized rate limiting, token revocation and advanced
+privileged-user MFA, centralized rate limiting, distributed token revocation and advanced
 deployment TLS management are considered operational hardening.
 
 The current CSP is a baseline policy because the static frontend still requires

@@ -1,5 +1,6 @@
 package com.ghostreport.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghostreport.model.AuditLog;
 import com.ghostreport.model.SecurityAlert;
 import com.ghostreport.model.User;
@@ -60,6 +61,9 @@ class RuntimeSecurityEventLoggingTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     private String username;
 
@@ -127,6 +131,32 @@ class RuntimeSecurityEventLoggingTest {
                         && alert.getDescription().contains("/analyst/panel"));
         assertThat(alerts)
                 .allMatch(alert -> doesNotContainSensitiveValues(alert.getDescription(), INVALID_TOKEN));
+    }
+
+    @Test
+    void logoutRevokesTokenAndCreatesAuditLogWithoutStoringToken() throws Exception {
+        String response = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody(PASSWORD)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String token = objectMapper.readTree(response).path("token").asText();
+
+        mockMvc.perform(post("/auth/logout")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/analyst/panel")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
+
+        List<AuditLog> logs = auditLogRepository.findAll();
+        assertThat(logs)
+                .anyMatch(log -> "LOGOUT".equals(log.getAction()));
+        assertThat(logs)
+                .allMatch(log -> doesNotContainSensitiveValues(log.getDetails(), token, PASSWORD));
     }
 
     private String loginBody(String password) {
