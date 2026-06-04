@@ -20,7 +20,7 @@ known gaps and residual risk used to fill it.
 | --- | --- | --- | --- | --- |
 | V1 Encoding and Sanitization | Partially Compliant | `SafeFilename`, `ReportDescription`, DTO validation, Spring Data JPA repositories | Domain tests, security tests, JaCoCo | Frontend still needs inline JavaScript/CSS removal and stronger output-encoding evidence. |
 | V2 Validation and Business Logic | Partially Compliant | DTO validation, domain primitives, service-level state checks, rate limits | `TrackingCodeEnumerationTest`, `RateLimiterServiceTest`, RBAC tests | Business-limit documentation is incomplete. Some workflows need more negative-path tests. |
-| V3 Web Frontend Security | Partially Compliant | Security headers and CSP baseline in `SecurityConfig` | `SecurityHeadersTest`, ZAP baseline | ZAP reports `unsafe-inline` in `script-src` and `style-src`; HTML comments/cache policy require cleanup. |
+| V3 Web Frontend Security | Partially Compliant | Security headers, CSP without `unsafe-inline`, external JavaScript files and removed inline handlers/styles | `SecurityHeadersTest`, ZAP baseline | Existing ZAP evidence is pre-remediation; run ZAP again to prove the CSP finding is closed. |
 | V4 API and Web Service | Partially Compliant | Controllers return DTOs, generic JSON errors and role-protected endpoints | MockMvc security tests, Surefire reports | HTTP method restrictions, proxy-boundary assumptions and cache behaviour need more explicit tests/docs. |
 | V5 File Handling | Partially Compliant | File size, MIME, extension, magic-byte checks and normalized path boundaries | `FileStorageServiceTest`, upload/security tests | No antivirus scanning, quarantine, per-user storage quotas or archive unpacking policy. |
 | V6 Authentication | Partially Compliant | BCrypt, inactive-user checks, login rate limiting and audit/security events | `LoginRateLimitSecurityTest`, `AdminUserManagementSecurityTest` | No MFA, password reset, password history/reuse checks or mature account recovery. |
@@ -58,7 +58,7 @@ known gaps and residual risk used to fill it.
 | Dependency-Check | Report generated | `Deliverables/Phase 2/Evidence/sca/dependency-check-sca-json`, `docs/SCA_TRIAGE.md` | Old report found critical/high CVEs in Spring Boot/Tomcat/PostgreSQL and other dependencies | Dependency versions updated; fresh scan required before closing findings. |
 | SpotBugs | Report generated | `Deliverables/Phase 2/Evidence/sast/sast-spotbugs-report (1)` | Mutable exposure, constructor exceptions, broad catch and formatting findings | Open remediation/triage. |
 | Gitleaks | Empty JSON report means no leaks found in scanned scope | `Deliverables/Phase 2/Evidence/secret-scanning` once organized | Artifact was previously categorized under SCA | Evidence valid after folder cleanup. |
-| ZAP | Baseline report generated | `Deliverables/Phase 2/Evidence/dast` | CSP `unsafe-inline`, comments and cache informational alerts | Open remediation. |
+| ZAP | Baseline report generated | `Deliverables/Phase 2/Evidence/dast` | Old report found CSP `unsafe-inline`, comments and cache informational alerts | CSP/frontend remediation applied; fresh ZAP run required as final evidence. |
 | CodeQL | Code Scanning plus run summary | `Deliverables/Phase 2/Evidence/sast/sast-codeql-evidence-summary` | Local SARIF export is not promised by the current workflow | Evidence review. |
 | PIT | Fallback evidence generated | `Deliverables/Phase 2/Evidence/testing/pit-mutation-testing-report` | No real HTML/XML mutation report yet | Open remediation. |
 

@@ -13,7 +13,7 @@ downloaded artifacts.
 | `sast/` | SpotBugs and CodeQL summary | Development, Pipeline Automation | V15, V16 | CodeQL primary evidence is GitHub Code Scanning; local artifact is a run summary. |
 | `sca/` | OWASP Dependency-Check and CycloneDX SBOM | Build and Test, Pipeline Automation | V13, V15 | Existing reports are pre-remediation evidence; `docs/SCA_TRIAGE.md` records dependency updates and residual risk pending a fresh scan. |
 | `secret-scanning/` | Gitleaks JSON report | Pipeline Automation, Production | V13, V14, V15 | Empty `[]` report means no leaked secrets were found in the scanned scope. |
-| `dast/` | OWASP ZAP baseline reports | Build and Test, ASVS | V3, V4, V12 | Baseline DAST is unauthenticated and currently reports CSP `unsafe-inline`. |
+| `dast/` | OWASP ZAP baseline reports | Build and Test, ASVS | V3, V4, V12 | Existing ZAP reports are pre-CSP-remediation evidence; rerun ZAP to archive the updated result. |
 | `pipelines/` | GitHub Actions screenshots, job summaries and run links | Pipeline Automation | V15 | Screenshots/job summaries must be manually downloaded or captured. |
 | `asvs/` | Tracker exports and ASVS notes | ASVS, Overall Project | V1-V17 | Formal checklist lives in `Deliverables/Phase 2/ASVS_5.0_Tracker_Phase 2_Sprint 2.xlsx`. |
 | `code-review/` | Pull request templates, review screenshots and governance evidence | Development, Overall Project | V15, V16 | GitHub branch protection must be shown in the repository UI. |
