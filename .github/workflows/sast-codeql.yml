@@ -53,6 +53,33 @@ jobs:
       - name: Run CodeQL analysis
         uses: github/codeql-action/analyze@v4
 
+      - name: Prepare CodeQL archiveable evidence summary
+        if: always()
+        run: |
+          mkdir -p target/codeql-evidence
+          {
+            echo "# CodeQL SAST Evidence"
+            echo ""
+            echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo ""
+            echo "Repository: $GITHUB_REPOSITORY"
+            echo "Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "Code Scanning: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/security/code-scanning"
+            echo ""
+            echo "Primary evidence: GitHub Code Scanning alerts produced by the CodeQL action."
+            echo "Archive evidence: this summary records the run context for audit/demo material."
+            echo ""
+            echo "Gate mode: evidence review."
+          } > target/codeql-evidence/codeql-evidence-summary.md
+
+      - name: Upload CodeQL archiveable evidence summary
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sast-codeql-evidence-summary
+          path: ghostreport/target/codeql-evidence/**
+          if-no-files-found: error
+
       - name: Publish CodeQL evidence summary
         if: always()
         run: |
@@ -62,7 +89,8 @@ jobs:
             echo "| Evidence | Location |"
             echo "| --- | --- |"
             echo "| CodeQL semantic analysis | GitHub Code Scanning alerts |"
+            echo "| Archiveable run summary | sast-codeql-evidence-summary |"
             echo "| Gate mode | Evidence review |"
             echo ""
-            echo "CodeQL complements SpotBugs by identifying semantic vulnerability patterns."
+            echo "CodeQL complements SpotBugs by identifying semantic vulnerability patterns. Code Scanning remains the primary evidence source; the artifact is a run-context summary for local archive/demo."
           } >> "$GITHUB_STEP_SUMMARY"
