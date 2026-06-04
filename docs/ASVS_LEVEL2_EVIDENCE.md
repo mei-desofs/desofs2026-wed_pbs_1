@@ -17,10 +17,10 @@ artifacts.
 | V7 Error Handling | Controlled errors | Generic errors, no stack traces and correlation IDs | `GlobalExceptionHandler`, `SecurityConfig`, `ErrorHandlingSecurityTest` | Implemented |
 | V8 Data Protection | Secret management | Env-var configuration, fail-fast JWT secret validation and Gitleaks scan | `application.yaml`, `.env.example`, `.gitleaks.toml`, `SecurityConfigurationValidatorTest` | Implemented |
 | V8 Data Protection | Evidence integrity | SHA-256 hashes for attachments, evidence packages and backup manifests | `FileStorageService`, `CasePackageService`, `BackupService` | Implemented |
-| V9 Communication Security | Browser-facing secure headers | HSTS, CSP, frame protection, referrer policy and permissions policy | `SecurityConfig`, `SecurityHeadersTest` | Implemented |
-| V10 Malicious Code Prevention | Static/security analysis | SpotBugs and CodeQL workflows | `.github/workflows/sast-spotbugs.yml`, `.github/workflows/sast-codeql.yml` | Evidence review |
+| V9 Communication Security | Browser-facing secure headers | HSTS, CSP with `form-action 'self'`, frame protection, referrer policy and permissions policy | `SecurityConfig`, `SecurityHeadersTest` | Implemented baseline |
+| V10 Malicious Code Prevention | Static/security analysis | SpotBugs workflow, CodeQL Code Scanning and CodeQL summary artifact | `.github/workflows/sast-spotbugs.yml`, `.github/workflows/sast-codeql.yml` | Evidence review |
 | V10 Malicious Code Prevention | Dependency risk | Dependency-Check and CycloneDX SBOM workflows | `.github/workflows/sca-dependency-check.yml`, `.github/workflows/sbom-cyclonedx.yml` | Evidence review |
-| V10 Malicious Code Prevention | Runtime security evidence | IAST/runtime security workflow and OWASP ZAP baseline | `.github/workflows/iast-runtime.yml`, `.github/workflows/dast-zap.yml` | Evidence review |
+| V10 Malicious Code Prevention | Runtime security evidence | Runtime security/IAST readiness workflow and OWASP ZAP baseline | `.github/workflows/iast-runtime.yml`, `.github/workflows/dast-zap.yml` | Evidence review |
 | V11 Business Logic | Controlled case state changes | Closed-case modification protection and assignment conflict checks | `CaseReviewService`, `ClosedCaseSecurityTest`, `AnalystCaseOwnershipTest` | Implemented |
 | V13 API Security | DTO API contracts | Controllers return DTOs/records, including audit and security alert responses | `dto` package, controllers | Implemented |
 | V13 API Security | Abuse controls | Rate limits for login, tracking, upload and download flows | `RateLimiterService`, security tests | Implemented |
@@ -28,6 +28,9 @@ artifacts.
 ## Scope Boundaries
 
 The Level 2 evidence is scoped to implemented application features and automated
-pipeline evidence. Advanced production operations such as external SIEM/WORM
-storage, token revocation, privileged-user MFA and authenticated DAST contexts
-are treated as operational hardening beyond the current sprint scope.
+pipeline evidence. CodeQL findings are primarily stored in GitHub Code Scanning,
+with an archiveable run summary artifact. Runtime security evidence is always
+generated through tests; complete external IAST telemetry requires optional
+Contrast agent configuration. Advanced production operations such as external
+SIEM/WORM storage, token revocation, privileged-user MFA and authenticated DAST
+contexts are treated as operational hardening beyond the current sprint scope.

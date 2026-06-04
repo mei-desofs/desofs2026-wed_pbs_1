@@ -30,7 +30,7 @@ assessment evidence:
 - `02C - SAST CodeQL`
 - `02D - SBOM CycloneDX`
 - `03 - DAST OWASP ZAP Baseline`
-- `04 - IAST Runtime Security Evidence`
+- `04 - Runtime Security Evidence and IAST Readiness`
 - `05 - Mutation Testing PIT`
 
 CI is the primary required status check. Security analysis workflows produce

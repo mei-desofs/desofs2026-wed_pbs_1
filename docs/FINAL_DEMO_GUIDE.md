@@ -26,11 +26,13 @@ Open GitHub Actions and show the numbered workflow sequence:
 - `02C - SAST CodeQL`
 - `02D - SBOM CycloneDX`
 - `03 - DAST OWASP ZAP Baseline`
-- `04 - IAST Runtime Security Evidence`
+- `04 - Runtime Security Evidence and IAST Readiness`
 - `05 - Mutation Testing PIT`
 
 Explain that build/tests/coverage and secret scanning are gates, while the
-security analysis workflows produce artifacts for review.
+security analysis workflows produce artifacts for review. The numbered
+workflows are the presentation timeline; they remain separate so each scanner
+can be rerun and archived independently.
 
 ## 3. Artifacts
 
@@ -39,12 +41,20 @@ Show the artifacts created by each workflow:
 - Surefire test reports.
 - JaCoCo coverage report.
 - SpotBugs XML report.
+- CodeQL Code Scanning alerts and `sast-codeql-evidence-summary`.
 - Dependency-Check reports.
 - CycloneDX SBOM.
 - Gitleaks JSON report.
 - ZAP HTML/JSON/XML reports.
-- IAST/runtime security evidence.
-- PIT mutation testing report.
+- Runtime security evidence and optional IAST readiness notes.
+- PIT mutation testing report or fallback PIT triage summary.
+
+Downloaded GitHub Actions artifacts can be copied into
+`Deliverables/Phase 2/Evidence` with:
+
+```powershell
+.\scripts\collect-evidence.ps1
+```
 
 ## 4. ASVS Evidence
 
@@ -74,3 +84,13 @@ When discussing boundaries, keep the wording technical:
 > current coursework scope. Production hardening items such as external SIEM,
 > token revocation, advanced deployment TLS management and authenticated DAST
 > are documented as next-step operational hardening.
+
+Also state the exact evidence boundaries:
+
+- runtime security tests exist in every Stage 04 run;
+- complete IAST telemetry exists only if the optional Contrast agent is
+  configured;
+- PIT is evidence review, not a blocking quality gate;
+- CodeQL evidence is primarily GitHub Code Scanning, with an archiveable summary
+  artifact;
+- CSP is a baseline because the current frontend still uses inline assets.

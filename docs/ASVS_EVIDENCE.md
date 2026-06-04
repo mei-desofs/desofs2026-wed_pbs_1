@@ -16,7 +16,7 @@ references that can be inspected during assessment.
 | Error handling | `GlobalExceptionHandler`, Spring Security error responses and tests for controlled responses. |
 | Data protection | Environment-based secrets, JWT secret validation, attachment/package/backup hashes and Gitleaks scanning. |
 | Logging and monitoring | `AuditLogService`, `SecurityMonitoringService` and runtime security event tests. |
-| DevSecOps evidence | CI, JaCoCo, SpotBugs, CodeQL, Dependency-Check, CycloneDX, Gitleaks, ZAP, IAST/runtime evidence and PIT workflows. |
+| DevSecOps evidence | CI, JaCoCo, SpotBugs, CodeQL, Dependency-Check, CycloneDX, Gitleaks, ZAP, runtime security/IAST readiness evidence and PIT workflows. |
 
 ## Control Evidence
 
@@ -36,7 +36,7 @@ references that can be inspected during assessment.
 | Static analysis | SpotBugs and CodeQL workflows. | Evidence review |
 | Dependency analysis | OWASP Dependency-Check and CycloneDX SBOM workflows. | Evidence review |
 | Dynamic analysis | OWASP ZAP baseline workflow. | Evidence review |
-| IAST/runtime evidence | Runtime security test workflow and optional Contrast Java Agent readiness. | Evidence review |
+| Runtime security / IAST readiness evidence | Runtime security test workflow and optional Contrast Java Agent readiness. | Evidence review |
 
 ## Pipeline Artifact Mapping
 
@@ -44,12 +44,12 @@ references that can be inspected during assessment.
 | --- | --- |
 | Tests | `ci-surefire-test-reports` |
 | Coverage | `ci-jacoco-coverage-report` |
-| SAST | `sast-spotbugs-report`, CodeQL Code Scanning |
+| SAST | `sast-spotbugs-report`, CodeQL Code Scanning, `sast-codeql-evidence-summary` |
 | SCA | `dependency-check-sca-*`, `sbom-cyclonedx` |
 | Secret scanning | `secret-scan-gitleaks-json` |
 | DAST | `dast-zap-baseline-*`, `dast-ghostreport-app-log` |
-| IAST/runtime | `iast-runtime-security-evidence` |
-| Mutation testing | `pit-mutation-testing-report` |
+| Runtime security / IAST readiness | `iast-runtime-security-evidence` |
+| Mutation testing | `pit-mutation-testing-report` including PIT exit code and fallback summary |
 
 ## Scope Boundaries
 
@@ -57,3 +57,6 @@ The current scope focuses on coursework-grade secure development evidence for
 the implemented GhostReport features. Additional production hardening, such as
 external SIEM integration, token revocation, advanced deployment TLS management
 and authenticated DAST contexts, is documented as next-step operational work.
+GitHub Actions artifacts are the primary pipeline evidence; the local
+`Deliverables/Phase 2/Evidence` folder is populated manually from downloaded
+artifacts for presentation/archive.

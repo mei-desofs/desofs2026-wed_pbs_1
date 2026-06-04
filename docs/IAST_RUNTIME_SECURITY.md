@@ -1,4 +1,4 @@
-# IAST Runtime Security
+# Runtime Security Evidence and IAST Readiness
 
 GhostReport includes a runtime security evidence stage that exercises the
 application while security-sensitive code paths are active. The workflow is
@@ -11,7 +11,7 @@ GitHub Actions
   -> Maven security-focused tests
   -> Spring Boot application context / MockMvc runtime
   -> AuditLogService and SecurityMonitoringService
-  -> Surefire reports and IAST runtime evidence artifact
+  -> Surefire reports and runtime security evidence artifact
   -> optional Contrast Java Agent telemetry when configured
 ```
 
@@ -22,7 +22,7 @@ JVM `-javaagent` and external IAST telemetry.
 
 ## Runtime Coverage
 
-The IAST/runtime evidence workflow executes tests for:
+The runtime security evidence workflow executes tests for:
 
 - successful and failed authentication events;
 - invalid/expired JWT handling;
@@ -84,5 +84,6 @@ them to be supplied as GitHub Actions variables/secrets.
 ## Scope Boundaries
 
 The repository always produces local runtime security evidence through
-automated tests. External Contrast findings require a configured Contrast
-tenant, valid credentials and an instrumented runtime execution.
+automated tests. It does not claim complete IAST telemetry unless the optional
+Contrast integration is configured with a tenant, valid credentials and an
+instrumented runtime execution.
