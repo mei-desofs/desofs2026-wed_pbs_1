@@ -44,7 +44,7 @@ public class AuditReadService {
                 report.getCategory(),
                 caseReview.getPriority() != null ? caseReview.getPriority().name() : null,
                 caseReview.getAssignedAnalyst() != null ? caseReview.getAssignedAnalyst().getUsername() : null,
-                report.getAttachments() != null ? report.getAttachments().size() : 0,
+                report.getAttachments().size(),
                 report.getCreatedAt(),
                 caseReview.getUpdatedAt()
         );

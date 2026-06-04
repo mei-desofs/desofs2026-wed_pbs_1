@@ -3,6 +3,7 @@ package com.ghostreport.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Entity
@@ -72,7 +73,7 @@ public class User {
     }
 
     public List<CaseReview> getAssignedCases() {
-        return assignedCases;
+        return Collections.unmodifiableList(assignedCases);
     }
 
     public void setId(Long id) {
@@ -104,6 +105,9 @@ public class User {
     }
 
     public void setAssignedCases(List<CaseReview> assignedCases) {
-        this.assignedCases = assignedCases;
+        this.assignedCases = new ArrayList<>();
+        if (assignedCases != null) {
+            this.assignedCases.addAll(assignedCases);
+        }
     }
 }

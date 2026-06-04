@@ -95,8 +95,8 @@ public class SecurityConfig {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.getWriter().write(
-                "{\"status\":%d,\"error\":\"%s\",\"correlationId\":\"%s\"}%n"
-                        .formatted(status, error, UUID.randomUUID())
+                "{\"status\":%d,\"error\":\"%s\",\"correlationId\":\"%s\"}%s"
+                        .formatted(status, error, UUID.randomUUID(), System.lineSeparator())
         );
     }
 

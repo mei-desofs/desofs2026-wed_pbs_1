@@ -130,16 +130,18 @@ public class FileStorageService {
 
             ensureInsideBase(file);
 
-            String content = """
-                    === DENÚNCIA ===
-
-                    ID: %d
-                    Categoria: %s
-                    Estado: %s
-
-                    Descrição:
-                    %s
-                    """.formatted(reportId, category, status, description);
+            String newline = System.lineSeparator();
+            String content = String.join(newline,
+                    "=== DENUNCIA ===",
+                    "",
+                    "ID: %d".formatted(reportId),
+                    "Categoria: %s".formatted(category),
+                    "Estado: %s".formatted(status),
+                    "",
+                    "Descricao:",
+                    description,
+                    ""
+            );
 
             Files.writeString(file, content,
                     StandardOpenOption.CREATE,

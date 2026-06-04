@@ -1,6 +1,7 @@
 package com.ghostreport.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -8,7 +9,9 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Base64;
@@ -89,7 +92,7 @@ public class JwtService {
     private String encodeJson(Map<String, Object> values) {
         try {
             return BASE64_URL_ENCODER.encodeToString(objectMapper.writeValueAsBytes(values));
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             throw new IllegalStateException("Could not encode JWT", e);
         }
     }
@@ -131,7 +134,7 @@ public class JwtService {
                 throw new IllegalArgumentException("Expired JWT");
             }
             return new JwtClaims(username, authorityRole);
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new IllegalArgumentException("Invalid JWT", e);
         }
     }
@@ -152,7 +155,7 @@ public class JwtService {
             Mac mac = Mac.getInstance(HMAC_ALGORITHM);
             mac.init(new SecretKeySpec(secret, HMAC_ALGORITHM));
             return BASE64_URL_ENCODER.encodeToString(mac.doFinal(value.getBytes(StandardCharsets.UTF_8)));
-        } catch (Exception e) {
+        } catch (GeneralSecurityException e) {
             throw new IllegalStateException("Could not sign JWT", e);
         }
     }
