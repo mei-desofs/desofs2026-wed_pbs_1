@@ -11,7 +11,7 @@ downloaded artifacts.
 | --- | --- | --- | --- | --- |
 | `testing/` | Surefire/JUnit, JaCoCo, runtime security evidence, PIT | Build and Test, ASVS | V2, V5, V6, V7, V8, V9, V16 | PIT currently contains fallback evidence if no mutation report is generated. |
 | `sast/` | SpotBugs and CodeQL summary | Development, Pipeline Automation | V15, V16 | CodeQL primary evidence is GitHub Code Scanning; local artifact is a run summary. |
-| `sca/` | OWASP Dependency-Check and CycloneDX SBOM | Build and Test, Pipeline Automation | V13, V15 | Dependency-Check reports critical/high findings until dependencies are updated or triaged. |
+| `sca/` | OWASP Dependency-Check and CycloneDX SBOM | Build and Test, Pipeline Automation | V13, V15 | Existing reports are pre-remediation evidence; `docs/SCA_TRIAGE.md` records dependency updates and residual risk pending a fresh scan. |
 | `secret-scanning/` | Gitleaks JSON report | Pipeline Automation, Production | V13, V14, V15 | Empty `[]` report means no leaked secrets were found in the scanned scope. |
 | `dast/` | OWASP ZAP baseline reports | Build and Test, ASVS | V3, V4, V12 | Baseline DAST is unauthenticated and currently reports CSP `unsafe-inline`. |
 | `pipelines/` | GitHub Actions screenshots, job summaries and run links | Pipeline Automation | V15 | Screenshots/job summaries must be manually downloaded or captured. |
