@@ -96,6 +96,7 @@ cd ghostreport
 - [ASVS Level 2 evidence](docs/ASVS_LEVEL2_EVIDENCE.md)
 - [Technology stack security review](docs/TECH_STACK_SECURITY_REVIEW.md)
 - [Sprint 2 GAP analysis](docs/SPRINT2_GAP_ANALYSIS.md)
+- [Sprint 2 recovery final report](docs/SPRINT2_RECOVERY_FINAL_REPORT.md)
 - [Final presentation guide](docs/FINAL_PRESENTATION_GUIDE.md)
 - [Demo script](docs/DEMO_SCRIPT.md)
 - [Phase 2 evidence folder](Deliverables/Phase%202/Evidence/README.md)
