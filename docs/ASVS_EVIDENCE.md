@@ -32,7 +32,7 @@ known gaps and residual risk used to fill it.
 | V12 Secure Communication | Partially Compliant | HSTS header and installation guidance for TLS deployment | `SecurityHeadersTest`, `docs/SECURE_INSTALLATION.md` | Local CI/DAST evidence does not prove production TLS, certificates or cipher configuration. |
 | V13 Configuration | Partially Compliant | Environment-based secrets, prod-like fail-fast validation, disabled seed users, SCA triage | `SecurityConfigurationValidatorTest`, Gitleaks evidence, `docs/SCA_TRIAGE.md` | Dependency updates were applied, but a new Dependency-Check report is required before marking findings fixed. |
 | V14 Data Protection | Partially Compliant | DTO responses avoid passwords, upload/package/backup hashes protect integrity | DTO tests, backup/package tests | Data classification, retention/deletion policy and encryption-at-rest are incomplete. |
-| V15 Secure Coding and Architecture | Partially Compliant | CI, JaCoCo, SpotBugs, CodeQL, Dependency-Check, CycloneDX, Gitleaks, ZAP, PIT evidence | GitHub Actions artifacts under `Deliverables/Phase 2/Evidence`, `docs/SCA_TRIAGE.md`, `docs/SPOTBUGS_TRIAGE.md` | SpotBugs was reduced to 21 triaged findings; SCA needs a fresh post-upgrade scan; PIT currently has fallback evidence only. |
+| V15 Secure Coding and Architecture | Partially Compliant | CI, JaCoCo, SpotBugs, CodeQL, Dependency-Check, CycloneDX, Gitleaks, ZAP, PIT evidence | GitHub Actions artifacts under `Deliverables/Phase 2/Evidence`, `docs/SCA_TRIAGE.md`, `docs/SPOTBUGS_TRIAGE.md`, `docs/SECURITY_TESTING.md` | SpotBugs was reduced to 21 triaged findings; SCA needs a fresh post-upgrade scan; PIT is configured for real reports in CI Java 17 but local Java 23 still fails. |
 | V16 Security Logging and Error Handling | Partially Compliant | `AuditLogService`, `SecurityMonitoringService`, generic error handlers and correlation IDs | `RuntimeSecurityEventLoggingTest`, `ErrorHandlingSecurityTest` | Logs are not tamper resistant and no SIEM/incident-response runbook is implemented. |
 | V17 WebRTC | Not Applicable | GhostReport has no WebRTC, TURN/STUN, media server or browser media capture | Architecture review | None in current scope. |
 
@@ -60,7 +60,7 @@ known gaps and residual risk used to fill it.
 | Gitleaks | Empty JSON report means no leaks found in scanned scope | `Deliverables/Phase 2/Evidence/secret-scanning` once organized | Artifact was previously categorized under SCA | Evidence valid after folder cleanup. |
 | ZAP | Baseline report generated | `Deliverables/Phase 2/Evidence/dast` | Old report found CSP `unsafe-inline`, comments and cache informational alerts | CSP/frontend remediation applied; fresh ZAP run required as final evidence. |
 | CodeQL | Code Scanning plus run summary | `Deliverables/Phase 2/Evidence/sast/sast-codeql-evidence-summary` | Local SARIF export is not promised by the current workflow | Evidence review. |
-| PIT | Fallback evidence generated | `Deliverables/Phase 2/Evidence/testing/pit-mutation-testing-report` | No real HTML/XML mutation report yet | Open remediation. |
+| PIT | Evidence review | `Deliverables/Phase 2/Evidence/testing/pit-mutation-testing-report`, `Deliverables/Phase 2/Evidence/testing/pit-local-java23-runtime-note.md`, `docs/SECURITY_TESTING.md` | Previous run had fallback only; local Java 23 still fails before report generation | Plugin/configuration updated for HTML/XML reports in CI Java 17. |
 
 ## Not Applicable Scope
 

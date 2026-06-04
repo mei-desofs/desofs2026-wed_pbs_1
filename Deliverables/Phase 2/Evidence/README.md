@@ -9,8 +9,8 @@ downloaded artifacts.
 
 | Folder | Tool/evidence | DESOFS rubric | ASVS chapters | Current limitation / residual risk |
 | --- | --- | --- | --- | --- |
-| `testing/` | Surefire/JUnit, JaCoCo, runtime security evidence, PIT | Build and Test, ASVS | V2, V5, V6, V7, V8, V9, V16 | PIT currently contains fallback evidence if no mutation report is generated. |
-| `sast/` | SpotBugs and CodeQL summary | Development, Pipeline Automation | V15, V16 | CodeQL primary evidence is GitHub Code Scanning; local artifact is a run summary. |
+| `testing/` | Surefire/JUnit, JaCoCo, runtime security evidence, PIT | Build and Test, ASVS | V2, V5, V6, V7, V8, V9, V16 | PIT is configured for HTML/XML reports in CI Java 17; local Java 23 failure is documented separately. |
+| `sast/` | SpotBugs and CodeQL summary | Development, Pipeline Automation | V15, V16 | CodeQL primary evidence is GitHub Code Scanning; SpotBugs remediation is documented in `docs/SPOTBUGS_TRIAGE.md` pending a fresh scan. |
 | `sca/` | OWASP Dependency-Check and CycloneDX SBOM | Build and Test, Pipeline Automation | V13, V15 | Existing reports are pre-remediation evidence; `docs/SCA_TRIAGE.md` records dependency updates and residual risk pending a fresh scan. |
 | `secret-scanning/` | Gitleaks JSON report | Pipeline Automation, Production | V13, V14, V15 | Empty `[]` report means no leaked secrets were found in the scanned scope. |
 | `dast/` | OWASP ZAP baseline reports | Build and Test, ASVS | V3, V4, V12 | Existing ZAP reports are pre-CSP-remediation evidence; rerun ZAP to archive the updated result. |

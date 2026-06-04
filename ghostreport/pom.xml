@@ -166,7 +166,7 @@
 			<plugin>
 				<groupId>org.pitest</groupId>
 				<artifactId>pitest-maven</artifactId>
-				<version>1.23.1</version>
+				<version>1.25.3</version>
 
 				<dependencies>
 					<dependency>
@@ -179,7 +179,8 @@
 				<configuration>
 
 					<targetClasses>
-						<param>com.ghostreport.*</param>
+						<param>com.ghostreport.domain.*</param>
+						<param>com.ghostreport.service.*</param>
 					</targetClasses>
 
 					<targetTests>
@@ -188,6 +189,7 @@
 
 					<outputFormats>
 						<param>HTML</param>
+						<param>XML</param>
 					</outputFormats>
 
 					<timestampedReports>false</timestampedReports>
