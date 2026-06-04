@@ -1,6 +1,6 @@
-# DevSecOps stage 04.
+# DevSecOps stage 05.
 # Test quality workflow: mutation testing gives stronger evidence than line coverage alone.
-name: 04 - Mutation Testing PIT
+name: 05 - Mutation Testing PIT
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -20,8 +20,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  stage_04_mutation_testing:
-    name: Stage 04 - PIT mutation testing evidence
+  stage_05_mutation_testing:
+    name: Stage 05 - PIT mutation testing evidence
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -62,8 +62,7 @@ jobs:
             echo "| Evidence | Artifact |"
             echo "| --- | --- |"
             echo "| PIT mutation testing report | pit-mutation-testing-report |"
-            echo "| Gate mode | Evidence/manual triage |"
+            echo "| Gate mode | Evidence review |"
             echo ""
             echo "PIT is used to assess test strength beyond JaCoCo line coverage."
           } >> "$GITHUB_STEP_SUMMARY"
-

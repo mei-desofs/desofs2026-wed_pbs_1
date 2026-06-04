@@ -63,6 +63,5 @@ jobs:
             echo "| Evidence | Artifact |"
             echo "| --- | --- |"
             echo "| CycloneDX JSON/XML SBOM | sbom-cyclonedx |"
-            echo "| Gate mode | Evidence/manual triage |"
+            echo "| Gate mode | Evidence review |"
           } >> "$GITHUB_STEP_SUMMARY"
-

@@ -159,7 +159,7 @@ jobs:
             echo "| ZAP JSON report | dast-zap-baseline-json |"
             echo "| ZAP XML report | dast-zap-baseline-xml |"
             echo "| Application runtime log | dast-ghostreport-app-log |"
-            echo "| Gate mode | Evidence/manual triage |"
+            echo "| Gate mode | Evidence review |"
             echo ""
             echo "GhostReport runs on the GitHub runner at http://localhost:8081; ZAP runs in Docker with host networking."
           } >> "$GITHUB_STEP_SUMMARY"

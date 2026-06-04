@@ -62,8 +62,7 @@ jobs:
             echo "| Evidence | Location |"
             echo "| --- | --- |"
             echo "| CodeQL semantic analysis | GitHub Code Scanning alerts |"
-            echo "| Gate mode | Evidence/manual triage |"
+            echo "| Gate mode | Evidence review |"
             echo ""
             echo "CodeQL complements SpotBugs by identifying semantic vulnerability patterns."
           } >> "$GITHUB_STEP_SUMMARY"
-

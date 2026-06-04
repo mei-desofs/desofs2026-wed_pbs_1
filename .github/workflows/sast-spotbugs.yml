@@ -1,6 +1,6 @@
 # DevSecOps stage 02A.
-# Evidence workflow: runs after/alongside the CI baseline. Findings are reviewed
-# manually during Sprint 2 instead of failing every build.
+# Evidence workflow: runs after/alongside the CI baseline and uploads findings
+# for reviewer assessment.
 name: 02A - SAST SpotBugs
 
 env:
@@ -42,8 +42,8 @@ jobs:
           cache: maven
           cache-dependency-path: ghostreport/pom.xml
 
-      # SpotBugs is used as SAST evidence. Findings are triaged manually from
-      # the XML artifact instead of blocking every build during Sprint 2.
+      # SpotBugs is used as SAST evidence. Findings are reviewed from the XML
+      # artifact without blocking every build.
       - name: Run SpotBugs static analysis in evidence mode
         run: ./mvnw -DskipTests compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true
 
@@ -73,7 +73,7 @@ jobs:
             echo "| Evidence | Artifact |"
             echo "| --- | --- |"
             echo "| SpotBugs XML/static analysis report | sast-spotbugs-report |"
-            echo "| Gate mode | Evidence/manual triage |"
+            echo "| Gate mode | Evidence review |"
             echo ""
-            echo "Sprint 2 mode: evidence/manual triage."
+            echo "Findings are reviewed with application context before remediation decisions."
           } >> "$GITHUB_STEP_SUMMARY"

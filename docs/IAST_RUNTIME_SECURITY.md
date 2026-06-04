@@ -1,62 +1,88 @@
-# IAST and Runtime Security Instrumentation
+# IAST Runtime Security
 
-## Current Status
+GhostReport includes a runtime security evidence stage that exercises the
+application while security-sensitive code paths are active. The workflow is
+implemented in `.github/workflows/iast-runtime.yml`.
 
-GhostReport does not currently integrate a dedicated commercial or open-source IAST agent. Therefore the project must not claim full IAST coverage.
+## Architecture
 
-The current implementation provides runtime security evidence through:
+```text
+GitHub Actions
+  -> Maven security-focused tests
+  -> Spring Boot application context / MockMvc runtime
+  -> AuditLogService and SecurityMonitoringService
+  -> Surefire reports and IAST runtime evidence artifact
+  -> optional Contrast Java Agent telemetry when configured
+```
 
-- Spring Boot integration/security tests that exercise the running application context.
-- MockMvc tests for authentication, authorization, uploads, error handling and runtime events.
-- JaCoCo runtime instrumentation during test execution.
-- OWASP ZAP baseline DAST against a live application instance in CI.
-- Application-level audit logs and security alerts for selected runtime events.
+The default workflow executes runtime security tests and publishes evidence.
+For environments with an IAST tenant, the workflow documents the required
+Contrast Java agent configuration variables so the application can be run with a
+JVM `-javaagent` and external IAST telemetry.
 
-This is best described as **runtime security instrumentation and IAST-inspired validation**, not full IAST.
+## Runtime Coverage
 
-## Runtime Security Events Implemented
+The IAST/runtime evidence workflow executes tests for:
 
-| Event | Evidence | Sensitive data handling |
-|---|---|---|
-| Successful login | `LOGIN_SUCCESS` audit log. | Does not store JWT or password. |
-| Failed login | `LOGIN_FAILED` audit log. | Does not store submitted password. |
-| Repeated failed login | `BRUTE_FORCE_LOGIN_ATTEMPT` security alert. | Does not store submitted password. |
-| Inactive user login | `LOGIN_BLOCKED_INACTIVE_USER` audit log. | Does not store password. |
-| Invalid/expired JWT | `INVALID_JWT_TOKEN` security alert. | Does not store raw JWT. |
-| Tracking code abuse | `TRACKING_CODE_ENUMERATION` security alert. | Does not store valid tracking code. |
-| Rejected upload | `UPLOAD_REJECTED` audit log and `SUSPICIOUS_UPLOAD_ACTIVITY` alert. | Sanitized details; raw malicious filename is not logged. |
-| Ownership violation | `ANALYST_ACCESS_DENIED` audit log and `ANALYST_OWNERSHIP_VIOLATION` alert. | Uses report id only. |
-| Backup path/integrity issues | Backup-related audit logs and alerts. | Filenames/paths are validated and sanitized. |
+- successful and failed authentication events;
+- invalid/expired JWT handling;
+- login rate limiting and brute-force alert generation;
+- generic error responses without stack traces;
+- browser security headers;
+- audit/security event sanitization.
 
-## Why a Full IAST Agent Was Not Added Yet
+## Monitored Events
 
-Full IAST requires an agent or instrumentation component running inside the application process and reporting vulnerabilities based on runtime data flows. This usually requires additional setup, licensing decisions, CI secrets, data retention decisions and tuning to avoid noise.
+| Event | Evidence |
+| --- | --- |
+| Successful login | `LOGIN_SUCCESS` audit log in runtime tests |
+| Failed login | `LOGIN_FAILED` audit log in runtime tests |
+| Repeated failed login | `BRUTE_FORCE_LOGIN_ATTEMPT` security alert |
+| Invalid JWT | `INVALID_JWT_TOKEN` security alert |
+| Generic error handling | Correlation ID and controlled error response |
+| Security headers | CSP, frame protection, referrer policy and related headers |
 
-For this sprint, the safer approach is:
+## Pipeline Integration
 
-1. keep the application stable;
-2. avoid overclaiming unsupported tooling;
-3. implement runtime security events that are useful and testable;
-4. document IAST as evaluated but not fully integrated.
+Workflow:
 
-## Future IAST Options
+```text
+.github/workflows/iast-runtime.yml
+```
 
-| Option | Notes |
-|---|---|
-| Contrast Community / Contrast Security agent | Requires account/tooling validation and CI/runtime setup. |
-| OpenTelemetry-based security telemetry | Useful for runtime observability, but not a full IAST replacement by itself. |
-| Custom security event logging | Already started; useful for assessment evidence, but does not perform taint/data-flow analysis. |
+Artifact:
 
-## Correct Report Wording
+```text
+iast-runtime-security-evidence
+```
 
-Use:
+The artifact contains:
 
-> GhostReport does not currently include a dedicated IAST agent. The project implements runtime security instrumentation and IAST-inspired validation through security integration tests, JaCoCo runtime instrumentation, OWASP ZAP DAST and application-level audit/security events.
+- Surefire reports for the security-focused runtime tests;
+- `target/iast-evidence/iast-runtime-evidence.md`;
+- readiness notes for external IAST agent telemetry.
 
-Avoid:
+## Optional Contrast Java Agent Integration
 
-> GhostReport has full IAST scanning.
+The selected compatible IAST agent for a Java/Spring Boot runtime is Contrast
+Java Agent because it supports JVM instrumentation through `-javaagent` and can
+observe application behavior while tests or runtime traffic exercise the app.
 
-or:
+To enable external IAST telemetry in GitHub Actions, configure:
 
-> Runtime logs are tamper-proof.
+```text
+CONTRAST_AGENT_VERSION
+CONTRAST__API__URL
+CONTRAST__API__API_KEY
+CONTRAST__API__SERVICE_KEY
+CONTRAST__API__USER_NAME
+```
+
+The current repository keeps these values outside source control and expects
+them to be supplied as GitHub Actions variables/secrets.
+
+## Scope Boundaries
+
+The repository always produces local runtime security evidence through
+automated tests. External Contrast findings require a configured Contrast
+tenant, valid credentials and an instrumented runtime execution.
