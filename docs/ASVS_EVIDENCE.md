@@ -53,7 +53,7 @@ known gaps and residual risk used to fill it.
 
 | Tool | Result | Evidence | Issues identified | Current status |
 | --- | --- | --- | --- | --- |
-| JUnit/MockMvc | 110 tests after session-management and admin-evidence additions; CI artifact still contains the downloaded pre-change run | `Deliverables/Phase 2/Evidence/testing/ci-surefire-test-reports (1)` plus local Maven output | Coverage gaps in admin/case/backup branches | Evidence accepted; upload a fresh CI artifact after push. |
+| JUnit/MockMvc | 111 tests after session-management and admin-evidence additions; CI artifact still contains the downloaded pre-change run | `Deliverables/Phase 2/Evidence/testing/ci-surefire-test-reports (1)` plus local Maven output | Coverage gaps in admin/case/backup branches | Evidence accepted; upload a fresh CI artifact after push. |
 | JaCoCo | Coverage artifact exists | `Deliverables/Phase 2/Evidence/testing/ci-jacoco-coverage-report (1)` | Low coverage in some controllers/services | Evidence accepted; improve critical paths. |
 | Dependency-Check | Report generated | `Deliverables/Phase 2/Evidence/sca/dependency-check-sca-json`, `docs/SCA_TRIAGE.md` | Old report found critical/high CVEs in Spring Boot/Tomcat/PostgreSQL and other dependencies | Dependency versions updated; fresh scan required before closing findings. |
 | SpotBugs | Report generated | `Deliverables/Phase 2/Evidence/sast/sast-spotbugs-report (1)`, `Deliverables/Phase 2/Evidence/sast/spotbugs-post-remediation`, `docs/SPOTBUGS_TRIAGE.md` | Original report found 35 findings; post-remediation report has 21 findings | High-value findings remediated; remaining findings are triaged residual risk. |
