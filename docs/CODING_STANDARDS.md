@@ -49,6 +49,7 @@ Controllers should:
 - validate request DTOs with `@Valid`;
 - delegate business rules to services;
 - avoid direct repository access;
+- return DTOs or response records instead of JPA entities;
 - avoid leaking stack traces or internal exception messages.
 
 Endpoint names should be stable and descriptive. Protected endpoints must be
@@ -131,6 +132,35 @@ Do not claim a control as implemented unless it exists in code and has evidence.
 Use "planned" or "future work" for malware scanning, storage quotas, distributed
 rate limiting, MFA, tamper-proof logs and full admin user lifecycle management
 until those features are actually implemented.
+
+## Pull Request Rules
+
+Every PR should:
+
+- use `.github/pull_request_template.md`;
+- receive at least one teammate approval;
+- pass the CI build/tests/coverage workflow;
+- include or reference security evidence when a security control changes;
+- update ASVS or security documentation when a security claim changes.
+
+Branch names should be descriptive and use prefixes such as:
+
+```text
+feature/security-configuration-assessment
+security/input-validation-hardening
+docs/asvs-level2-evidence
+ci/dependency-check-artifacts
+```
+
+## DTO and Sanitization Rules
+
+- Do not expose entities directly from controllers.
+- Use response records for immutable API responses when practical.
+- Validate request DTOs with Bean Validation and service/domain rules.
+- Trim and normalize user-controlled text before storing when the domain rule
+  requires it.
+- Sanitize audit and security event details before persistence.
+- Never log passwords, JWTs, raw secrets or full uploaded file contents.
 
 ## Workflow and Documentation Standards
 

@@ -84,7 +84,9 @@ PY
 When a security control is added or changed, update at least one of:
 
 - `docs/ASVS_EVIDENCE.md`
-- `docs/SECURITY_CONTROLS.md`
+- `docs/ASVS_LEVEL2_EVIDENCE.md`
+- `docs/SECURITY_ASSESSMENT.md`
+- `docs/SECURITY_CONFIGURATION_ASSESSMENT.md`
 - `docs/DEVSECOPS_PIPELINE.md`
 - `docs/PIPELINE_FLOW.md`
 - `docs/PIPELINE_ARTIFACTS.md`
