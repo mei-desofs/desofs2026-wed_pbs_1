@@ -39,7 +39,7 @@ public class SecurityConfig {
                                 .maxAgeInSeconds(31_536_000)
                         )
                         .contentSecurityPolicy(csp -> csp
-                                .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'")
+                                .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'; form-action 'self'")
                         )
                         .referrerPolicy(referrer -> referrer
                                 .policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)
@@ -94,9 +94,10 @@ public class SecurityConfig {
     ) throws IOException {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write("""
-                {"status":%d,"error":"%s","correlationId":"%s"}
-                """.formatted(status, error, UUID.randomUUID()));
+        response.getWriter().write(
+                "{\"status\":%d,\"error\":\"%s\",\"correlationId\":\"%s\"}%n"
+                        .formatted(status, error, UUID.randomUUID())
+        );
     }
 
     @Bean

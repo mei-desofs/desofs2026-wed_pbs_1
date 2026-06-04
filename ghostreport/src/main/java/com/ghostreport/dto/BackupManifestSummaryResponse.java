@@ -9,4 +9,7 @@ public record BackupManifestSummaryResponse(
         int totalFiles,
         Map<String, Integer> databaseExports
 ) {
+    public BackupManifestSummaryResponse {
+        databaseExports = databaseExports == null ? Map.of() : Map.copyOf(databaseExports);
+    }
 }

@@ -239,7 +239,11 @@ public class BackupService {
                     if (!output.startsWith(restoreRoot)) {
                         throw new IOException("Unsafe restore entry");
                     }
-                    Files.createDirectories(output.getParent());
+                    Path parent = output.getParent();
+                    if (parent == null) {
+                        throw new IOException("Unsafe restore output path");
+                    }
+                    Files.createDirectories(parent);
                     try (InputStream input = zipFile.getInputStream(entry)) {
                         Files.copy(input, output);
                     }
@@ -458,7 +462,11 @@ public class BackupService {
     }
 
     private Path sidecarHashPath(Path zipPath) {
-        return zipPath.resolveSibling(zipPath.getFileName().toString() + ".sha256");
+        Path filename = zipPath.getFileName();
+        if (filename == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid backup path");
+        }
+        return zipPath.resolveSibling(filename.toString() + ".sha256");
     }
 
     private String sha256(Path file) {

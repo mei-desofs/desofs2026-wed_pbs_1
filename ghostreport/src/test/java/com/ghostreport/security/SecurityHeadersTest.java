@@ -28,6 +28,7 @@ class SecurityHeadersTest {
                 .andExpect(header().string("X-Frame-Options", "DENY"))
                 .andExpect(header().string("Referrer-Policy", "no-referrer"))
                 .andExpect(header().string("Content-Security-Policy", containsString("default-src 'self'")))
+                .andExpect(header().string("Content-Security-Policy", containsString("form-action 'self'")))
                 .andExpect(header().string("Permissions-Policy", containsString("geolocation=()")))
                 .andExpect(header().string("Cross-Origin-Opener-Policy", "same-origin"))
                 .andExpect(header().string("Cross-Origin-Resource-Policy", "same-origin"))
