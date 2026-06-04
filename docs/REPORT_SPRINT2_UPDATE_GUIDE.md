@@ -11,7 +11,7 @@ with the code and avoids overclaiming features that are not implemented yet.
 | DevSecOps pipeline | Describe separate workflows: CI tests/coverage, SpotBugs, Dependency-Check, Gitleaks and ZAP. |
 | Pipeline flow | Explain the sequence: secret scanning, CI build/tests/coverage, SAST/SCA, DAST and evidence collection. |
 | ASVS | Reference `docs/ASVS_EVIDENCE.md` and the Sprint 2 tracker. |
-| Security controls | Reference `docs/SECURITY_CONTROLS.md` for control-to-code/test mapping. |
+| Security controls | Reference `docs/SECURITY_ASSESSMENT.md`, `docs/SECURITY_CONFIGURATION_ASSESSMENT.md` and `docs/ASVS_LEVEL2_EVIDENCE.md` for control-to-code/test mapping. |
 | Testing | Include Maven tests, JaCoCo coverage, security tests and pipeline artifacts. |
 | DAST | State that GhostReport runs on `localhost:8081` on the GitHub runner and ZAP runs in Docker with host networking. |
 | Limitations | Keep malware scanning, quotas, MFA, tamper-proof logs, distributed rate limiting and authenticated DAST as future work. |

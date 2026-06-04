@@ -84,12 +84,20 @@ cd ghostreport
 ## Documentation
 
 - [Coding standards](docs/CODING_STANDARDS.md)
+- [Code review guidelines](docs/CODE_REVIEW_GUIDELINES.md)
+- [Branch protection rules](docs/BRANCH_PROTECTION_RULES.md)
 - [Contribution guide](CONTRIBUTING.md)
 - [Secure installation](docs/SECURE_INSTALLATION.md)
+- [Security configuration assessment](docs/SECURITY_CONFIGURATION_ASSESSMENT.md)
 - [Security assessment](docs/SECURITY_ASSESSMENT.md)
 - [IAST and runtime security instrumentation](docs/IAST_RUNTIME_SECURITY.md)
 - [DevSecOps pipeline evidence](docs/DEVSECOPS_PIPELINE.md)
 - [ASVS evidence mapping](docs/ASVS_EVIDENCE.md)
+- [ASVS Level 2 evidence](docs/ASVS_LEVEL2_EVIDENCE.md)
+- [Technology stack security review](docs/TECH_STACK_SECURITY_REVIEW.md)
+- [Sprint 2 GAP analysis](docs/SPRINT2_GAP_ANALYSIS.md)
+- [Final presentation guide](docs/FINAL_PRESENTATION_GUIDE.md)
+- [Demo script](docs/DEMO_SCRIPT.md)
 - [Phase 2 evidence folder](Deliverables/Phase%202/Evidence/README.md)
 
 ## Authors
