@@ -24,7 +24,8 @@ here.
 
 1. Run the GitHub Actions workflows from the PR or from `workflow_dispatch`.
 2. Download the artifacts from the workflow run page.
-3. Extract or place the downloaded artifact folders under:
+3. Place the downloaded `.zip` files, extracted artifact folders or individual
+   report files under:
 
 ```text
 downloaded-artifacts/
@@ -36,9 +37,22 @@ downloaded-artifacts/
 .\scripts\collect-evidence.ps1
 ```
 
-The script copies matching artifacts into the evidence areas above. It does not
-delete existing files. Unrecognized artifacts are copied to `pipelines/` for
-manual review.
+The script expands `.zip` artifacts when needed and copies matching artifacts
+into the evidence areas above. It does not delete existing files. Unrecognized
+artifacts are copied to `pipelines/` for manual review.
+
+Use a dedicated folder containing only GhostReport evidence artifacts. Avoid
+passing the whole Windows `Temp` folder because it contains unrelated system and
+application files.
+
+If the files are still in another clean folder, pass that folder explicitly:
+
+```powershell
+.\scripts\collect-evidence.ps1 -ArtifactsDir "C:\Users\Bárbara Silva\Downloads\ghostreport-artifacts"
+```
+
+Unmatched files are skipped by default. To also copy unmatched files into
+`pipelines/` for manual review, add `-IncludeUnmatched`.
 
 ## Evidence Rules
 
