@@ -1,65 +1,53 @@
 # Security Configuration Assessment
 
-This assessment focuses on the current branch,
-`feature/security-configuration-assessment`, and maps configuration hardening to
-code, tests, workflows and residual risks.
+This assessment documents the configuration controls used by GhostReport across
+local development, automated tests and production-like execution.
 
-## Current State
+## Configuration Evidence
 
 | Area | Evidence | Status |
 | --- | --- | --- |
-| Profiles | `application.yaml`, `application-dev.yaml`, `application-test.yaml` | Implemented |
-| Production-like config | Default profile requires `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` | Implemented |
+| Runtime profiles | `application.yaml`, `application-dev.yaml`, `application-test.yaml` | Implemented |
+| Production-like configuration | Default profile requires database and JWT environment variables | Implemented |
 | JWT secret validation | `SecurityConfigurationValidator`, `JwtService`, validator tests | Implemented |
-| Seed users | Disabled by default; restricted by profile and validator | Implemented |
-| Database config | PostgreSQL default/prod with `ddl-auto=validate`; dev uses `update`; test uses H2 | Implemented |
-| H2 console | Disabled in default/dev; enabled only for test profile | Acceptable for tests |
-| Stack traces | `server.error.include-stacktrace=never` | Implemented |
-| Upload limits | Multipart 10 MB and max files per request | Implemented |
-| Backup/upload separation | Validator rejects same normalized directory | Implemented |
-| Docker hardening | Non-root user, read-only container, named volumes, `no-new-privileges` | Implemented baseline |
-| Secret scanning | `.gitleaks.toml`, Gitleaks workflow | Implemented |
-
-## Configuration Risks and Mitigations
-
-| Risk | Current mitigation | Residual risk |
-| --- | --- | --- |
-| Hardcoded secrets | Production-like profile has no secret defaults; Gitleaks scans repo. | Placeholder values must never be used in real environments. |
-| Weak JWT secret | Minimum length checked at startup. | No automated rotation mechanism. |
-| Dev settings in production | Validator rejects dev/test JWT secrets and seed users in production-like profiles. | Operators must set the right active profile. |
-| Schema drift | Production-like `ddl-auto=validate`. | No Flyway/Liquibase migrations yet. |
-| Sensitive error output | Stack traces disabled and exception handler returns generic errors. | Correlation IDs are not yet propagated into structured logs. |
-| Unsafe filesystem paths | Upload/backup paths are normalized and separated. | OS-level permissions remain an operational requirement. |
-| Multi-instance abuse | In-memory rate limits exist. | Distributed rate limiting is future work. |
+| Seed users | Disabled by default and controlled by profile/validator | Implemented |
+| Database configuration | PostgreSQL default/dev, H2 test profile, `ddl-auto=validate` in production-like config | Implemented |
+| H2 console | Disabled outside the test profile | Implemented |
+| Error output | `server.error.include-stacktrace=never` | Implemented |
+| Upload limits | Multipart limit and max files per request | Implemented |
+| Backup/upload separation | Validator rejects identical normalized directories | Implemented |
+| Docker hardening | Non-root user, read-only app container, named volumes and `no-new-privileges` | Implemented |
+| Secret scanning | `.gitleaks.toml` and Gitleaks workflow | Implemented |
 
 ## Fail-Fast Checks
 
-The application fails startup when:
+The application validates configuration at startup:
 
-- `JWT_SECRET` is missing or shorter than 32 characters.
-- `JWT_EXPIRATION_SECONDS` is not positive.
-- `app.upload-dir` or `ghostreport.backup-dir` is blank.
-- Upload and backup directories resolve to the same path.
-- Production-like profiles use dev/test JWT placeholders.
-- Production-like profiles enable seed users.
+- `JWT_SECRET` must be at least 32 characters.
+- `JWT_EXPIRATION_SECONDS` must be positive.
+- Upload and backup directories must be configured and distinct.
+- Production-like profiles must not use dev/test JWT placeholders.
+- Production-like profiles must not enable seed users.
 
 Evidence: `SecurityConfigurationValidatorTest`.
 
-## Presentation Evidence
+## Environment Variables
 
-Show:
+| Variable | Purpose |
+| --- | --- |
+| `DB_URL` | PostgreSQL JDBC URL |
+| `DB_USERNAME` | Database username |
+| `DB_PASSWORD` | Database password |
+| `JWT_SECRET` | JWT HMAC signing secret |
+| `JWT_EXPIRATION_SECONDS` | Token lifetime |
+| `APP_UPLOAD_MAX_FILES_PER_REQUEST` | Upload abuse-control limit |
 
-- `application.yaml` requiring environment variables.
-- `SecurityConfigurationValidator`.
-- `SecurityConfigurationValidatorTest`.
-- `.env.example` with placeholders only.
-- Gitleaks workflow artifact.
-- Dockerfile/compose hardening settings.
+Use `.env.example` as a local template. Real secrets are supplied through the
+runtime environment or GitHub Actions secrets.
 
-## Recommended Future Work
+## Operational Notes
 
-- Add Flyway or Liquibase migrations.
-- Add structured logging with correlation ID propagation.
-- Add secret rotation runbook.
-- Replace in-memory rate limiting with Redis for distributed deployment.
-- Add production TLS/reverse-proxy deployment documentation.
+- The default profile is production-like and expects external configuration.
+- The `dev` profile supports local iteration with PostgreSQL defaults.
+- The `test` profile uses isolated H2 databases and test storage paths.
+- Docker Compose is configured for local containerized execution.

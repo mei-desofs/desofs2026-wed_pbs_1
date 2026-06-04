@@ -1,92 +1,59 @@
 # ASVS Evidence Mapping
 
-This document supports the ASVS tracker for Phase 2 Sprint 2. It maps controls
-to implemented code, tests and pipeline evidence. The spreadsheet remains the
-formal tracker, but this file explains how each claim can be defended.
+This document maps GhostReport security controls to implementation evidence.
+The ASVS spreadsheet remains the formal checklist; this file provides repository
+references that can be inspected during assessment.
 
-## Coverage Summary
+## Evidence Summary
 
-| Area | Status | Evidence |
-| --- | --- | --- |
-| Authentication | Strong baseline | `AuthController`, `AuthService`, `JwtService`, `JwtAuthenticationFilter`, BCrypt, inactive-user checks, login rate limiting, runtime auth events and JWT security tests. |
-| Authorization / RBAC | Strong | `SecurityConfig`, `AdminAuthorizationTest`, `AuditorAuthorizationTest`, `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`. |
-| Input validation | Strong | DTO validation, `ReportDescription`, `SafeFilename`, `TrackingCode`, controller/service tests. |
-| File upload security | Strong baseline | `FileStorageService`, `ReportController`, MIME/extension/magic byte checks, path normalization, upload count limit and upload tests. |
-| Error handling | Strong baseline | Controlled JSON errors and tests for malformed/unauthorized responses without stack traces. |
-| Logging and monitoring | Partial/strong | `AuditLogService`, `SecurityMonitoringService`, audit/security tests, login events, invalid JWT alerts and brute-force alerts. Logs are not tamper-proof. |
-| Rate limiting | Strong baseline | `RateLimiterService`, public tracking/upload/download limits and login rate limiting. |
-| Backup integrity | Strong baseline | `BackupService`, manifests, SHA-256, restore staging, integration tests. |
-| DevSecOps | Strong evidence | CI, JaCoCo, PIT, SpotBugs, CodeQL, Dependency-Check, CycloneDX SBOM, Gitleaks and ZAP artifacts mapped in `docs/PIPELINE_ARTIFACTS.md`. |
-
-## Suggested ASVS Control Evidence
-
-| ASVS topic | GhostReport evidence | Status |
-| --- | --- | --- |
-| Password storage | BCrypt `PasswordEncoder`; password complexity in `CreateUserRequest`. | Implemented |
-| Session management | Stateless JWT; no server-side session state for API authentication; signature, expiry and role validation tested. | Implemented |
-| Access control | Centralized RBAC in `SecurityConfig`; ownership checks in services; admin activate/deactivate tests. | Implemented |
-| Generic error handling | Generic responses for unauthorized/forbidden/malformed flows; tests check absence of internals. | Implemented |
-| Input validation | Bean Validation DTOs and domain primitives. | Implemented |
-| File upload validation | Size, MIME, extension, magic bytes, upload count limit, safe names and controlled storage. | Implemented |
-| Path traversal prevention | `SafeFilename`, normalized paths and storage boundary checks. | Implemented |
-| Logging | Audit logs for critical operations; sanitization of log details. | Implemented |
-| Monitoring | Security alerts for suspicious tracking, upload, path traversal, backup, ownership and brute-force login events. | Implemented baseline |
-| Data integrity | SHA-256 hashes for evidence and backups. | Implemented |
-| Secret management | GitHub Actions secrets and Gitleaks workflow. | Implemented |
-| Secure configuration | `.env.example`, `docs/SECURE_INSTALLATION.md`, `SecurityConfigurationValidator`, fail-fast configuration tests. | Implemented |
-| Dependency monitoring | OWASP Dependency-Check workflow and artifacts. | Implemented |
-| Static analysis | SpotBugs workflow and XML artifacts. | Implemented |
-| Semantic static analysis | CodeQL workflow and GitHub Code Scanning alerts. | Implemented evidence |
-| Software inventory | CycloneDX SBOM workflow and artifacts. | Implemented evidence |
-| Dynamic analysis | OWASP ZAP baseline workflow and reports. | Implemented |
-
-## Pipeline Evidence by ASVS Area
-
-| ASVS evidence area | Artifact evidence |
+| Area | Evidence |
 | --- | --- |
-| Secure verification | `ci-surefire-test-reports`, `ci-jacoco-coverage-report` |
-| Static analysis | `sast-spotbugs-report` |
-| Semantic static analysis | GitHub Code Scanning alerts from CodeQL |
-| Dependency management | `dependency-check-sca-html`, `dependency-check-sca-json`, `dependency-check-sca-xml`, `dependency-check-sca-sarif`, `sbom-cyclonedx` |
-| Secret management | `secret-scan-gitleaks-json` |
-| Dynamic analysis | `dast-zap-baseline-html`, `dast-zap-baseline-json`, `dast-zap-baseline-xml` |
-| Runtime evidence | `dast-ghostreport-app-log` |
-| Test quality | `ci-jacoco-coverage-report`, `pit-mutation-testing-report` |
+| Authentication | `AuthController`, `AuthService`, `JwtService`, `JwtAuthenticationFilter`, BCrypt password encoding, inactive-user checks and login rate limiting tests. |
+| Authorization | Centralized role rules in `SecurityConfig`, RBAC tests and analyst ownership tests. |
+| Input validation | Request DTO validation, `TrackingCode`, `SafeFilename`, `ReportDescription` and upload validation tests. |
+| API contracts | DTO/record responses in the `dto` package, including audit/security evidence responses. |
+| File handling | MIME, extension, magic-byte, size and normalized-path checks in `FileStorageService`. |
+| Error handling | `GlobalExceptionHandler`, Spring Security error responses and tests for controlled responses. |
+| Data protection | Environment-based secrets, JWT secret validation, attachment/package/backup hashes and Gitleaks scanning. |
+| Logging and monitoring | `AuditLogService`, `SecurityMonitoringService` and runtime security event tests. |
+| DevSecOps evidence | CI, JaCoCo, SpotBugs, CodeQL, Dependency-Check, CycloneDX, Gitleaks, ZAP, IAST/runtime evidence and PIT workflows. |
 
-The full artifact map is maintained in `docs/PIPELINE_ARTIFACTS.md`.
+## Control Evidence
 
-## Known Gaps to Track Honestly
-
-| Gap | Recommended wording |
-| --- | --- |
-| Malware scanning | Planned future hardening; current upload security is validation-based, not antivirus scanning. |
-| Storage quotas | Not implemented; future work for abuse and capacity control. |
-| Tamper-proof audit logs | Audit logs exist but are not append-only/hash-chained. |
-| Distributed rate limiting | Current implementation is in-memory and suitable for single-instance/dev use. |
-| Full admin lifecycle | Admin currently creates/lists/activates/deactivates users; edit/delete/role changes/password resets are not implemented. |
-| Authenticated DAST | ZAP baseline is unauthenticated and passive. |
-| MFA | Not implemented. |
-| Full IAST agent | Not implemented; runtime security instrumentation is documented separately. |
-
-## Sprint 2 High-Value ASVS Improvements
-
-| Improvement | Why it matters | Evidence to add |
+| ASVS topic | Project evidence | Status |
 | --- | --- | --- |
-| Login rate limiting | Strengthens authentication abuse protection. | `LoginRateLimitSecurityTest` and `BRUTE_FORCE_LOGIN_ATTEMPT` alert. |
-| Inactive users | Makes admin user management more credible. | `AdminUserManagementSecurityTest` verifies deactivate/reactivate and login rejection. |
-| JWT tamper/expired tests | Proves token validation behavior. | `JwtServiceSecurityTest`. |
-| Error response tests | Supports information disclosure controls. | `ErrorHandlingSecurityTest`. |
-| Runtime security events | Supports monitoring and assessment evidence. | `RuntimeSecurityEventLoggingTest`, `LOGIN_SUCCESS`, `LOGIN_FAILED`, `INVALID_JWT_TOKEN`. |
-| ASVS screenshots/artifacts | Makes tracker defensible. | Link workflow artifacts and test output. |
+| Password storage | BCrypt `PasswordEncoder` and user creation tests. | Implemented |
+| Credential handling | Passwords accepted only in request DTOs and never returned in user responses. | Implemented |
+| Session management | Stateless JWT, expiry validation, signature validation and role validation tests. | Implemented |
+| Access control | `ADMIN`, `ANALYST` and `AUDITOR` rules in `SecurityConfig`. | Implemented |
+| Object-level authorization | Analyst ownership controls in services and tests. | Implemented |
+| Input validation | Bean Validation annotations and domain primitives. | Implemented |
+| Upload validation | File type, size, magic-byte and safe-path checks. | Implemented |
+| Error handling | Generic API errors, no stack traces and correlation IDs. | Implemented |
+| Security logging | Sanitized audit logs and security alerts. | Implemented |
+| Backup integrity | Backup manifests and SHA-256 verification. | Implemented |
+| Secret scanning | Gitleaks workflow and `.gitleaks.toml` placeholder allowlist. | Implemented |
+| Static analysis | SpotBugs and CodeQL workflows. | Evidence review |
+| Dependency analysis | OWASP Dependency-Check and CycloneDX SBOM workflows. | Evidence review |
+| Dynamic analysis | OWASP ZAP baseline workflow. | Evidence review |
+| IAST/runtime evidence | Runtime security test workflow and optional Contrast Java Agent readiness. | Evidence review |
 
-## Evidence Storage
+## Pipeline Artifact Mapping
 
-Recommended evidence location:
+| Evidence area | Artifact |
+| --- | --- |
+| Tests | `ci-surefire-test-reports` |
+| Coverage | `ci-jacoco-coverage-report` |
+| SAST | `sast-spotbugs-report`, CodeQL Code Scanning |
+| SCA | `dependency-check-sca-*`, `sbom-cyclonedx` |
+| Secret scanning | `secret-scan-gitleaks-json` |
+| DAST | `dast-zap-baseline-*`, `dast-ghostreport-app-log` |
+| IAST/runtime | `iast-runtime-security-evidence` |
+| Mutation testing | `pit-mutation-testing-report` |
 
-```text
-Deliverables/Phase 2/Evidence/
-```
+## Scope Boundaries
 
-Store only curated evidence there: screenshots, downloaded workflow artifacts,
-coverage summaries and ASVS notes. Do not store local build folders or runtime
-backups.
+The current scope focuses on coursework-grade secure development evidence for
+the implemented GhostReport features. Additional production hardening, such as
+external SIEM integration, token revocation, advanced deployment TLS management
+and authenticated DAST contexts, is documented as next-step operational work.
