@@ -1,8 +1,8 @@
 # DevSecOps stage 04.
-# Runtime security evidence workflow: executes security-focused integration
-# tests and prepares optional Contrast Java agent evidence for IAST-compatible
-# assessment when credentials are configured in the repository.
-name: 04 - IAST Runtime Security Evidence
+# Runtime security evidence workflow: executes security-focused tests and
+# prepares optional Contrast Java agent readiness evidence when credentials are
+# configured in the repository.
+name: 04 - Runtime Security Evidence and IAST Readiness
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -22,8 +22,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  stage_04_iast_runtime_security:
-    name: Stage 04 - Runtime security tests and IAST evidence
+  stage_04_runtime_security:
+    name: Stage 04 - Runtime security validation and IAST readiness
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -47,6 +47,7 @@ jobs:
         run: |
           mkdir -p target/iast-evidence
           ./mvnw \
+            -Djacoco.skip=true \
             -Dtest=RuntimeSecurityEventLoggingTest,ErrorHandlingSecurityTest,SecurityHeadersTest,JwtServiceSecurityTest,LoginRateLimitSecurityTest \
             test
 
@@ -54,13 +55,14 @@ jobs:
         run: |
           mkdir -p target/iast-evidence
           {
-            echo "# IAST Runtime Security Evidence"
+            echo "# Runtime Security Evidence and IAST Readiness"
             echo ""
             echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo ""
             echo "## Runtime security tests"
             echo ""
             echo "Executed security-focused tests for authentication events, JWT validation, rate limiting, security headers and error handling."
+            echo "The JaCoCo coverage gate is intentionally skipped in this workflow because Stage 01 is the blocking coverage workflow."
             echo ""
             echo "## IAST agent integration"
             echo ""
@@ -84,7 +86,13 @@ jobs:
           CONTRAST__API__SERVICE_KEY: ${{ secrets.CONTRAST__API__SERVICE_KEY }}
           CONTRAST__API__USER_NAME: ${{ secrets.CONTRAST__API__USER_NAME }}
 
-      - name: Upload IAST runtime security evidence artifact
+      - name: Verify runtime security evidence was generated
+        run: |
+          test -s target/iast-evidence/iast-runtime-evidence.md
+          test -d target/surefire-reports
+          find target/surefire-reports -name "TEST-*.xml" -print -quit | grep -q .
+
+      - name: Upload runtime security and IAST readiness evidence artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -98,11 +106,14 @@ jobs:
         if: always()
         run: |
           {
-            echo "## IAST / Runtime Security Evidence"
+            echo "## Runtime Security Evidence and IAST Readiness"
             echo ""
             echo "| Evidence | Artifact |"
             echo "| --- | --- |"
             echo "| Runtime security-focused tests | iast-runtime-security-evidence |"
+            echo "| Surefire XML reports | iast-runtime-security-evidence |"
             echo "| Optional Contrast Java agent readiness notes | iast-runtime-security-evidence |"
             echo "| Gate mode | Evidence review |"
+            echo ""
+            echo "Stage 04 fails when runtime security tests fail or expected reports are missing. The global JaCoCo coverage gate remains in Stage 01."
           } >> "$GITHUB_STEP_SUMMARY"
