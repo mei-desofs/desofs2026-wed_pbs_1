@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ghostreport</a> &gt; <a href="index.source.html" class="el_package">com.ghostreport.controller</a> &gt; <span class="el_source">AuthController.java</span></div><h1>AuthController.java</h1><pre class="source lang-java linenums">package com.ghostreport.controller;
+
+import com.ghostreport.dto.AuthResponse;
+import com.ghostreport.dto.LoginRequest;
+import com.ghostreport.service.AuditLogService;
+import com.ghostreport.service.AuthService;
+import com.ghostreport.service.RateLimiterService;
+import com.ghostreport.service.SecurityMonitoringService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping(&quot;/auth&quot;)
+public class AuthController {
+
+    private final AuthService authService;
+    private final RateLimiterService rateLimiterService;
+    private final SecurityMonitoringService securityMonitoringService;
+    private final AuditLogService auditLogService;
+
+    public AuthController(
+            AuthService authService,
+            RateLimiterService rateLimiterService,
+            SecurityMonitoringService securityMonitoringService,
+            AuditLogService auditLogService
+<span class="fc" id="L31">    ) {</span>
+<span class="fc" id="L32">        this.authService = authService;</span>
+<span class="fc" id="L33">        this.rateLimiterService = rateLimiterService;</span>
+<span class="fc" id="L34">        this.securityMonitoringService = securityMonitoringService;</span>
+<span class="fc" id="L35">        this.auditLogService = auditLogService;</span>
+<span class="fc" id="L36">    }</span>
+
+    @PostMapping(&quot;/login&quot;)
+    public AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+<span class="fc" id="L40">        String clientKey = httpRequest.getRemoteAddr();</span>
+<span class="fc" id="L41">        rateLimiterService.checkLoginAllowed(clientKey);</span>
+        try {
+<span class="fc" id="L43">            AuthResponse response = authService.login(request);</span>
+<span class="fc" id="L44">            rateLimiterService.clearLoginFailures(clientKey);</span>
+<span class="fc" id="L45">            return response;</span>
+<span class="fc" id="L46">        } catch (AuthenticationException ex) {</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">            if (rateLimiterService.recordLoginFailure(clientKey)) {</span>
+<span class="fc" id="L48">                securityMonitoringService.recordBruteForceLoginAttempt();</span>
+            }
+<span class="fc" id="L50">            auditLogService.log(&quot;LOGIN_FAILED&quot;, &quot;AUTHENTICATION&quot;, null, &quot;Login failed&quot;);</span>
+<span class="fc" id="L51">            throw ex;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

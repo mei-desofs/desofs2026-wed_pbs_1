@@ -1,0 +1,370 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FileStorageService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ghostreport</a> &gt; <a href="index.source.html" class="el_package">com.ghostreport.service</a> &gt; <span class="el_source">FileStorageService.java</span></div><h1>FileStorageService.java</h1><pre class="source lang-java linenums">package com.ghostreport.service;
+
+import com.ghostreport.domain.SafeFilename;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.nio.file.*;
+import java.security.MessageDigest;
+import java.util.Locale;
+import java.util.HexFormat;
+import java.util.Set;
+import java.util.UUID;
+
+@Service
+public class FileStorageService {
+
+<span class="fc" id="L28">    private static final Logger logger = LoggerFactory.getLogger(FileStorageService.class);</span>
+
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+<span class="fc" id="L32">    private static final Set&lt;String&gt; ALLOWED_TYPES = Set.of(</span>
+            &quot;application/pdf&quot;,
+            &quot;image/png&quot;,
+            &quot;image/jpeg&quot;,
+            &quot;text/plain&quot;,
+            &quot;application/vnd.openxmlformats-officedocument.wordprocessingml.document&quot;
+    );
+
+    private final Path baseStoragePath;
+    private final SecurityMonitoringService securityMonitoringService;
+
+    @Autowired
+    public FileStorageService(
+            @Value(&quot;${app.upload-dir:uploads}&quot;) String uploadDir,
+            SecurityMonitoringService securityMonitoringService
+<span class="fc" id="L47">    ) {</span>
+<span class="fc" id="L48">        this.baseStoragePath = Paths.get(uploadDir).toAbsolutePath().normalize();</span>
+<span class="fc" id="L49">        this.securityMonitoringService = securityMonitoringService;</span>
+
+        try {
+<span class="fc" id="L52">            Files.createDirectories(this.baseStoragePath);</span>
+<span class="nc" id="L53">        } catch (IOException e) {</span>
+<span class="nc" id="L54">            throw new RuntimeException(&quot;Erro ao criar pasta uploads&quot;, e);</span>
+<span class="fc" id="L55">        }</span>
+<span class="fc" id="L56">    }</span>
+
+    FileStorageService(String uploadDir) {
+<span class="fc" id="L59">        this(uploadDir, null);</span>
+<span class="fc" id="L60">    }</span>
+
+    public StoredFileInfo storeAttachment(Long reportId, MultipartFile file) {
+
+<span class="fc" id="L64">        validateFile(file);</span>
+
+        try {
+<span class="fc" id="L67">            Path attachmentsDir = baseStoragePath</span>
+<span class="fc" id="L68">                    .resolve(&quot;reports&quot;)</span>
+<span class="fc" id="L69">                    .resolve(String.valueOf(reportId))</span>
+<span class="fc" id="L70">                    .resolve(&quot;attachments&quot;)</span>
+<span class="fc" id="L71">                    .toAbsolutePath()</span>
+<span class="fc" id="L72">                    .normalize();</span>
+
+<span class="fc" id="L74">            ensureInsideBase(attachmentsDir);</span>
+
+<span class="fc" id="L76">            Files.createDirectories(attachmentsDir);</span>
+<span class="fc" id="L77">            ensureRealPathInsideBase(attachmentsDir);</span>
+
+<span class="fc" id="L79">            String originalName = sanitizeFilename(file.getOriginalFilename());</span>
+<span class="fc" id="L80">            String extension = getExtension(originalName);</span>
+
+<span class="fc" id="L82">            String fileRef = UUID.randomUUID().toString();</span>
+<span class="fc" id="L83">            String storedName = fileRef + extension;</span>
+
+<span class="fc" id="L85">            Path target = attachmentsDir.resolve(storedName)</span>
+<span class="fc" id="L86">                    .toAbsolutePath()</span>
+<span class="fc" id="L87">                    .normalize();</span>
+
+<span class="fc" id="L89">            ensureInsideBase(target);</span>
+
+<span class="fc" id="L91">            try (InputStream input = file.getInputStream()) {</span>
+<span class="fc" id="L92">                Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING);</span>
+            }
+
+<span class="fc" id="L95">            String hash = sha256(target);</span>
+
+<span class="fc" id="L97">            return new StoredFileInfo(</span>
+                    originalName,
+                    storedName,
+                    fileRef,
+<span class="fc" id="L101">                    baseStoragePath.relativize(target).toString().replace('\\', '/'),</span>
+<span class="fc" id="L102">                    file.getContentType(),</span>
+<span class="fc" id="L103">                    file.getSize(),</span>
+                    hash
+            );
+
+<span class="nc" id="L107">        } catch (IOException e) {</span>
+<span class="nc" id="L108">            throw new RuntimeException(&quot;Erro ao guardar ficheiro&quot;, e);</span>
+        }
+    }
+
+    public void generateReportDocument(Long reportId, String description, String category, String status) {
+
+        try {
+<span class="fc" id="L115">            Path dir = baseStoragePath</span>
+<span class="fc" id="L116">                    .resolve(&quot;reports&quot;)</span>
+<span class="fc" id="L117">                    .resolve(String.valueOf(reportId))</span>
+<span class="fc" id="L118">                    .resolve(&quot;documents&quot;)</span>
+<span class="fc" id="L119">                    .toAbsolutePath()</span>
+<span class="fc" id="L120">                    .normalize();</span>
+
+<span class="fc" id="L122">            ensureInsideBase(dir);</span>
+
+<span class="fc" id="L124">            Files.createDirectories(dir);</span>
+<span class="fc" id="L125">            ensureRealPathInsideBase(dir);</span>
+
+<span class="fc" id="L127">            Path file = dir.resolve(&quot;report_&quot; + reportId + &quot;.txt&quot;)</span>
+<span class="fc" id="L128">                    .toAbsolutePath()</span>
+<span class="fc" id="L129">                    .normalize();</span>
+
+<span class="fc" id="L131">            ensureInsideBase(file);</span>
+
+<span class="fc" id="L133">            String content = &quot;&quot;&quot;</span>
+                    === DENÚNCIA ===
+
+                    ID: %d
+                    Categoria: %s
+                    Estado: %s
+
+                    Descrição:
+                    %s
+<span class="fc" id="L142">                    &quot;&quot;&quot;.formatted(reportId, category, status, description);</span>
+
+<span class="fc" id="L144">            Files.writeString(file, content,</span>
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING);
+
+<span class="fc" id="L148">            logger.info(&quot;Report document generated for report id={}&quot;, reportId);</span>
+
+<span class="nc" id="L150">        } catch (IOException e) {</span>
+<span class="nc" id="L151">            throw new RuntimeException(&quot;Erro ao gerar documento&quot;, e);</span>
+<span class="fc" id="L152">        }</span>
+<span class="fc" id="L153">    }</span>
+
+    public Resource loadFileAsResource(String path) {
+        try {
+<span class="fc" id="L157">            Path file = resolveStoredPath(path);</span>
+<span class="fc" id="L158">            return new UrlResource(file.toUri());</span>
+<span class="nc" id="L159">        } catch (MalformedURLException e) {</span>
+<span class="nc" id="L160">            throw new RuntimeException(&quot;Erro ao carregar ficheiro&quot;, e);</span>
+        }
+    }
+
+    private Path resolveStoredPath(String path) {
+<span class="pc bpc" id="L165" title="2 of 4 branches missed.">        if (path == null || path.isBlank()) {</span>
+<span class="nc" id="L166">            return rejectInvalidPath(path);</span>
+        }
+
+        Path rawPath;
+
+        try {
+<span class="fc" id="L172">            rawPath = Paths.get(path);</span>
+<span class="nc" id="L173">        } catch (InvalidPathException e) {</span>
+<span class="nc" id="L174">            return rejectInvalidPath(path);</span>
+<span class="fc" id="L175">        }</span>
+
+<span class="fc bfc" id="L177" title="All 2 branches covered.">        if (rawPath.isAbsolute()) {</span>
+<span class="nc" id="L178">            return rejectInvalidPath(path);</span>
+        }
+
+<span class="pc bpc" id="L181" title="1 of 4 branches missed.">        if (rawPath.normalize().startsWith(&quot;..&quot;) || path.contains(&quot;..&quot;)) {</span>
+<span class="nc" id="L182">            return rejectInvalidPath(path);</span>
+        }
+
+<span class="fc" id="L185">        Path resolved = baseStoragePath.resolve(rawPath).toAbsolutePath().normalize();</span>
+
+<span class="pc bpc" id="L187" title="1 of 2 branches missed.">        if (!Files.exists(resolved)) {</span>
+<span class="nc" id="L188">            Path legacyRelativePath = rawPath.toAbsolutePath().normalize();</span>
+<span class="nc bnc" id="L189" title="All 2 branches missed.">            if (legacyRelativePath.startsWith(baseStoragePath)) {</span>
+<span class="nc" id="L190">                resolved = legacyRelativePath;</span>
+            }
+        }
+
+<span class="fc" id="L194">        ensureInsideBase(resolved);</span>
+
+        try {
+<span class="fc" id="L197">            Path realBase = baseStoragePath.toRealPath();</span>
+<span class="fc" id="L198">            Path realFile = resolved.toRealPath();</span>
+
+<span class="pc bpc" id="L200" title="2 of 4 branches missed.">            if (!realFile.startsWith(realBase) || !Files.isRegularFile(realFile)) {</span>
+<span class="nc" id="L201">                return rejectInvalidPath(path);</span>
+            }
+
+<span class="fc" id="L204">            return realFile;</span>
+<span class="nc" id="L205">        } catch (NoSuchFileException e) {</span>
+<span class="nc" id="L206">            throw new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;File not found&quot;);</span>
+<span class="nc" id="L207">        } catch (IOException e) {</span>
+<span class="nc" id="L208">            return rejectInvalidPath(path);</span>
+        }
+    }
+
+    private void ensureInsideBase(Path path) {
+<span class="fc" id="L213">        Path normalized = path.toAbsolutePath().normalize();</span>
+
+<span class="pc bpc" id="L215" title="1 of 2 branches missed.">        if (!normalized.startsWith(baseStoragePath)) {</span>
+<span class="nc" id="L216">            rejectInvalidPath(path.toString());</span>
+        }
+<span class="fc" id="L218">    }</span>
+
+    private void ensureRealPathInsideBase(Path path) throws IOException {
+<span class="fc" id="L221">        Path realBase = baseStoragePath.toRealPath();</span>
+<span class="fc" id="L222">        Path realPath = path.toRealPath();</span>
+
+<span class="pc bpc" id="L224" title="1 of 2 branches missed.">        if (!realPath.startsWith(realBase)) {</span>
+<span class="nc" id="L225">            rejectInvalidPath(path.toString());</span>
+        }
+<span class="fc" id="L227">    }</span>
+
+    private void validateFile(MultipartFile file) {
+<span class="fc" id="L230">        logger.info(&quot;Attachment upload validation started&quot;);</span>
+
+<span class="pc bpc" id="L232" title="1 of 2 branches missed.">        if (file == null) {</span>
+<span class="nc" id="L233">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;Ficheiro vazio&quot;);</span>
+        }
+
+<span class="pc bpc" id="L236" title="1 of 2 branches missed.">        if (file.isEmpty()) {</span>
+<span class="nc" id="L237">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;Ficheiro vazio&quot;);</span>
+        }
+
+<span class="fc bfc" id="L240" title="All 2 branches covered.">        if (file.getSize() &gt; MAX_FILE_SIZE) {</span>
+<span class="fc" id="L241">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;Ficheiro demasiado grande&quot;);</span>
+        }
+
+<span class="fc" id="L244">        String contentType = file.getContentType();</span>
+<span class="fc" id="L245">        String originalName = sanitizeFilename(file.getOriginalFilename());</span>
+<span class="fc" id="L246">        String extension = getExtension(originalName).toLowerCase(Locale.ROOT);</span>
+
+<span class="pc bpc" id="L248" title="2 of 4 branches missed.">        if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {</span>
+<span class="nc" id="L249">            throw new ResponseStatusException(</span>
+                    HttpStatus.BAD_REQUEST,
+                    &quot;Invalid file type&quot;
+            );
+        }
+
+<span class="fc" id="L255">        validateExtensionForContentType(extension, contentType);</span>
+<span class="fc" id="L256">        validateMagicBytes(file, extension, contentType);</span>
+<span class="fc" id="L257">    }</span>
+
+    private String sanitizeFilename(String name) {
+<span class="pc bpc" id="L260" title="1 of 4 branches missed.">        if (name == null || name.isBlank()) {</span>
+<span class="fc" id="L261">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;Invalid filename&quot;);</span>
+        }
+
+<span class="fc" id="L264">        String normalized = name.trim();</span>
+
+        try {
+<span class="fc" id="L267">            new SafeFilename(normalized);</span>
+<span class="fc" id="L268">        } catch (IllegalArgumentException e) {</span>
+<span class="fc" id="L269">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;Invalid filename&quot;);</span>
+<span class="fc" id="L270">        }</span>
+
+<span class="fc" id="L272">        return normalized.replaceAll(&quot;[^a-zA-Z0-9._-]&quot;, &quot;_&quot;);</span>
+    }
+
+    private String getExtension(String name) {
+<span class="fc" id="L276">        int i = name.lastIndexOf(&quot;.&quot;);</span>
+<span class="pc bpc" id="L277" title="1 of 2 branches missed.">        return (i != -1) ? name.substring(i) : &quot;&quot;;</span>
+    }
+
+    private String sha256(Path file) {
+        try {
+<span class="fc" id="L282">            MessageDigest digest = MessageDigest.getInstance(&quot;SHA-256&quot;);</span>
+<span class="fc" id="L283">            byte[] bytes = Files.readAllBytes(file);</span>
+<span class="fc" id="L284">            return HexFormat.of().formatHex(digest.digest(bytes));</span>
+<span class="nc" id="L285">        } catch (Exception e) {</span>
+<span class="nc" id="L286">            throw new RuntimeException(e);</span>
+        }
+    }
+
+    private void validateExtensionForContentType(String extension, String contentType) {
+<span class="pc bpc" id="L291" title="2 of 6 branches missed.">        boolean valid = switch (contentType) {</span>
+<span class="fc" id="L292">            case &quot;application/pdf&quot; -&gt; &quot;.pdf&quot;.equals(extension);</span>
+<span class="fc" id="L293">            case &quot;image/png&quot; -&gt; &quot;.png&quot;.equals(extension);</span>
+<span class="pc bpc" id="L294" title="3 of 4 branches missed.">            case &quot;image/jpeg&quot; -&gt; &quot;.jpg&quot;.equals(extension) || &quot;.jpeg&quot;.equals(extension);</span>
+<span class="fc" id="L295">            case &quot;text/plain&quot; -&gt; &quot;.txt&quot;.equals(extension);</span>
+<span class="nc" id="L296">            case &quot;application/vnd.openxmlformats-officedocument.wordprocessingml.document&quot; -&gt; &quot;.docx&quot;.equals(extension);</span>
+<span class="pc" id="L297">            default -&gt; false;</span>
+        };
+
+<span class="pc bpc" id="L300" title="1 of 2 branches missed.">        if (!valid) {</span>
+<span class="nc" id="L301">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;File extension does not match type&quot;);</span>
+        }
+<span class="fc" id="L303">    }</span>
+
+    private void validateMagicBytes(MultipartFile file, String extension, String contentType) {
+<span class="fc" id="L306">        try (InputStream input = file.getInputStream()) {</span>
+<span class="fc" id="L307">            byte[] header = input.readNBytes(8192);</span>
+<span class="pc bpc" id="L308" title="2 of 6 branches missed.">            boolean valid = switch (contentType) {</span>
+<span class="fc" id="L309">                case &quot;application/pdf&quot; -&gt; startsWith(header, new byte[]{0x25, 0x50, 0x44, 0x46});</span>
+<span class="fc" id="L310">                case &quot;image/png&quot; -&gt; startsWith(header, new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A});</span>
+<span class="fc" id="L311">                case &quot;image/jpeg&quot; -&gt; startsWith(header, new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF});</span>
+                case &quot;application/vnd.openxmlformats-officedocument.wordprocessingml.document&quot; -&gt;
+<span class="nc bnc" id="L313" title="All 4 branches missed.">                        &quot;.docx&quot;.equals(extension) &amp;&amp; startsWith(header, new byte[]{0x50, 0x4B, 0x03, 0x04});</span>
+<span class="fc" id="L314">                case &quot;text/plain&quot; -&gt; isTextLike(header);</span>
+<span class="pc" id="L315">                default -&gt; false;</span>
+            };
+
+<span class="fc bfc" id="L318" title="All 2 branches covered.">            if (!valid) {</span>
+<span class="fc" id="L319">                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;File signature does not match type&quot;);</span>
+            }
+<span class="nc" id="L321">        } catch (IOException e) {</span>
+<span class="nc" id="L322">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;Could not validate file&quot;);</span>
+<span class="fc" id="L323">        }</span>
+<span class="fc" id="L324">    }</span>
+
+    private boolean startsWith(byte[] value, byte[] prefix) {
+<span class="pc bpc" id="L327" title="1 of 2 branches missed.">        if (value.length &lt; prefix.length) {</span>
+<span class="nc" id="L328">            return false;</span>
+        }
+
+<span class="fc bfc" id="L331" title="All 2 branches covered.">        for (int i = 0; i &lt; prefix.length; i++) {</span>
+<span class="fc bfc" id="L332" title="All 2 branches covered.">            if (value[i] != prefix[i]) {</span>
+<span class="fc" id="L333">                return false;</span>
+            }
+        }
+
+<span class="fc" id="L337">        return true;</span>
+    }
+
+    private boolean isTextLike(byte[] bytes) {
+<span class="fc bfc" id="L341" title="All 2 branches covered.">        for (byte value : bytes) {</span>
+<span class="fc" id="L342">            int unsigned = value &amp; 0xFF;</span>
+<span class="pc bpc" id="L343" title="1 of 2 branches missed.">            if (unsigned == 0) {</span>
+<span class="nc" id="L344">                return false;</span>
+            }
+<span class="pc bpc" id="L346" title="7 of 8 branches missed.">            if (unsigned &lt; 0x20 &amp;&amp; unsigned != '\n' &amp;&amp; unsigned != '\r' &amp;&amp; unsigned != '\t') {</span>
+<span class="nc" id="L347">                return false;</span>
+            }
+        }
+<span class="fc" id="L350">        return true;</span>
+    }
+
+    private Path rejectInvalidPath(String input) {
+<span class="fc bfc" id="L354" title="All 2 branches covered.">        if (securityMonitoringService != null) {</span>
+<span class="fc" id="L355">            securityMonitoringService.recordPathTraversalAttempt(input);</span>
+        }
+<span class="fc" id="L357">        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;Invalid file path&quot;);</span>
+    }
+
+<span class="fc" id="L360">    public record StoredFileInfo(</span>
+            String originalName,
+            String storedName,
+            String fileReference,
+            String storagePath,
+            String mimeType,
+            long size,
+            String hash
+    ) {}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

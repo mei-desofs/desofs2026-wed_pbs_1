@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CaseReview.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ghostreport</a> &gt; <a href="index.source.html" class="el_package">com.ghostreport.model</a> &gt; <span class="el_source">CaseReview.java</span></div><h1>CaseReview.java</h1><pre class="source lang-java linenums">package com.ghostreport.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = &quot;case_reviews&quot;)
+public class CaseReview {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @OneToOne(optional = false)
+    @JoinColumn(name = &quot;report_id&quot;, nullable = false, unique = true)
+    private Report report;
+
+    @ManyToOne
+    @JoinColumn(name = &quot;assigned_analyst_id&quot;)
+    private User assignedAnalyst;
+
+    @Column(length = 4000)
+    private String notes;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private CasePriority priority;
+
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
+
+<span class="fc" id="L32">    public CaseReview() {</span>
+<span class="fc" id="L33">    }</span>
+
+    @PrePersist
+    @PreUpdate
+    public void updateTimestamp() {
+<span class="fc" id="L38">        this.updatedAt = LocalDateTime.now();</span>
+<span class="fc bfc" id="L39" title="All 2 branches covered.">        if (this.priority == null) {</span>
+<span class="fc" id="L40">            this.priority = CasePriority.MEDIUM;</span>
+        }
+<span class="fc" id="L42">    }</span>
+
+    public Long getId() {
+<span class="fc" id="L45">        return id;</span>
+    }
+
+    public Report getReport() {
+<span class="fc" id="L49">        return report;</span>
+    }
+
+    public User getAssignedAnalyst() {
+<span class="fc" id="L53">        return assignedAnalyst;</span>
+    }
+
+    public String getNotes() {
+<span class="fc" id="L57">        return notes;</span>
+    }
+
+    public CasePriority getPriority() {
+<span class="fc" id="L61">        return priority;</span>
+    }
+
+    public LocalDateTime getUpdatedAt() {
+<span class="fc" id="L65">        return updatedAt;</span>
+    }
+
+    public void setId(Long id) {
+<span class="nc" id="L69">        this.id = id;</span>
+<span class="nc" id="L70">    }</span>
+
+    public void setReport(Report report) {
+<span class="fc" id="L73">        this.report = report;</span>
+<span class="fc" id="L74">    }</span>
+
+    public void setAssignedAnalyst(User assignedAnalyst) {
+<span class="fc" id="L77">        this.assignedAnalyst = assignedAnalyst;</span>
+<span class="fc" id="L78">    }</span>
+
+    public void setNotes(String notes) {
+<span class="fc" id="L81">        this.notes = notes;</span>
+<span class="fc" id="L82">    }</span>
+
+    public void setPriority(CasePriority priority) {
+<span class="fc" id="L85">        this.priority = priority;</span>
+<span class="fc" id="L86">    }</span>
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+<span class="nc" id="L89">        this.updatedAt = updatedAt;</span>
+<span class="nc" id="L90">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

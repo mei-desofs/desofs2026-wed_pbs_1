@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Report.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ghostreport</a> &gt; <a href="index.source.html" class="el_package">com.ghostreport.model</a> &gt; <span class="el_source">Report.java</span></div><h1>Report.java</h1><pre class="source lang-java linenums">package com.ghostreport.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+@Entity
+@Table(name = &quot;reports&quot;)
+public class Report {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    // 🔥 NOVO CAMPO
+    @Column(nullable = false, length = 200)
+    private String title;
+
+    @Column(nullable = false, length = 4000)
+    private String description;
+
+    @Column(nullable = false, length = 100)
+    private String category;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private ReportStatus status;
+
+    @Column(name = &quot;tracking_code_hash&quot;, nullable = false, unique = true, length = 255)
+    private String trackingCodeHash;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+<span class="fc" id="L36">    @OneToMany(mappedBy = &quot;report&quot;, cascade = CascadeType.ALL, orphanRemoval = true)</span>
+    private List&lt;Attachment&gt; attachments = new ArrayList&lt;&gt;();
+
+    @OneToOne(mappedBy = &quot;report&quot;, cascade = CascadeType.ALL, orphanRemoval = true)
+    private CaseReview caseReview;
+
+<span class="fc" id="L42">    public Report() {}</span>
+
+    @PrePersist
+    public void prePersist() {
+<span class="fc" id="L46">        this.createdAt = LocalDateTime.now();</span>
+
+<span class="pc bpc" id="L48" title="1 of 2 branches missed.">        if (this.status == null) {</span>
+<span class="nc" id="L49">            this.status = ReportStatus.SUBMITTED;</span>
+        }
+<span class="fc" id="L51">    }</span>
+
+    public void addAttachment(Attachment attachment) {
+<span class="nc" id="L54">        attachments.add(attachment);</span>
+<span class="nc" id="L55">        attachment.setReport(this);</span>
+<span class="nc" id="L56">    }</span>
+
+    public void removeAttachment(Attachment attachment) {
+<span class="nc" id="L59">        attachments.remove(attachment);</span>
+<span class="nc" id="L60">        attachment.setReport(null);</span>
+<span class="nc" id="L61">    }</span>
+
+    // GETTERS
+<span class="fc" id="L64">    public Long getId() { return id; }</span>
+<span class="fc" id="L65">    public String getTitle() { return title; }</span>
+<span class="fc" id="L66">    public String getDescription() { return description; }</span>
+<span class="fc" id="L67">    public String getCategory() { return category; }</span>
+<span class="fc" id="L68">    public ReportStatus getStatus() { return status; }</span>
+<span class="fc" id="L69">    public String getTrackingCodeHash() { return trackingCodeHash; }</span>
+<span class="fc" id="L70">    public LocalDateTime getCreatedAt() { return createdAt; }</span>
+<span class="fc" id="L71">    public List&lt;Attachment&gt; getAttachments() { return attachments; }</span>
+<span class="nc" id="L72">    public CaseReview getCaseReview() { return caseReview; }</span>
+
+    // SETTERS
+<span class="nc" id="L75">    public void setId(Long id) { this.id = id; }</span>
+<span class="fc" id="L76">    public void setTitle(String title) { this.title = title; }</span>
+<span class="fc" id="L77">    public void setDescription(String description) { this.description = description; }</span>
+<span class="fc" id="L78">    public void setCategory(String category) { this.category = category; }</span>
+<span class="fc" id="L79">    public void setStatus(ReportStatus status) { this.status = status; }</span>
+<span class="fc" id="L80">    public void setTrackingCodeHash(String trackingCodeHash) { this.trackingCodeHash = trackingCodeHash; }</span>
+<span class="nc" id="L81">    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }</span>
+<span class="nc" id="L82">    public void setAttachments(List&lt;Attachment&gt; attachments) { this.attachments = attachments; }</span>
+<span class="nc" id="L83">    public void setCaseReview(CaseReview caseReview) { this.caseReview = caseReview; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

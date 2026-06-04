@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GlobalExceptionHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ghostreport</a> &gt; <a href="index.source.html" class="el_package">com.ghostreport.exception</a> &gt; <span class="el_source">GlobalExceptionHandler.java</span></div><h1>GlobalExceptionHandler.java</h1><pre class="source lang-java linenums">package com.ghostreport.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.OffsetDateTime;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+@RestControllerAdvice
+<span class="fc" id="L21">public class GlobalExceptionHandler {</span>
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; handleAuthenticationException(AuthenticationException ex) {
+<span class="fc" id="L25">        Map&lt;String, Object&gt; body = errorBody(HttpStatus.UNAUTHORIZED.value(), &quot;Invalid credentials&quot;);</span>
+<span class="fc" id="L26">        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);</span>
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; handleResponseStatusException(ResponseStatusException ex) {
+<span class="fc" id="L31">        Map&lt;String, Object&gt; body = errorBody(ex.getStatusCode().value(), ex.getReason());</span>
+<span class="fc" id="L32">        return ResponseEntity.status(ex.getStatusCode()).body(body);</span>
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; handleValidationException(MethodArgumentNotValidException ex) {
+<span class="fc" id="L37">        Map&lt;String, Object&gt; body = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L38">        Map&lt;String, String&gt; fieldErrors = new HashMap&lt;&gt;();</span>
+
+<span class="fc bfc" id="L40" title="All 2 branches covered.">        for (FieldError error : ex.getBindingResult().getFieldErrors()) {</span>
+<span class="fc" id="L41">            fieldErrors.put(error.getField(), error.getDefaultMessage());</span>
+<span class="fc" id="L42">        }</span>
+
+<span class="fc" id="L44">        body.put(&quot;timestamp&quot;, OffsetDateTime.now());</span>
+<span class="fc" id="L45">        body.put(&quot;correlationId&quot;, UUID.randomUUID().toString());</span>
+<span class="fc" id="L46">        body.put(&quot;status&quot;, HttpStatus.BAD_REQUEST.value());</span>
+<span class="fc" id="L47">        body.put(&quot;error&quot;, &quot;Validation failed&quot;);</span>
+<span class="fc" id="L48">        body.put(&quot;fields&quot;, fieldErrors);</span>
+
+<span class="fc" id="L50">        return ResponseEntity.badRequest().body(body);</span>
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; handleMissingRequestParameter(MissingServletRequestParameterException ex) {
+<span class="nc" id="L55">        Map&lt;String, Object&gt; body = errorBody(HttpStatus.BAD_REQUEST.value(), &quot;Missing required request parameter&quot;);</span>
+<span class="nc" id="L56">        return ResponseEntity.badRequest().body(body);</span>
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; handleUnreadableMessage(HttpMessageNotReadableException ex) {
+<span class="fc" id="L61">        Map&lt;String, Object&gt; body = errorBody(HttpStatus.BAD_REQUEST.value(), &quot;Malformed request&quot;);</span>
+<span class="fc" id="L62">        return ResponseEntity.badRequest().body(body);</span>
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; handleAccessDeniedException(AccessDeniedException ex) {
+<span class="nc" id="L67">        Map&lt;String, Object&gt; body = errorBody(HttpStatus.FORBIDDEN.value(), &quot;Access denied&quot;);</span>
+<span class="nc" id="L68">        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);</span>
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; handleGenericException(Exception ex) {
+<span class="nc" id="L73">        Map&lt;String, Object&gt; body = errorBody(HttpStatus.INTERNAL_SERVER_ERROR.value(), &quot;Unexpected internal error&quot;);</span>
+<span class="nc" id="L74">        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);</span>
+    }
+
+    private Map&lt;String, Object&gt; errorBody(int status, String error) {
+<span class="fc" id="L78">        Map&lt;String, Object&gt; body = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L79">        body.put(&quot;timestamp&quot;, OffsetDateTime.now());</span>
+<span class="fc" id="L80">        body.put(&quot;correlationId&quot;, UUID.randomUUID().toString());</span>
+<span class="fc" id="L81">        body.put(&quot;status&quot;, status);</span>
+<span class="fc" id="L82">        body.put(&quot;error&quot;, error);</span>
+<span class="fc" id="L83">        return body;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

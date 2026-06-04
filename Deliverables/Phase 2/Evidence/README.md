@@ -1,31 +1,44 @@
 # Phase 2 Sprint 2 Evidence
 
-This folder is reserved for curated evidence used in the final delivery report
-and ASVS tracker.
+This folder is a curated local archive for presentation and assessment. GitHub
+Actions does not write directly into this repository folder. The primary source
+of pipeline evidence is still the GitHub Actions run, its job summaries and its
+downloaded artifacts.
 
-GitHub Actions does not write files into this repository folder. The primary
-evidence is generated as GitHub Actions artifacts and job summaries. For the
-final presentation or local archive, download those artifacts and organize them
-here.
+## Evidence Index
 
-## Recommended Structure
+| Folder | Tool/evidence | DESOFS rubric | ASVS chapters | Current limitation / residual risk |
+| --- | --- | --- | --- | --- |
+| `testing/` | Surefire/JUnit, JaCoCo, runtime security evidence, PIT | Build and Test, ASVS | V2, V5, V6, V7, V8, V9, V16 | PIT currently contains fallback evidence if no mutation report is generated. |
+| `sast/` | SpotBugs and CodeQL summary | Development, Pipeline Automation | V15, V16 | CodeQL primary evidence is GitHub Code Scanning; local artifact is a run summary. |
+| `sca/` | OWASP Dependency-Check and CycloneDX SBOM | Build and Test, Pipeline Automation | V13, V15 | Dependency-Check reports critical/high findings until dependencies are updated or triaged. |
+| `secret-scanning/` | Gitleaks JSON report | Pipeline Automation, Production | V13, V14, V15 | Empty `[]` report means no leaked secrets were found in the scanned scope. |
+| `dast/` | OWASP ZAP baseline reports | Build and Test, ASVS | V3, V4, V12 | Baseline DAST is unauthenticated and currently reports CSP `unsafe-inline`. |
+| `pipelines/` | GitHub Actions screenshots, job summaries and run links | Pipeline Automation | V15 | Screenshots/job summaries must be manually downloaded or captured. |
+| `asvs/` | Tracker exports and ASVS notes | ASVS, Overall Project | V1-V17 | Formal checklist lives in `Deliverables/Phase 2/ASVS_5.0_Tracker_Phase 2_Sprint 2.xlsx`. |
+| `code-review/` | Pull request templates, review screenshots and governance evidence | Development, Overall Project | V15, V16 | GitHub branch protection must be shown in the repository UI. |
+| `assessment/` | Security assessment summaries and triage notes | Production, Operate, Overall Project | V13, V15, V16 | Manual triage must remain traceable to actual reports. |
 
-| Folder | Evidence |
-| --- | --- |
-| `pipelines/` | GitHub Actions screenshots, job summaries and run links. |
-| `testing/` | Surefire/JUnit reports, JaCoCo reports, runtime security reports and PIT evidence. |
-| `sast/` | SpotBugs reports, CodeQL screenshots/notes and CodeQL run summary artifact. |
-| `sca/` | OWASP Dependency-Check HTML/JSON/XML/SARIF artifacts and CycloneDX SBOM. |
-| `secret-scanning/` | Gitleaks JSON evidence. |
-| `dast/` | OWASP ZAP HTML/JSON/XML reports and DAST app log. |
-| `asvs/` | ASVS tracker exports, notes and mapping evidence. |
+## Current Downloaded Artifacts
+
+The local archive currently includes artifacts for:
+
+- CI Surefire and JaCoCo evidence.
+- Runtime security evidence and IAST readiness summary.
+- PIT evidence summary and exit code.
+- SpotBugs XML reports.
+- CodeQL run-context summary.
+- Dependency-Check HTML, JSON, XML and SARIF reports.
+- CycloneDX SBOM in JSON and XML.
+- Gitleaks JSON report.
+- ZAP baseline HTML, JSON and XML reports.
 
 ## Collecting Downloaded Artifacts
 
-1. Run the GitHub Actions workflows from the PR or from `workflow_dispatch`.
+1. Run the GitHub Actions workflows from the pull request or through
+   `workflow_dispatch`.
 2. Download the artifacts from the workflow run page.
-3. Place the downloaded `.zip` files, extracted artifact folders or individual
-   report files under:
+3. Extract or place them under a clean local folder, for example:
 
 ```text
 downloaded-artifacts/
@@ -37,29 +50,23 @@ downloaded-artifacts/
 .\scripts\collect-evidence.ps1
 ```
 
-The script expands `.zip` artifacts when needed and copies matching artifacts
-into the evidence areas above. It does not delete existing files. Unrecognized
-artifacts are copied to `pipelines/` for manual review.
-
-Use a dedicated folder containing only GhostReport evidence artifacts. Avoid
-passing the whole Windows `Temp` folder because it contains unrelated system and
-application files.
-
-If the files are still in another clean folder, pass that folder explicitly:
+If the artifacts are in a different clean folder, pass it explicitly:
 
 ```powershell
 .\scripts\collect-evidence.ps1 -ArtifactsDir "C:\Users\Bárbara Silva\Downloads\ghostreport-artifacts"
 ```
 
-Unmatched files are skipped by default. To also copy unmatched files into
-`pipelines/` for manual review, add `-IncludeUnmatched`.
+The collection script is intended to copy downloaded GitHub Actions artifacts
+into this curated archive. It should not be run against the whole Windows Temp
+folder because that can copy unrelated files.
 
 ## Evidence Rules
 
-- Keep evidence small and relevant.
-- Prefer downloaded GitHub Actions artifacts, job summaries and screenshots
-  from the same run.
-- Do not add local `target/`, `uploads/`, runtime backups or temporary extracted
-  report text files.
-- Every report claim should be traceable to code, tests, a workflow artifact or
-  a documented limitation.
+- Do not invent evidence or hide failed findings.
+- Keep the original tool report whenever possible.
+- Use `Partially Compliant`, `Residual Risk` or `Evidence Review` when a control
+  is incomplete.
+- Do not mark ASVS requirements as `Compliant` unless implementation plus
+  tests or tool evidence exists.
+- Keep old evidence if it is referenced by reports; replace it only with newer
+  equivalent evidence from a later run.

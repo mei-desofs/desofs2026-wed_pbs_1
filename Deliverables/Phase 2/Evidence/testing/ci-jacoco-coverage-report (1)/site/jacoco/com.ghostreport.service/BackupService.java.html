@@ -1,0 +1,597 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BackupService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ghostreport</a> &gt; <a href="index.source.html" class="el_package">com.ghostreport.service</a> &gt; <span class="el_source">BackupService.java</span></div><h1>BackupService.java</h1><pre class="source lang-java linenums">package com.ghostreport.service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ghostreport.dto.BackupFileResponse;
+import com.ghostreport.dto.BackupManifestSummaryResponse;
+import com.ghostreport.dto.BackupOperationResponse;
+import com.ghostreport.dto.BackupRestoreResponse;
+import com.ghostreport.dto.BackupVerificationResponse;
+import com.ghostreport.model.Attachment;
+import com.ghostreport.model.AuditLog;
+import com.ghostreport.model.CaseReview;
+import com.ghostreport.model.Report;
+import com.ghostreport.model.SecurityAlert;
+import com.ghostreport.model.User;
+import com.ghostreport.repository.AttachmentRepository;
+import com.ghostreport.repository.AuditLogRepository;
+import com.ghostreport.repository.CaseReviewRepository;
+import com.ghostreport.repository.ReportRepository;
+import com.ghostreport.repository.SecurityAlertRepository;
+import com.ghostreport.repository.UserRepository;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
+
+@Service
+public class BackupService {
+
+    private static final String BACKUP_PREFIX = &quot;ghostreport-backup-&quot;;
+    private static final String BACKUP_SUFFIX = &quot;.zip&quot;;
+<span class="fc" id="L58">    private static final Pattern SAFE_BACKUP_NAME = Pattern.compile(&quot;^ghostreport-backup-\\d{8}-\\d{6}\\.zip$&quot;);</span>
+<span class="fc" id="L59">    private static final DateTimeFormatter FILE_TIMESTAMP = DateTimeFormatter.ofPattern(&quot;yyyyMMdd-HHmmss&quot;);</span>
+    private static final String FORMAT_VERSION = &quot;1&quot;;
+
+    private final ReportRepository reportRepository;
+    private final AttachmentRepository attachmentRepository;
+    private final CaseReviewRepository caseReviewRepository;
+    private final UserRepository userRepository;
+    private final AuditLogRepository auditLogRepository;
+    private final SecurityAlertRepository securityAlertRepository;
+    private final AuditLogService auditLogService;
+    private final SecurityMonitoringService securityMonitoringService;
+    private final ObjectMapper objectMapper;
+    private final Path backupDir;
+    private final Path uploadDir;
+
+    @Value(&quot;${ghostreport.backup-enabled:true}&quot;)
+    private boolean backupEnabled;
+
+    public BackupService(
+            ReportRepository reportRepository,
+            AttachmentRepository attachmentRepository,
+            CaseReviewRepository caseReviewRepository,
+            UserRepository userRepository,
+            AuditLogRepository auditLogRepository,
+            SecurityAlertRepository securityAlertRepository,
+            AuditLogService auditLogService,
+            SecurityMonitoringService securityMonitoringService,
+            ObjectMapper objectMapper,
+            @Value(&quot;${ghostreport.backup-dir:backups}&quot;) String backupDir,
+            @Value(&quot;${app.upload-dir:uploads}&quot;) String uploadDir
+<span class="fc" id="L89">    ) {</span>
+<span class="fc" id="L90">        this.reportRepository = reportRepository;</span>
+<span class="fc" id="L91">        this.attachmentRepository = attachmentRepository;</span>
+<span class="fc" id="L92">        this.caseReviewRepository = caseReviewRepository;</span>
+<span class="fc" id="L93">        this.userRepository = userRepository;</span>
+<span class="fc" id="L94">        this.auditLogRepository = auditLogRepository;</span>
+<span class="fc" id="L95">        this.securityAlertRepository = securityAlertRepository;</span>
+<span class="fc" id="L96">        this.auditLogService = auditLogService;</span>
+<span class="fc" id="L97">        this.securityMonitoringService = securityMonitoringService;</span>
+<span class="fc" id="L98">        this.objectMapper = objectMapper;</span>
+<span class="fc" id="L99">        this.backupDir = Paths.get(backupDir).toAbsolutePath().normalize();</span>
+<span class="fc" id="L100">        this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();</span>
+<span class="fc" id="L101">    }</span>
+
+    @PostConstruct
+    public void initialize() throws IOException {
+<span class="pc bpc" id="L105" title="1 of 2 branches missed.">        if (backupDir.equals(uploadDir)) {</span>
+<span class="nc" id="L106">            throw new IllegalStateException(&quot;ghostreport.backup-dir cannot be the same as app.upload-dir&quot;);</span>
+        }
+<span class="fc" id="L108">        Files.createDirectories(backupDir);</span>
+<span class="fc" id="L109">        Files.createDirectories(uploadDir);</span>
+<span class="fc" id="L110">    }</span>
+
+    public BackupOperationResponse createBackup() {
+<span class="pc bpc" id="L113" title="1 of 2 branches missed.">        if (!backupEnabled) {</span>
+<span class="nc" id="L114">            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, &quot;Backups are disabled&quot;);</span>
+        }
+
+<span class="fc" id="L117">        String filename = BACKUP_PREFIX + LocalDateTime.now().format(FILE_TIMESTAMP) + BACKUP_SUFFIX;</span>
+<span class="fc" id="L118">        Path target = backupDir.resolve(filename).normalize();</span>
+
+        try {
+<span class="fc" id="L121">            ensureInsideBackupDir(target);</span>
+<span class="fc" id="L122">            BackupWriteResult result = writeBackupZip(target);</span>
+<span class="fc" id="L123">            String zipHash = sha256(target);</span>
+<span class="fc" id="L124">            Files.writeString(sidecarHashPath(target), zipHash);</span>
+
+<span class="fc" id="L126">            auditLogService.log(</span>
+                    &quot;BACKUP_CREATED&quot;,
+                    &quot;BACKUP&quot;,
+                    null,
+                    &quot;Backup created: &quot; + filename + &quot; sha256=&quot; + zipHash
+            );
+
+<span class="fc" id="L133">            return new BackupOperationResponse(filename, Files.size(target), zipHash, result.totalFiles(), &quot;Backup created&quot;);</span>
+<span class="nc" id="L134">        } catch (Exception e) {</span>
+<span class="nc" id="L135">            auditLogService.log(&quot;BACKUP_ERROR&quot;, &quot;BACKUP&quot;, null, &quot;Backup creation failed&quot;);</span>
+<span class="nc" id="L136">            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, &quot;Backup creation failed&quot;);</span>
+        }
+    }
+
+    public List&lt;BackupFileResponse&gt; listBackups() {
+<span class="fc" id="L141">        try (Stream&lt;Path&gt; stream = Files.list(backupDir)) {</span>
+<span class="fc" id="L142">            return stream</span>
+<span class="pc" id="L143">                    .filter(Files::isRegularFile)</span>
+<span class="pc" id="L144">                    .filter(path -&gt; SAFE_BACKUP_NAME.matcher(path.getFileName().toString()).matches())</span>
+<span class="fc" id="L145">                    .sorted(Comparator.comparing(Path::getFileName).reversed())</span>
+<span class="fc" id="L146">                    .map(this::toBackupFileResponse)</span>
+<span class="fc" id="L147">                    .toList();</span>
+<span class="nc" id="L148">        } catch (IOException e) {</span>
+<span class="nc" id="L149">            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, &quot;Could not list backups&quot;);</span>
+        }
+    }
+
+    public Resource getBackupResource(String filename) {
+<span class="nc" id="L154">        Path path = resolveBackup(filename);</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">        if (!Files.exists(path)) {</span>
+<span class="nc" id="L156">            securityMonitoringService.recordMissingBackupDownload(filename);</span>
+<span class="nc" id="L157">            auditLogService.log(&quot;BACKUP_ERROR&quot;, &quot;BACKUP&quot;, null, &quot;Backup download failed: missing file&quot;);</span>
+<span class="nc" id="L158">            throw new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Backup not found&quot;);</span>
+        }
+
+        try {
+<span class="nc" id="L162">            auditLogService.log(&quot;BACKUP_DOWNLOADED&quot;, &quot;BACKUP&quot;, null, &quot;Backup downloaded: &quot; + filename);</span>
+<span class="nc" id="L163">            return new UrlResource(path.toUri());</span>
+<span class="nc" id="L164">        } catch (MalformedURLException e) {</span>
+<span class="nc" id="L165">            auditLogService.log(&quot;BACKUP_ERROR&quot;, &quot;BACKUP&quot;, null, &quot;Backup download failed&quot;);</span>
+<span class="nc" id="L166">            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, &quot;Could not download backup&quot;);</span>
+        }
+    }
+
+    public BackupVerificationResponse verifyBackup(String filename) {
+<span class="fc" id="L171">        Path path = resolveExistingBackup(filename);</span>
+        try {
+<span class="fc" id="L173">            VerificationResult result = verifyBackupFile(path);</span>
+<span class="fc" id="L174">            auditLogService.log(&quot;BACKUP_VALIDATED&quot;, &quot;BACKUP&quot;, null, &quot;Backup validated: &quot; + filename);</span>
+<span class="fc" id="L175">            return new BackupVerificationResponse(filename, true, result.zipSha256(), result.checkedFiles(), &quot;Backup is valid&quot;);</span>
+<span class="fc" id="L176">        } catch (Exception e) {</span>
+<span class="fc" id="L177">            securityMonitoringService.recordBackupIntegrityFailure(filename);</span>
+<span class="fc" id="L178">            auditLogService.log(&quot;BACKUP_ERROR&quot;, &quot;BACKUP&quot;, null, &quot;Backup validation failed: &quot; + filename);</span>
+<span class="fc" id="L179">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;Backup integrity validation failed&quot;);</span>
+        }
+    }
+
+    public BackupManifestSummaryResponse getBackupManifestSummary(String filename) {
+<span class="fc" id="L184">        Path path = resolveExistingBackup(filename);</span>
+<span class="fc" id="L185">        try (ZipFile zipFile = new ZipFile(path.toFile())) {</span>
+<span class="fc" id="L186">            ZipEntry manifestEntry = zipFile.getEntry(&quot;manifest.json&quot;);</span>
+<span class="pc bpc" id="L187" title="1 of 2 branches missed.">            if (manifestEntry == null) {</span>
+<span class="nc" id="L188">                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;Backup manifest not found&quot;);</span>
+            }
+
+            JsonNode manifest;
+<span class="fc" id="L192">            try (InputStream input = zipFile.getInputStream(manifestEntry)) {</span>
+<span class="fc" id="L193">                manifest = objectMapper.readTree(input);</span>
+            }
+
+<span class="fc" id="L196">            Map&lt;String, Integer&gt; databaseExports = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L197">            JsonNode exports = manifest.get(&quot;databaseExports&quot;);</span>
+<span class="pc bpc" id="L198" title="2 of 4 branches missed.">            if (exports != null &amp;&amp; exports.isObject()) {</span>
+<span class="fc" id="L199">                exports.fields().forEachRemaining(entry -&gt; databaseExports.put(entry.getKey(), entry.getValue().asInt()));</span>
+            }
+
+<span class="fc" id="L202">            return new BackupManifestSummaryResponse(</span>
+                    filename,
+<span class="fc" id="L204">                    manifest.path(&quot;formatVersion&quot;).asText(null),</span>
+<span class="fc" id="L205">                    manifest.path(&quot;createdAt&quot;).toString(),</span>
+<span class="fc" id="L206">                    manifest.path(&quot;totalFiles&quot;).asInt(0),</span>
+                    databaseExports
+            );
+<span class="nc" id="L209">        } catch (ResponseStatusException e) {</span>
+<span class="nc" id="L210">            throw e;</span>
+<span class="nc" id="L211">        } catch (Exception e) {</span>
+<span class="nc" id="L212">            securityMonitoringService.recordBackupIntegrityFailure(filename);</span>
+<span class="nc" id="L213">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;Could not read backup manifest&quot;);</span>
+        }
+    }
+
+    public BackupRestoreResponse restoreBackup(String filename) {
+<span class="fc" id="L218">        Path path = resolveExistingBackup(filename);</span>
+        try {
+<span class="fc" id="L220">            verifyBackupFile(path);</span>
+
+<span class="fc" id="L222">            Path restoreRoot = backupDir</span>
+<span class="fc" id="L223">                    .resolve(&quot;restore-staging&quot;)</span>
+<span class="fc" id="L224">                    .resolve(filename.replace(BACKUP_SUFFIX, &quot;&quot;))</span>
+<span class="fc" id="L225">                    .resolve(LocalDateTime.now().format(FILE_TIMESTAMP))</span>
+<span class="fc" id="L226">                    .normalize();</span>
+<span class="fc" id="L227">            ensureInsideBackupDir(restoreRoot);</span>
+<span class="fc" id="L228">            Files.createDirectories(restoreRoot);</span>
+
+<span class="fc" id="L230">            try (ZipFile zipFile = new ZipFile(path.toFile())) {</span>
+<span class="fc" id="L231">                var entries = zipFile.entries();</span>
+<span class="fc bfc" id="L232" title="All 2 branches covered.">                while (entries.hasMoreElements()) {</span>
+<span class="fc" id="L233">                    ZipEntry entry = entries.nextElement();</span>
+<span class="pc bpc" id="L234" title="1 of 2 branches missed.">                    if (entry.isDirectory()) {</span>
+<span class="nc" id="L235">                        continue;</span>
+                    }
+<span class="fc" id="L237">                    ensureSafeZipEntry(entry.getName());</span>
+<span class="fc" id="L238">                    Path output = restoreRoot.resolve(entry.getName()).normalize();</span>
+<span class="pc bpc" id="L239" title="1 of 2 branches missed.">                    if (!output.startsWith(restoreRoot)) {</span>
+<span class="nc" id="L240">                        throw new IOException(&quot;Unsafe restore entry&quot;);</span>
+                    }
+<span class="fc" id="L242">                    Path parent = output.getParent();</span>
+<span class="pc bpc" id="L243" title="1 of 2 branches missed.">                    if (parent == null) {</span>
+<span class="nc" id="L244">                        throw new IOException(&quot;Unsafe restore output path&quot;);</span>
+                    }
+<span class="fc" id="L246">                    Files.createDirectories(parent);</span>
+<span class="fc" id="L247">                    try (InputStream input = zipFile.getInputStream(entry)) {</span>
+<span class="fc" id="L248">                        Files.copy(input, output);</span>
+                    }
+<span class="fc" id="L250">                }</span>
+            }
+
+<span class="fc" id="L253">            auditLogService.log(</span>
+                    &quot;BACKUP_RESTORE_STAGED&quot;,
+                    &quot;BACKUP&quot;,
+                    null,
+                    &quot;Backup extracted to restore staging area: &quot; + filename
+            );
+<span class="fc" id="L259">            return new BackupRestoreResponse(</span>
+                    filename,
+                    true,
+<span class="fc" id="L262">                    restoreRoot.toString(),</span>
+                    &quot;Backup validated and extracted to controlled staging directory. Live DB/uploads were not overwritten.&quot;
+            );
+<span class="nc" id="L265">        } catch (Exception e) {</span>
+<span class="nc" id="L266">            securityMonitoringService.recordBackupIntegrityFailure(filename);</span>
+<span class="nc" id="L267">            auditLogService.log(&quot;BACKUP_ERROR&quot;, &quot;BACKUP&quot;, null, &quot;Backup restore failed: &quot; + filename);</span>
+<span class="nc" id="L268">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;Backup restore failed&quot;);</span>
+        }
+    }
+
+    @Scheduled(cron = &quot;${ghostreport.backup-schedule-cron:0 0 2 * * *}&quot;)
+    public void createScheduledBackup() {
+<span class="nc bnc" id="L274" title="All 2 branches missed.">        if (!backupEnabled) {</span>
+<span class="nc" id="L275">            return;</span>
+        }
+
+        try {
+<span class="nc" id="L279">            createBackup();</span>
+<span class="nc" id="L280">        } catch (RuntimeException e) {</span>
+<span class="nc" id="L281">            auditLogService.log(&quot;BACKUP_ERROR&quot;, &quot;BACKUP&quot;, null, &quot;Scheduled backup failed&quot;);</span>
+<span class="nc" id="L282">        }</span>
+<span class="nc" id="L283">    }</span>
+
+    private BackupWriteResult writeBackupZip(Path target) throws IOException {
+<span class="fc" id="L286">        List&lt;ManifestFileEntry&gt; manifestEntries = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L287">        Map&lt;String, Integer&gt; exportedData = new LinkedHashMap&lt;&gt;();</span>
+
+<span class="fc" id="L289">        try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(target))) {</span>
+<span class="fc" id="L290">            writeJson(zip, manifestEntries, exportedData, &quot;db/reports.json&quot;, exportReports(), &quot;reports&quot;);</span>
+<span class="fc" id="L291">            writeJson(zip, manifestEntries, exportedData, &quot;db/attachments.json&quot;, exportAttachments(), &quot;attachments&quot;);</span>
+<span class="fc" id="L292">            writeJson(zip, manifestEntries, exportedData, &quot;db/case-reviews.json&quot;, exportCaseReviews(), &quot;caseReviews&quot;);</span>
+<span class="fc" id="L293">            writeJson(zip, manifestEntries, exportedData, &quot;db/users.json&quot;, exportUsers(), &quot;users&quot;);</span>
+<span class="fc" id="L294">            writeJson(zip, manifestEntries, exportedData, &quot;db/audit-logs.json&quot;, exportAuditLogs(), &quot;auditLogs&quot;);</span>
+<span class="fc" id="L295">            writeJson(zip, manifestEntries, exportedData, &quot;db/security-alerts.json&quot;, exportSecurityAlerts(), &quot;securityAlerts&quot;);</span>
+<span class="fc" id="L296">            writeUploadedFiles(zip, manifestEntries);</span>
+
+<span class="fc" id="L298">            Map&lt;String, Object&gt; manifest = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L299">            manifest.put(&quot;createdAt&quot;, LocalDateTime.now());</span>
+<span class="fc" id="L300">            manifest.put(&quot;formatVersion&quot;, FORMAT_VERSION);</span>
+<span class="fc" id="L301">            manifest.put(&quot;files&quot;, manifestEntries);</span>
+<span class="fc" id="L302">            manifest.put(&quot;totalFiles&quot;, manifestEntries.size());</span>
+<span class="fc" id="L303">            manifest.put(&quot;databaseExports&quot;, exportedData);</span>
+
+<span class="fc" id="L305">            byte[] manifestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(manifest);</span>
+<span class="fc" id="L306">            zip.putNextEntry(new ZipEntry(&quot;manifest.json&quot;));</span>
+<span class="fc" id="L307">            zip.write(manifestBytes);</span>
+<span class="fc" id="L308">            zip.closeEntry();</span>
+        }
+
+<span class="fc" id="L311">        return new BackupWriteResult(manifestEntries.size());</span>
+    }
+
+    private void writeJson(
+            ZipOutputStream zip,
+            List&lt;ManifestFileEntry&gt; manifestEntries,
+            Map&lt;String, Integer&gt; exportedData,
+            String entryName,
+            List&lt;Map&lt;String, Object&gt;&gt; rows,
+            String exportName
+    ) throws IOException {
+<span class="fc" id="L322">        byte[] bytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(rows);</span>
+<span class="fc" id="L323">        writeZipEntry(zip, manifestEntries, entryName, bytes);</span>
+<span class="fc" id="L324">        exportedData.put(exportName, rows.size());</span>
+<span class="fc" id="L325">    }</span>
+
+    private void writeUploadedFiles(ZipOutputStream zip, List&lt;ManifestFileEntry&gt; manifestEntries) throws IOException {
+<span class="pc bpc" id="L328" title="1 of 2 branches missed.">        if (!Files.exists(uploadDir)) {</span>
+<span class="nc" id="L329">            return;</span>
+        }
+
+<span class="fc" id="L332">        try (Stream&lt;Path&gt; stream = Files.walk(uploadDir)) {</span>
+<span class="fc bfc" id="L333" title="All 2 branches covered.">            for (Path file : stream.filter(Files::isRegularFile).toList()) {</span>
+<span class="fc" id="L334">                Path normalized = file.toAbsolutePath().normalize();</span>
+<span class="pc bpc" id="L335" title="1 of 2 branches missed.">                if (!normalized.startsWith(uploadDir)) {</span>
+<span class="nc" id="L336">                    continue;</span>
+                }
+<span class="fc" id="L338">                Path relative = uploadDir.relativize(normalized);</span>
+<span class="fc" id="L339">                String entryName = &quot;files/&quot; + relative.toString().replace('\\', '/');</span>
+<span class="fc" id="L340">                ensureSafeZipEntry(entryName);</span>
+<span class="fc" id="L341">                writeZipEntry(zip, manifestEntries, entryName, Files.readAllBytes(normalized));</span>
+<span class="fc" id="L342">            }</span>
+        }
+<span class="fc" id="L344">    }</span>
+
+    private void writeZipEntry(
+            ZipOutputStream zip,
+            List&lt;ManifestFileEntry&gt; manifestEntries,
+            String entryName,
+            byte[] bytes
+    ) throws IOException {
+<span class="fc" id="L352">        ensureSafeZipEntry(entryName);</span>
+<span class="fc" id="L353">        zip.putNextEntry(new ZipEntry(entryName));</span>
+<span class="fc" id="L354">        zip.write(bytes);</span>
+<span class="fc" id="L355">        zip.closeEntry();</span>
+<span class="fc" id="L356">        manifestEntries.add(new ManifestFileEntry(entryName, bytes.length, sha256(bytes)));</span>
+<span class="fc" id="L357">    }</span>
+
+    private VerificationResult verifyBackupFile(Path path) throws Exception {
+<span class="fc" id="L360">        String zipSha256 = sha256(path);</span>
+
+<span class="fc" id="L362">        try (ZipFile zipFile = new ZipFile(path.toFile())) {</span>
+<span class="fc" id="L363">            ZipEntry manifestEntry = zipFile.getEntry(&quot;manifest.json&quot;);</span>
+<span class="pc bpc" id="L364" title="1 of 2 branches missed.">            if (manifestEntry == null) {</span>
+<span class="nc" id="L365">                throw new IOException(&quot;Missing manifest&quot;);</span>
+            }
+
+            JsonNode manifest;
+<span class="fc" id="L369">            try (InputStream input = zipFile.getInputStream(manifestEntry)) {</span>
+<span class="fc" id="L370">                manifest = objectMapper.readTree(input);</span>
+            }
+
+<span class="fc" id="L373">            JsonNode files = manifest.get(&quot;files&quot;);</span>
+<span class="pc bpc" id="L374" title="2 of 4 branches missed.">            if (files == null || !files.isArray()) {</span>
+<span class="nc" id="L375">                throw new IOException(&quot;Invalid manifest files&quot;);</span>
+            }
+
+<span class="fc" id="L378">            int checked = 0;</span>
+<span class="fc bfc" id="L379" title="All 2 branches covered.">            for (JsonNode fileNode : files) {</span>
+<span class="fc" id="L380">                String entryName = fileNode.path(&quot;path&quot;).asText();</span>
+<span class="fc" id="L381">                String expectedHash = fileNode.path(&quot;sha256&quot;).asText();</span>
+<span class="fc" id="L382">                ensureSafeZipEntry(entryName);</span>
+
+<span class="fc" id="L384">                ZipEntry entry = zipFile.getEntry(entryName);</span>
+<span class="pc bpc" id="L385" title="1 of 2 branches missed.">                if (entry == null) {</span>
+<span class="nc" id="L386">                    throw new IOException(&quot;Missing backup entry&quot;);</span>
+                }
+
+                byte[] bytes;
+<span class="fc" id="L390">                try (InputStream input = zipFile.getInputStream(entry)) {</span>
+<span class="fc" id="L391">                    bytes = input.readAllBytes();</span>
+                }
+
+<span class="pc bpc" id="L394" title="1 of 2 branches missed.">                if (!sha256(bytes).equals(expectedHash)) {</span>
+<span class="nc" id="L395">                    throw new IOException(&quot;Hash mismatch&quot;);</span>
+                }
+<span class="fc" id="L397">                checked++;</span>
+<span class="fc" id="L398">            }</span>
+
+<span class="pc bpc" id="L400" title="1 of 2 branches missed.">            if (manifest.path(&quot;totalFiles&quot;).asInt(-1) != checked) {</span>
+<span class="nc" id="L401">                throw new IOException(&quot;Manifest total mismatch&quot;);</span>
+            }
+
+<span class="fc" id="L404">            Path sidecar = sidecarHashPath(path);</span>
+<span class="pc bpc" id="L405" title="1 of 2 branches missed.">            if (Files.exists(sidecar)) {</span>
+<span class="fc" id="L406">                String expectedZipHash = Files.readString(sidecar).trim();</span>
+<span class="fc bfc" id="L407" title="All 2 branches covered.">                if (!expectedZipHash.equals(zipSha256)) {</span>
+<span class="fc" id="L408">                    throw new IOException(&quot;ZIP sidecar hash mismatch&quot;);</span>
+                }
+            }
+
+<span class="fc" id="L412">            return new VerificationResult(zipSha256, checked);</span>
+        }
+    }
+
+    private Path resolveExistingBackup(String filename) {
+<span class="fc" id="L417">        Path path = resolveBackup(filename);</span>
+<span class="pc bpc" id="L418" title="1 of 2 branches missed.">        if (!Files.exists(path)) {</span>
+<span class="nc" id="L419">            securityMonitoringService.recordMissingBackupDownload(filename);</span>
+<span class="nc" id="L420">            throw new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Backup not found&quot;);</span>
+        }
+<span class="fc" id="L422">        return path;</span>
+    }
+
+    private Path resolveBackup(String filename) {
+<span class="pc bpc" id="L426" title="1 of 4 branches missed.">        if (filename == null || !SAFE_BACKUP_NAME.matcher(filename).matches()) {</span>
+<span class="fc" id="L427">            securityMonitoringService.recordBackupPathTraversalAttempt(filename);</span>
+<span class="fc" id="L428">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;Invalid backup filename&quot;);</span>
+        }
+
+<span class="fc" id="L431">        Path resolved = backupDir.resolve(filename).normalize();</span>
+<span class="fc" id="L432">        ensureInsideBackupDir(resolved);</span>
+<span class="fc" id="L433">        return resolved;</span>
+    }
+
+    private void ensureInsideBackupDir(Path path) {
+<span class="pc bpc" id="L437" title="1 of 2 branches missed.">        if (!path.toAbsolutePath().normalize().startsWith(backupDir)) {</span>
+<span class="nc" id="L438">            securityMonitoringService.recordBackupPathTraversalAttempt(path.toString());</span>
+<span class="nc" id="L439">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;Invalid backup path&quot;);</span>
+        }
+<span class="fc" id="L441">    }</span>
+
+    private void ensureSafeZipEntry(String entryName) throws IOException {
+<span class="pc bpc" id="L444" title="4 of 8 branches missed.">        if (entryName == null || entryName.isBlank() || entryName.startsWith(&quot;/&quot;) || entryName.contains(&quot;\\&quot;)</span>
+<span class="pc bpc" id="L445" title="2 of 4 branches missed.">                || entryName.contains(&quot;..&quot;) || Paths.get(entryName).normalize().startsWith(&quot;..&quot;)) {</span>
+<span class="nc" id="L446">            securityMonitoringService.recordBackupPathTraversalAttempt(entryName);</span>
+<span class="nc" id="L447">            throw new IOException(&quot;Unsafe ZIP entry&quot;);</span>
+        }
+<span class="fc" id="L449">    }</span>
+
+    private BackupFileResponse toBackupFileResponse(Path path) {
+        try {
+<span class="nc" id="L453">            return new BackupFileResponse(</span>
+<span class="nc" id="L454">                    path.getFileName().toString(),</span>
+<span class="nc" id="L455">                    Files.size(path),</span>
+<span class="nc" id="L456">                    sha256(path),</span>
+<span class="nc" id="L457">                    LocalDateTime.ofInstant(Files.getLastModifiedTime(path).toInstant(), java.time.ZoneId.systemDefault())</span>
+            );
+<span class="nc" id="L459">        } catch (IOException e) {</span>
+<span class="nc" id="L460">            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, &quot;Could not read backup metadata&quot;);</span>
+        }
+    }
+
+    private Path sidecarHashPath(Path zipPath) {
+<span class="fc" id="L465">        Path filename = zipPath.getFileName();</span>
+<span class="pc bpc" id="L466" title="1 of 2 branches missed.">        if (filename == null) {</span>
+<span class="nc" id="L467">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;Invalid backup path&quot;);</span>
+        }
+<span class="fc" id="L469">        return zipPath.resolveSibling(filename.toString() + &quot;.sha256&quot;);</span>
+    }
+
+    private String sha256(Path file) {
+        try {
+<span class="fc" id="L474">            return sha256(Files.readAllBytes(file));</span>
+<span class="nc" id="L475">        } catch (IOException e) {</span>
+<span class="nc" id="L476">            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, &quot;Could not hash file&quot;);</span>
+        }
+    }
+
+    private String sha256(byte[] bytes) {
+        try {
+<span class="fc" id="L482">            MessageDigest digest = MessageDigest.getInstance(&quot;SHA-256&quot;);</span>
+<span class="fc" id="L483">            return HexFormat.of().formatHex(digest.digest(bytes));</span>
+<span class="nc" id="L484">        } catch (Exception e) {</span>
+<span class="nc" id="L485">            throw new IllegalStateException(&quot;SHA-256 unavailable&quot;, e);</span>
+        }
+    }
+
+    private List&lt;Map&lt;String, Object&gt;&gt; exportReports() {
+<span class="fc" id="L490">        return reportRepository.findAll().stream().map(this::reportToMap).toList();</span>
+    }
+
+    private List&lt;Map&lt;String, Object&gt;&gt; exportAttachments() {
+<span class="fc" id="L494">        return attachmentRepository.findAll().stream().map(this::attachmentToMap).toList();</span>
+    }
+
+    private List&lt;Map&lt;String, Object&gt;&gt; exportCaseReviews() {
+<span class="fc" id="L498">        return caseReviewRepository.findAll().stream().map(this::caseReviewToMap).toList();</span>
+    }
+
+    private List&lt;Map&lt;String, Object&gt;&gt; exportUsers() {
+<span class="fc" id="L502">        return userRepository.findAll().stream().map(this::userToMap).toList();</span>
+    }
+
+    private List&lt;Map&lt;String, Object&gt;&gt; exportAuditLogs() {
+<span class="fc" id="L506">        return auditLogRepository.findAll().stream().map(this::auditLogToMap).toList();</span>
+    }
+
+    private List&lt;Map&lt;String, Object&gt;&gt; exportSecurityAlerts() {
+<span class="fc" id="L510">        return securityAlertRepository.findAll().stream().map(this::securityAlertToMap).toList();</span>
+    }
+
+    private Map&lt;String, Object&gt; reportToMap(Report report) {
+<span class="fc" id="L514">        Map&lt;String, Object&gt; row = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L515">        row.put(&quot;id&quot;, report.getId());</span>
+<span class="fc" id="L516">        row.put(&quot;title&quot;, report.getTitle());</span>
+<span class="fc" id="L517">        row.put(&quot;description&quot;, report.getDescription());</span>
+<span class="fc" id="L518">        row.put(&quot;category&quot;, report.getCategory());</span>
+<span class="pc bpc" id="L519" title="1 of 2 branches missed.">        row.put(&quot;status&quot;, report.getStatus() != null ? report.getStatus().name() : null);</span>
+<span class="fc" id="L520">        row.put(&quot;trackingCodeHash&quot;, report.getTrackingCodeHash());</span>
+<span class="fc" id="L521">        row.put(&quot;createdAt&quot;, report.getCreatedAt());</span>
+<span class="fc" id="L522">        return row;</span>
+    }
+
+    private Map&lt;String, Object&gt; attachmentToMap(Attachment attachment) {
+<span class="nc" id="L526">        Map&lt;String, Object&gt; row = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L527">        row.put(&quot;id&quot;, attachment.getId());</span>
+<span class="nc bnc" id="L528" title="All 2 branches missed.">        row.put(&quot;reportId&quot;, attachment.getReport() != null ? attachment.getReport().getId() : null);</span>
+<span class="nc" id="L529">        row.put(&quot;originalName&quot;, attachment.getOriginalName());</span>
+<span class="nc" id="L530">        row.put(&quot;storedName&quot;, attachment.getStoredName());</span>
+<span class="nc" id="L531">        row.put(&quot;mimeType&quot;, attachment.getMimeType());</span>
+<span class="nc" id="L532">        row.put(&quot;size&quot;, attachment.getSize());</span>
+<span class="nc" id="L533">        row.put(&quot;hash&quot;, attachment.getHash());</span>
+<span class="nc" id="L534">        row.put(&quot;storagePath&quot;, attachment.getStoragePath());</span>
+<span class="nc" id="L535">        row.put(&quot;fileReference&quot;, attachment.getFileReference());</span>
+<span class="nc" id="L536">        return row;</span>
+    }
+
+    private Map&lt;String, Object&gt; caseReviewToMap(CaseReview caseReview) {
+<span class="fc" id="L540">        Map&lt;String, Object&gt; row = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L541">        row.put(&quot;id&quot;, caseReview.getId());</span>
+<span class="pc bpc" id="L542" title="1 of 2 branches missed.">        row.put(&quot;reportId&quot;, caseReview.getReport() != null ? caseReview.getReport().getId() : null);</span>
+<span class="pc bpc" id="L543" title="1 of 2 branches missed.">        row.put(&quot;assignedAnalystId&quot;, caseReview.getAssignedAnalyst() != null ? caseReview.getAssignedAnalyst().getId() : null);</span>
+<span class="pc bpc" id="L544" title="1 of 2 branches missed.">        row.put(&quot;assignedAnalystUsername&quot;, caseReview.getAssignedAnalyst() != null ? caseReview.getAssignedAnalyst().getUsername() : null);</span>
+<span class="fc" id="L545">        row.put(&quot;notes&quot;, caseReview.getNotes());</span>
+<span class="pc bpc" id="L546" title="1 of 2 branches missed.">        row.put(&quot;priority&quot;, caseReview.getPriority() != null ? caseReview.getPriority().name() : null);</span>
+<span class="fc" id="L547">        row.put(&quot;updatedAt&quot;, caseReview.getUpdatedAt());</span>
+<span class="fc" id="L548">        return row;</span>
+    }
+
+    private Map&lt;String, Object&gt; userToMap(User user) {
+<span class="fc" id="L552">        Map&lt;String, Object&gt; row = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L553">        row.put(&quot;id&quot;, user.getId());</span>
+<span class="fc" id="L554">        row.put(&quot;username&quot;, user.getUsername());</span>
+<span class="fc" id="L555">        row.put(&quot;email&quot;, user.getEmail());</span>
+<span class="fc" id="L556">        row.put(&quot;passwordHash&quot;, user.getPasswordHash());</span>
+<span class="pc bpc" id="L557" title="1 of 2 branches missed.">        row.put(&quot;role&quot;, user.getRole() != null ? user.getRole().name() : null);</span>
+<span class="fc" id="L558">        row.put(&quot;active&quot;, user.isActive());</span>
+<span class="fc" id="L559">        row.put(&quot;createdAt&quot;, user.getCreatedAt());</span>
+<span class="fc" id="L560">        return row;</span>
+    }
+
+    private Map&lt;String, Object&gt; auditLogToMap(AuditLog auditLog) {
+<span class="fc" id="L564">        Map&lt;String, Object&gt; row = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L565">        row.put(&quot;id&quot;, auditLog.getId());</span>
+<span class="fc" id="L566">        row.put(&quot;timestamp&quot;, auditLog.getTimestamp());</span>
+<span class="fc" id="L567">        row.put(&quot;actor&quot;, auditLog.getActor());</span>
+<span class="fc" id="L568">        row.put(&quot;action&quot;, auditLog.getAction());</span>
+<span class="fc" id="L569">        row.put(&quot;targetType&quot;, auditLog.getTargetType());</span>
+<span class="fc" id="L570">        row.put(&quot;targetId&quot;, auditLog.getTargetId());</span>
+<span class="fc" id="L571">        row.put(&quot;details&quot;, auditLog.getDetails());</span>
+<span class="fc" id="L572">        return row;</span>
+    }
+
+    private Map&lt;String, Object&gt; securityAlertToMap(SecurityAlert alert) {
+<span class="nc" id="L576">        Map&lt;String, Object&gt; row = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L577">        row.put(&quot;id&quot;, alert.getId());</span>
+<span class="nc" id="L578">        row.put(&quot;timestamp&quot;, alert.getTimestamp());</span>
+<span class="nc" id="L579">        row.put(&quot;alertType&quot;, alert.getAlertType());</span>
+<span class="nc" id="L580">        row.put(&quot;severity&quot;, alert.getSeverity());</span>
+<span class="nc" id="L581">        row.put(&quot;actor&quot;, alert.getActor());</span>
+<span class="nc" id="L582">        row.put(&quot;targetType&quot;, alert.getTargetType());</span>
+<span class="nc" id="L583">        row.put(&quot;targetId&quot;, alert.getTargetId());</span>
+<span class="nc" id="L584">        row.put(&quot;description&quot;, alert.getDescription());</span>
+<span class="nc" id="L585">        return row;</span>
+    }
+
+<span class="fc" id="L588">    private record ManifestFileEntry(String path, long size, String sha256) {</span>
+    }
+
+<span class="fc" id="L591">    private record BackupWriteResult(int totalFiles) {</span>
+    }
+
+<span class="fc" id="L594">    private record VerificationResult(String zipSha256, int checkedFiles) {</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
