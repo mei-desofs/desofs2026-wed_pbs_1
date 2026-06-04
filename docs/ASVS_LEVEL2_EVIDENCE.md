@@ -8,7 +8,7 @@ artifacts.
 | --- | --- | --- | --- | --- |
 | V2 Authentication | Password storage and login abuse protection | BCrypt, inactive-user login block, login rate limiting and brute-force alerts | `SecurityConfig`, `AuthService`, `RateLimiterService`, `LoginRateLimitSecurityTest`, `AdminUserManagementSecurityTest` | Implemented |
 | V2 Authentication | Credential exposure prevention | Passwords are accepted through request DTOs and omitted from responses/log tests | `CreateUserRequest`, `UserResponse`, `UserService`, `RuntimeSecurityEventLoggingTest` | Implemented |
-| V3 Session Management | Stateless API session | JWT signed with HS256, expiry checked, role claim validated | `JwtService`, `JwtAuthenticationFilter`, `JwtServiceSecurityTest` | Implemented |
+| V3 Session Management | Stateless API session | JWT signed with HS256, expiry checked, role claim validated and logout revokes the current token | `JwtService`, `AuthController`, `JwtAuthenticationFilter`, `JwtServiceSecurityTest`, `RuntimeSecurityEventLoggingTest` | Implemented with residual risk |
 | V4 Access Control | Role-based access control | Centralized ADMIN/ANALYST/AUDITOR route rules and authorization matrix tests | `SecurityConfig`, `RbacAuthorizationMatrixTest` | Implemented |
 | V4 Access Control | Object-level authorization | Analysts can access only assigned/eligible cases | `ReportService`, `CaseReviewService`, `AnalystCaseOwnershipTest` | Implemented |
 | V5 Validation | Request validation | Bean Validation on request DTOs | `CreateReportRequest`, `CreateUserRequest`, `Update*Request`, controllers | Implemented |
@@ -32,5 +32,6 @@ pipeline evidence. CodeQL findings are primarily stored in GitHub Code Scanning,
 with an archiveable run summary artifact. Runtime security evidence is always
 generated through tests; complete external IAST telemetry requires optional
 Contrast agent configuration. Advanced production operations such as external
-SIEM/WORM storage, token revocation, privileged-user MFA and authenticated DAST
-contexts are treated as operational hardening beyond the current sprint scope.
+SIEM/WORM storage, distributed token revocation, privileged-user MFA and
+authenticated DAST contexts are treated as operational hardening beyond the
+current sprint scope.

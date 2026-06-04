@@ -7,7 +7,7 @@ implemented mitigations and pipeline evidence.
 | --- | --- | --- | --- |
 | Spring Boot 3.5.x | Main backend framework | Misconfiguration, outdated dependencies, accidental endpoint exposure | Maven-managed dependencies, SCA workflow, explicit security configuration |
 | Spring Security | Authentication, authorization and headers | Broken access control, weak headers, incorrect session assumptions | Stateless JWT, centralized RBAC, security headers and authorization tests |
-| JWT / HS256 | Stateless API token | Weak secrets, token leakage, long-lived tokens | Secret length validation, expiry, role validation and invalid-token alerts |
+| JWT / HS256 | Stateless API token | Weak secrets, token leakage, long-lived tokens, replay after logout | Secret length validation, expiry, issuer/audience checks, `jti`, role validation, logout revocation and invalid-token alerts |
 | PostgreSQL 16 | Runtime database | Weak credentials, schema drift, excessive privileges | Environment credentials, production-like `ddl-auto=validate`, Docker healthcheck |
 | H2 | Test database | Accidental non-test use | Restricted to automated tests through profile configuration |
 | Maven | Build and dependency management | Vulnerable dependencies/plugins, supply-chain risk | Dependency-Check, CycloneDX SBOM and pinned security tooling |
@@ -19,7 +19,7 @@ implemented mitigations and pipeline evidence.
 | OWASP ZAP | Baseline DAST scanner | Unauthenticated baseline does not cover all protected flows | Passive baseline against a live CI runtime and artifacts |
 | Contrast Java Agent | Optional JVM IAST agent | Requires tenant configuration and CI secrets | Workflow readiness checks and runtime security evidence |
 | Docker / Compose | Local container execution | Root containers, writable filesystem, leaked env vars | Non-root app user, read-only app container, named volumes, `no-new-privileges` |
-| Static HTML/CSS/JS | Browser interface served by Spring Boot | XSS, weak CSP, unsafe inline code | Same-origin serving, security headers and CSP baseline with `form-action 'self'`; inline code remains a documented baseline item |
+| Static HTML/CSS/JS | Browser interface served by Spring Boot | XSS, weak CSP, unsafe inline code | Same-origin serving, external JavaScript files, removed inline handlers/styles, security headers and CSP baseline with `form-action 'self'` |
 | Angus Activation / Jakarta Activation | Transitive activation API implementation pulled by JAXB/Hibernate paths | Dependency-Check may flag CVEs or ecosystem risk when transitive versions lag | Managed through Spring Boot dependency management; triage against Dependency-Check report before adding an override |
 | Lombok | Compile-time code generation | Generated methods can obscure review | Limited use; API contracts prefer explicit DTOs/records |
 
@@ -43,9 +43,10 @@ Stack risks are monitored through:
   evidence.
 - Gitleaks JSON output of `[]` is valid evidence that no leaks were detected in
   the scanned repository content.
-- The frontend CSP still allows `'unsafe-inline'` for current static assets.
-  `form-action 'self'` is enforced, and removal of inline script/style is a
-  future hardening item.
+- The frontend CSP no longer allows `'unsafe-inline'` in the current code and
+  `form-action 'self'` is enforced. The downloaded ZAP evidence is
+  pre-remediation, so a fresh ZAP run is required before closing that finding in
+  the evidence folder.
 - `org.eclipse.angus:angus-activation` is treated as a transitive dependency
   triage item. Do not suppress or override it without linking the
   Dependency-Check finding, current resolved version and compatibility impact.

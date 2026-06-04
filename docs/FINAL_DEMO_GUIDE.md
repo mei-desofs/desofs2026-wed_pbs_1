@@ -82,15 +82,16 @@ When discussing boundaries, keep the wording technical:
 
 > The project implements the required secure development evidence for the
 > current coursework scope. Production hardening items such as external SIEM,
-> token revocation, advanced deployment TLS management and authenticated DAST
+> distributed token revocation, advanced deployment TLS management and authenticated DAST
 > are documented as next-step operational hardening.
 
 Also state the exact evidence boundaries:
 
 - runtime security tests exist in every Stage 04 run;
-- complete IAST telemetry exists only if the optional Contrast agent is
+- external IAST telemetry exists only if the optional Contrast agent is
   configured;
 - PIT is evidence review, not a blocking quality gate;
 - CodeQL evidence is primarily GitHub Code Scanning, with an archiveable summary
   artifact;
-- CSP is a baseline because the current frontend still uses inline assets.
+- CSP no longer allows `unsafe-inline` in code; the existing ZAP artifact is
+  pre-remediation and should be regenerated before the final presentation.

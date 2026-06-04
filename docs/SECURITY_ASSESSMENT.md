@@ -52,6 +52,19 @@ evidence used to verify them.
 | Gitleaks | Blocking for confirmed leaks |
 | SpotBugs, CodeQL, Dependency-Check, SBOM, ZAP, runtime security/IAST readiness and PIT | Evidence review |
 
+## Tool Assessment Matrix
+
+| Tool | Result | Evidence | Issues Identified | Issues Mitigated | Residual Risk |
+| --- | --- | --- | --- | --- | --- |
+| SpotBugs | Evidence generated and post-remediation report available | `Deliverables/Phase 2/Evidence/sast/spotbugs-post-remediation`, `docs/SPOTBUGS_TRIAGE.md` | Original report had 35 findings; post-remediation report has 21 findings | High-value mutable exposure, broad exception and newline findings reduced | Remaining framework/model findings require triage before suppression |
+| Dependency-Check | Evidence generated from downloaded artifact; dependencies updated locally | `Deliverables/Phase 2/Evidence/sca`, `docs/SCA_TRIAGE.md` | Old report included critical/high dependency findings | Spring Boot, Tomcat, PostgreSQL JDBC and Log4j versions updated | Fresh Dependency-Check run required before closing CVEs |
+| Gitleaks | Empty JSON report in downloaded evidence | `Deliverables/Phase 2/Evidence/secret-scanning` | No leaked secrets in scanned scope | Artifact reorganized into secret-scanning evidence | Scope depends on repository contents scanned by the workflow |
+| ZAP | Baseline evidence generated before CSP remediation | `Deliverables/Phase 2/Evidence/dast` | CSP `unsafe-inline`, comments and cache informational alerts | Inline frontend code removed and CSP updated in code | Fresh ZAP run required to prove closure |
+| CodeQL | Code Scanning plus archiveable summary | `Deliverables/Phase 2/Evidence/sast/sast-codeql-evidence-summary` | Findings are reviewed in GitHub Code Scanning | Summary artifact documents the run for local archive | Full local SARIF export is not claimed |
+| PIT | Evidence-review workflow configured for HTML/XML output | `Deliverables/Phase 2/Evidence/testing`, `docs/SECURITY_TESTING.md` | Local Java 23 run fails before report generation | PIT plugin/configuration updated for CI Java 17 | Confirm real PIT report after CI run |
+| JaCoCo | Blocking coverage gate passes locally | `ghostreport/target/site/jacoco`, CI JaCoCo artifact | Critical controllers/services still have uneven coverage | Added tests for session/security and admin evidence flows | Add more service/controller branch tests over time |
+| JUnit/MockMvc | 110 tests pass locally | Surefire output, `ghostreport/src/test/java` | Security regression gaps remain in some negative paths | JWT revocation, login rate limit and admin evidence tests added | Upload fresh CI artifacts after push |
+
 ## Scope Boundaries
 
 The assessment covers the implemented coursework application and its automated
@@ -59,6 +72,7 @@ security evidence. Additional production operations such as external SIEM,
 privileged-user MFA, centralized rate limiting, distributed token revocation and advanced
 deployment TLS management are considered operational hardening.
 
-The current CSP is a baseline policy because the static frontend still requires
-`'unsafe-inline'` for scripts/styles. ZAP evidence is triaged with this scope
-boundary until inline assets are refactored or nonce/hash-based CSP is adopted.
+The current code removes `unsafe-inline` from the CSP and externalizes the
+frontend scripts/styles that previously required it. The downloaded ZAP
+artifact is pre-remediation, so the DAST evidence should be regenerated before
+closing that finding in the final assessment.
