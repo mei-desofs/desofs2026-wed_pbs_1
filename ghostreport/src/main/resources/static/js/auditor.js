@@ -46,13 +46,10 @@ let auditorAuth = sessionStorage.getItem("auditorAuth");
     }
 
     async function auditorSafeFetch(url, options = {}) {
-        const response = await fetch(url, {
-            ...options,
-            credentials: "omit",
-            headers: {
-                ...(options.headers || {})
-            }
-        });
+        const fetchOptions = typeof csrfFetchOptions === "function"
+            ? csrfFetchOptions(options)
+            : options;
+        const response = await fetch(url, fetchOptions);
 
         if (response.status === 401 || response.status === 403) {
             sessionStorage.removeItem("auditorAuth");

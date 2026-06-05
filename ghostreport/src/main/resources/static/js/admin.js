@@ -95,13 +95,10 @@ let adminSessionAuth = sessionStorage.getItem("adminAuth");
     }
 
     async function adminSafeFetch(url, options = {}) {
-        const response = await fetch(url, {
-            ...options,
-            credentials: "omit",
-            headers: {
-                ...(options.headers || {})
-            }
-        });
+        const fetchOptions = typeof csrfFetchOptions === "function"
+            ? csrfFetchOptions(options)
+            : options;
+        const response = await fetch(url, fetchOptions);
 
         if (response.status === 401 || response.status === 403) {
             sessionStorage.removeItem("adminAuth");

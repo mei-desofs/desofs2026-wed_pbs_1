@@ -13,7 +13,7 @@ document.getElementById("reportForm").addEventListener("submit", async (e) => {
 
         try {
 
-            const response = await fetch(`${API_BASE}/reports`, {
+            const response = await fetch(`${API_BASE}/reports`, csrfFetchOptions({
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -23,7 +23,7 @@ document.getElementById("reportForm").addEventListener("submit", async (e) => {
                     description,
                     category
                 })
-            });
+            }));
 
             const data = await handleJsonResponse(response);
 
@@ -36,10 +36,10 @@ document.getElementById("reportForm").addEventListener("submit", async (e) => {
                 }
                 formData.append("trackingCode", data.trackingCode);
 
-                const uploadResponse = await fetch(`${API_BASE}/reports/${data.id}/attachments`, {
+                const uploadResponse = await fetch(`${API_BASE}/reports/${data.id}/attachments`, csrfFetchOptions({
                     method: "POST",
                     body: formData
-                });
+                }));
 
                 if (!uploadResponse.ok) {
                     const errorText = await uploadResponse.text();

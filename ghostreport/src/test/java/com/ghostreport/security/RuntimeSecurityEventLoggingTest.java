@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -87,6 +88,7 @@ class RuntimeSecurityEventLoggingTest {
     @Test
     void successfulLoginCreatesAuditLogWithoutTokenOrPassword() throws Exception {
         String response = mockMvc.perform(post("/auth/login")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginBody(PASSWORD)))
                 .andExpect(status().isOk())
@@ -105,6 +107,7 @@ class RuntimeSecurityEventLoggingTest {
     @Test
     void failedLoginCreatesAuditLogWithoutPassword() throws Exception {
         mockMvc.perform(post("/auth/login")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginBody(WRONG_PASSWORD)))
                 .andExpect(status().isUnauthorized());
@@ -136,6 +139,7 @@ class RuntimeSecurityEventLoggingTest {
     @Test
     void logoutRevokesTokenAndCreatesAuditLogWithoutStoringToken() throws Exception {
         String response = mockMvc.perform(post("/auth/login")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginBody(PASSWORD)))
                 .andExpect(status().isOk())
@@ -145,6 +149,7 @@ class RuntimeSecurityEventLoggingTest {
         String token = objectMapper.readTree(response).path("token").asText();
 
         mockMvc.perform(post("/auth/logout")
+                        .with(csrf())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
 

@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -75,6 +76,7 @@ class RbacAuthorizationMatrixTest {
     @Test
     void publicReportEndpointsRemainAccessibleWithoutAuthentication() throws Exception {
         mockMvc.perform(post("/reports")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -89,6 +91,7 @@ class RbacAuthorizationMatrixTest {
                 .andExpect(jsonPath("$.status").value("SUBMITTED"));
 
         mockMvc.perform(post("/reports/verify")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -123,6 +126,7 @@ class RbacAuthorizationMatrixTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/analyst/reports/{id}/assign", reportId)
+                        .with(csrf())
                         .header("Authorization", bearerToken(analystUsername, PASSWORD))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
@@ -131,6 +135,7 @@ class RbacAuthorizationMatrixTest {
                 .andExpect(jsonPath("$.assignedAnalystUsername").value(analystUsername));
 
         mockMvc.perform(patch("/analyst/reports/{id}/status", reportId)
+                        .with(csrf())
                         .header("Authorization", bearerToken(analystUsername, PASSWORD))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -193,6 +198,7 @@ class RbacAuthorizationMatrixTest {
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/admin/users")
+                        .with(csrf())
                         .header("Authorization", bearerToken(auditorUsername, PASSWORD))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -206,6 +212,7 @@ class RbacAuthorizationMatrixTest {
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(patch("/analyst/reports/{id}/status", reportId)
+                        .with(csrf())
                         .header("Authorization", bearerToken(auditorUsername, PASSWORD))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -216,6 +223,7 @@ class RbacAuthorizationMatrixTest {
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/analyst/reports/{id}/assign", reportId)
+                        .with(csrf())
                         .header("Authorization", bearerToken(auditorUsername, PASSWORD))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
@@ -235,6 +243,7 @@ class RbacAuthorizationMatrixTest {
 
     private JsonNode createPublicReport() throws Exception {
         String body = mockMvc.perform(post("/reports")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -257,6 +266,7 @@ class RbacAuthorizationMatrixTest {
 
         String response = mockMvc.perform(
                         post("/auth/login")
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(body)
                 )

@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -117,7 +118,8 @@ class ReportControllerAttachmentUploadTest {
 
         mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
                         .file(file)
-                        .param("trackingCode", TRACKING_CODE))
+                        .param("trackingCode", TRACKING_CODE)
+                        .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").exists())
                 .andExpect(jsonPath("$[0].originalName").value("invoice.txt"))
@@ -149,6 +151,7 @@ class ReportControllerAttachmentUploadTest {
         Report report = createReport();
         var request = multipart("/reports/{id}/attachments", report.getId());
         request.param("trackingCode", TRACKING_CODE);
+        request.with(csrf());
 
         for (int i = 0; i < 6; i++) {
             request.file(new MockMultipartFile(
@@ -178,10 +181,12 @@ class ReportControllerAttachmentUploadTest {
 
         mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
                         .file(file)
-                        .param("trackingCode", TRACKING_CODE))
+                        .param("trackingCode", TRACKING_CODE)
+                        .with(csrf()))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/reports/{id}/attachments/list", report.getId())
+                        .with(csrf())
                         .contentType("application/json")
                         .content("""
                                 {
@@ -194,6 +199,7 @@ class ReportControllerAttachmentUploadTest {
                 .andExpect(jsonPath("$[0].mimeType").value("text/plain"));
 
         mockMvc.perform(post("/reports/{id}/attachments/list", report.getId())
+                        .with(csrf())
                         .contentType("application/json")
                         .content("""
                                 {
@@ -215,7 +221,8 @@ class ReportControllerAttachmentUploadTest {
 
         String response = mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
                         .file(file)
-                        .param("trackingCode", TRACKING_CODE))
+                        .param("trackingCode", TRACKING_CODE)
+                        .with(csrf()))
                 .andExpect(status().isBadRequest())
                 .andReturn()
                 .getResponse()
@@ -240,7 +247,8 @@ class ReportControllerAttachmentUploadTest {
 
         mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
                         .file(file)
-                        .param("trackingCode", TRACKING_CODE))
+                        .param("trackingCode", TRACKING_CODE)
+                        .with(csrf()))
                 .andExpect(status().isBadRequest());
 
         assertTrue(attachmentRepository.findByReportId(report.getId()).isEmpty());
@@ -261,7 +269,8 @@ class ReportControllerAttachmentUploadTest {
 
         String response = mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
                         .file(file)
-                        .param("trackingCode", TRACKING_CODE))
+                        .param("trackingCode", TRACKING_CODE)
+                        .with(csrf()))
                 .andExpect(status().isBadRequest())
                 .andReturn()
                 .getResponse()
@@ -282,12 +291,13 @@ class ReportControllerAttachmentUploadTest {
                 "approved evidence".getBytes()
         );
 
-        mockMvc.perform(multipart("/reports/{id}/attachments", report.getId()).file(file))
+        mockMvc.perform(multipart("/reports/{id}/attachments", report.getId()).file(file).with(csrf()))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
                         .file(file)
-                        .param("trackingCode", "GR-zzzzzzzzzzzzzzzzzzzz"))
+                        .param("trackingCode", "GR-zzzzzzzzzzzzzzzzzzzz")
+                        .with(csrf()))
                 .andExpect(status().isForbidden());
 
         assertTrue(attachmentRepository.findByReportId(report.getId()).isEmpty());
@@ -306,7 +316,8 @@ class ReportControllerAttachmentUploadTest {
 
         String wrongCodeResponse = mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
                         .file(file)
-                        .param("trackingCode", "GR-zzzzzzzzzzzzzzzzzzzz"))
+                        .param("trackingCode", "GR-zzzzzzzzzzzzzzzzzzzz")
+                        .with(csrf()))
                 .andExpect(status().isForbidden())
                 .andReturn()
                 .getResponse()
@@ -314,7 +325,8 @@ class ReportControllerAttachmentUploadTest {
 
         String wrongReportResponse = mockMvc.perform(multipart("/reports/{id}/attachments", report.getId() + 10_000)
                         .file(file)
-                        .param("trackingCode", TRACKING_CODE))
+                        .param("trackingCode", TRACKING_CODE)
+                        .with(csrf()))
                 .andExpect(status().isForbidden())
                 .andReturn()
                 .getResponse()
@@ -338,7 +350,8 @@ class ReportControllerAttachmentUploadTest {
 
         mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
                         .file(file)
-                        .param("trackingCode", TRACKING_CODE))
+                        .param("trackingCode", TRACKING_CODE)
+                        .with(csrf()))
                 .andExpect(status().isBadRequest());
 
         assertTrue(attachmentRepository.findByReportId(report.getId()).isEmpty());
@@ -360,7 +373,8 @@ class ReportControllerAttachmentUploadTest {
 
             mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
                             .file(file)
-                            .param("trackingCode", TRACKING_CODE))
+                            .param("trackingCode", TRACKING_CODE)
+                            .with(csrf()))
                     .andExpect(status().isBadRequest());
         }
 
@@ -401,7 +415,8 @@ class ReportControllerAttachmentUploadTest {
 
             mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
                             .file(file)
-                            .param("trackingCode", "GR-zzzzzzzzzzzzzzzzzzzz"))
+                            .param("trackingCode", "GR-zzzzzzzzzzzzzzzzzzzz")
+                            .with(csrf()))
                     .andExpect(status().isForbidden());
         }
 

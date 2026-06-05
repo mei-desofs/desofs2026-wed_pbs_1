@@ -1,0 +1,536 @@
+name: dev
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dev-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: build-test / build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ghostreport
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: user
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    defaults:
+      run:
+        working-directory: ./ghostreport
+
+    steps:
+      - name: Checkout repository content
+        uses: actions/checkout@v6
+
+      - name: Prepare Java 17 and Maven dependency cache
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: ghostreport/pom.xml
+
+      - name: Compile GhostReport Spring Boot module
+        run: ./mvnw clean compile
+
+      - name: Run automated tests and generate JaCoCo coverage evidence
+        run: ./mvnw test jacoco:report
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/ghostreport
+          DB_USERNAME: postgres
+          DB_PASSWORD: user
+
+      - name: Run PIT mutation testing in evidence review mode
+        run: |
+          mkdir -p target/pit-reports
+          set +e
+          ./mvnw \
+            -Djacoco.skip=true \
+            -DskipTests=false \
+            org.pitest:pitest-maven:mutationCoverage
+          pit_exit_code=$?
+          set -e
+
+          echo "$pit_exit_code" > target/pit-reports/pit-exit-code.txt
+          {
+            echo "# PIT Mutation Testing Evidence"
+            echo ""
+            echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo ""
+            echo "PIT command exit code: $pit_exit_code"
+            echo ""
+            echo "Gate mode: evidence review. Mutation findings and thresholds remain triaged manually."
+          } > target/pit-reports/pit-evidence-summary.md
+
+          if [ "$pit_exit_code" -ne 0 ]; then
+            echo "::warning title=PIT evidence review::PIT exited with code $pit_exit_code. Evidence artifact was still generated for triage."
+          fi
+        continue-on-error: true
+
+      - name: Upload Surefire test report artifact
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ci-surefire-test-reports
+          path: ghostreport/target/surefire-reports/**
+          if-no-files-found: warn
+
+      - name: Upload JaCoCo coverage artifact
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ci-jacoco-coverage-report
+          path: |
+            ghostreport/target/site/jacoco/**
+            ghostreport/target/jacoco.exec
+          if-no-files-found: warn
+
+      - name: Upload PIT mutation testing report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: pit-mutation-testing-report
+          path: ghostreport/target/pit-reports/**
+          if-no-files-found: warn
+
+      - name: Publish build and test evidence summary
+        if: always()
+        run: |
+          {
+            echo "## Build, Tests and Coverage"
+            echo ""
+            echo "| Evidence | Artifact |"
+            echo "| --- | --- |"
+            echo "| Maven test results | ci-surefire-test-reports |"
+            echo "| JaCoCo coverage | ci-jacoco-coverage-report |"
+            echo "| PIT mutation testing | pit-mutation-testing-report |"
+            echo "| Gate mode | Blocking for compile/tests/coverage; PIT evidence review |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  security-secrets:
+    name: security-secrets / secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        working-directory: ./ghostreport
+
+    steps:
+      - name: Checkout repository content
+        uses: actions/checkout@v6
+
+      - name: Run Gitleaks repository secret scan
+        run: |
+          mkdir -p target/gitleaks
+          set +e
+          docker run --rm \
+            -v "$PWD/..:/repo:ro" \
+            -v "$PWD/target/gitleaks:/reports:rw" \
+            ghcr.io/gitleaks/gitleaks:latest \
+            dir /repo \
+            --config /repo/.gitleaks.toml \
+            --report-format json \
+            --report-path /reports/gitleaks-report.json \
+            --redact
+          scan_exit=$?
+          set -e
+
+          if [ -f target/gitleaks/gitleaks-report.json ]; then
+            echo "Redacted Gitleaks report:"
+            cat target/gitleaks/gitleaks-report.json
+          else
+            echo "No Gitleaks report was generated."
+          fi
+
+          exit "$scan_exit"
+
+      - name: Upload Gitleaks JSON evidence artifact
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: secret-scan-gitleaks-json
+          path: ghostreport/target/gitleaks/**
+          if-no-files-found: warn
+
+      - name: Publish secret scanning evidence summary
+        if: always()
+        run: |
+          {
+            echo "## Secret Scanning"
+            echo ""
+            echo "| Evidence | Artifact |"
+            echo "| --- | --- |"
+            echo "| Gitleaks JSON report | secret-scan-gitleaks-json |"
+            echo "| Gate mode | Blocking for confirmed leaks |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  sast:
+    name: sast / SonarQube SAST Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [build-test, security-secrets]
+
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+    defaults:
+      run:
+        working-directory: ./ghostreport
+
+    steps:
+      - name: Checkout repository content
+        uses: actions/checkout@v6
+
+      - name: Prepare Java 17 with Maven cache
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: ghostreport/pom.xml
+
+      - name: Initialize CodeQL for Java
+        uses: github/codeql-action/init@v4
+        with:
+          languages: java
+
+      - name: Build GhostReport for SAST analysis
+        run: ./mvnw -DskipTests clean compile
+
+      - name: Run SpotBugs static analysis in evidence mode
+        run: ./mvnw -DskipTests compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true
+
+      - name: Run SonarQube SAST scan when configured
+        run: |
+          mkdir -p target/sast-evidence
+          if [ -n "${SONAR_TOKEN:-}" ] && [ -n "${SONAR_HOST_URL:-}" ]; then
+            ./mvnw -DskipTests org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+              -Dsonar.host.url="$SONAR_HOST_URL" \
+              -Dsonar.token="$SONAR_TOKEN" \
+              -Dsonar.projectKey="${SONAR_PROJECT_KEY:-ghostreport}"
+            echo "SonarQube scan executed." > target/sast-evidence/sonarqube-summary.txt
+          else
+            {
+              echo "SonarQube scan skipped because SONAR_TOKEN or SONAR_HOST_URL is not configured."
+              echo "CodeQL and SpotBugs SAST still ran in this job."
+            } > target/sast-evidence/sonarqube-summary.txt
+          fi
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+
+      - name: Run CodeQL analysis
+        uses: github/codeql-action/analyze@v4
+
+      - name: Prepare SAST archiveable evidence summary
+        if: always()
+        run: |
+          mkdir -p target/sast-evidence
+          {
+            echo "# SAST Evidence"
+            echo ""
+            echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo ""
+            echo "CodeQL results are uploaded to GitHub Code Scanning."
+            echo "SpotBugs XML and SonarQube run notes are uploaded as artifacts."
+          } > target/sast-evidence/sast-evidence-summary.md
+
+      - name: Upload SAST evidence artifacts
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sast-reports
+          path: |
+            ghostreport/target/spotbugsXml.xml
+            ghostreport/target/*spotbugs*.xml
+            ghostreport/target/site/spotbugs*
+            ghostreport/target/sast-evidence/**
+          if-no-files-found: warn
+
+      - name: Publish SAST evidence summary
+        if: always()
+        run: |
+          {
+            echo "## SAST"
+            echo ""
+            echo "| Evidence | Location |"
+            echo "| --- | --- |"
+            echo "| CodeQL semantic analysis | GitHub Code Scanning alerts |"
+            echo "| SpotBugs XML/static analysis report | sast-reports |"
+            echo "| SonarQube execution notes | sast-reports |"
+            echo "| Gate mode | Evidence review; SonarQube fails only when configured and failing |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  dependency-scanning:
+    name: dependency-scanning / Dependency Vulnerability Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [build-test, security-secrets]
+
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+    defaults:
+      run:
+        working-directory: ./ghostreport
+
+    steps:
+      - name: Checkout repository content
+        uses: actions/checkout@v6
+
+      - name: Prepare Java 17 and Maven dependency cache
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: ghostreport/pom.xml
+
+      - name: Run OWASP Dependency-Check SCA in evidence mode
+        run: ./mvnw org.owasp:dependency-check-maven:12.1.0:check -Dformat=ALL -DossindexAnalyzerEnabled=false -DfailOnError=false -DfailBuildOnCVSS=11
+        continue-on-error: true
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+
+      - name: Detect Dependency-Check SARIF report
+        id: dependency_check_sarif
+        run: |
+          if [ -f target/dependency-check-report/dependency-check-report.sarif ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload Dependency-Check SARIF to code scanning
+        if: steps.dependency_check_sarif.outputs.exists == 'true'
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: ghostreport/target/dependency-check-report/dependency-check-report.sarif
+          category: owasp-dependency-check
+
+      - name: Generate CycloneDX SBOM
+        run: ./mvnw -DskipTests org.cyclonedx:cyclonedx-maven-plugin:2.9.1:makeAggregateBom
+
+      - name: Upload Dependency-Check SCA reports
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: dependency-check-sca-reports
+          path: ghostreport/target/dependency-check-report/**
+          if-no-files-found: warn
+
+      - name: Upload CycloneDX SBOM artifacts
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sbom-cyclonedx
+          path: |
+            ghostreport/target/bom.json
+            ghostreport/target/bom.xml
+          if-no-files-found: warn
+
+      - name: Publish dependency scanning evidence summary
+        if: always()
+        run: |
+          {
+            echo "## Dependency Scanning"
+            echo ""
+            echo "| Evidence | Artifact |"
+            echo "| --- | --- |"
+            echo "| Dependency-Check HTML/XML/JSON/SARIF reports | dependency-check-sca-reports |"
+            echo "| Dependency-Check SARIF | GitHub Code Scanning when generated |"
+            echo "| CycloneDX JSON/XML SBOM | sbom-cyclonedx |"
+            echo "| Gate mode | Evidence review |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  dast-scan:
+    name: dast-scan / dast-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    needs: [build-test, security-secrets]
+
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ghostreport
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: user
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    defaults:
+      run:
+        working-directory: ./ghostreport
+
+    steps:
+      - name: Checkout repository content
+        uses: actions/checkout@v6
+
+      - name: Prepare Java 17 with Maven cache
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: ghostreport/pom.xml
+
+      - name: Run runtime security-focused automated tests
+        run: |
+          mkdir -p target/iast-evidence
+          ./mvnw \
+            -Djacoco.skip=true \
+            -Dtest=RuntimeSecurityEventLoggingTest,ErrorHandlingSecurityTest,SecurityHeadersTest,JwtServiceSecurityTest,LoginRateLimitSecurityTest,CsrfSecurityTest \
+            test
+
+      - name: Prepare optional Contrast Java agent integration evidence
+        run: |
+          mkdir -p target/iast-evidence
+          {
+            echo "# Runtime Security Evidence and IAST Readiness"
+            echo ""
+            echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo ""
+            echo "Executed security-focused tests for authentication events, JWT validation, rate limiting, CSRF, security headers and error handling."
+            if [ -n "${CONTRAST_AGENT_VERSION:-}" ] && \
+               [ -n "${CONTRAST__API__URL:-}" ] && \
+               [ -n "${CONTRAST__API__API_KEY:-}" ] && \
+               [ -n "${CONTRAST__API__SERVICE_KEY:-}" ] && \
+               [ -n "${CONTRAST__API__USER_NAME:-}" ]; then
+              echo "Contrast Java agent configuration variables are present."
+            else
+              echo "Contrast Java agent configuration variables are not present in this run."
+            fi
+          } > target/iast-evidence/iast-runtime-evidence.md
+        env:
+          CONTRAST_AGENT_VERSION: ${{ vars.CONTRAST_AGENT_VERSION }}
+          CONTRAST__API__URL: ${{ vars.CONTRAST__API__URL }}
+          CONTRAST__API__API_KEY: ${{ secrets.CONTRAST__API__API_KEY }}
+          CONTRAST__API__SERVICE_KEY: ${{ secrets.CONTRAST__API__SERVICE_KEY }}
+          CONTRAST__API__USER_NAME: ${{ secrets.CONTRAST__API__USER_NAME }}
+
+      - name: Start GhostReport on the runner at localhost:8081
+        run: |
+          mkdir -p target/zap-reports
+          chmod 777 target/zap-reports
+          nohup ./mvnw spring-boot:run \
+            -Dspring-boot.run.profiles=dev \
+            > target/ghostreport-dast-app.log 2>&1 &
+          echo $! > target/ghostreport-dast-app.pid
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/ghostreport
+          DB_USERNAME: postgres
+          DB_PASSWORD: user
+
+      - name: Wait until GhostReport is ready for scanning
+        run: |
+          for i in {1..60}; do
+            if curl --fail --silent --show-error http://localhost:8081/index.html > /dev/null; then
+              echo "GhostReport is ready for DAST"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "GhostReport did not become ready"
+          cat target/ghostreport-dast-app.log
+          exit 1
+
+      - name: Run OWASP ZAP Docker baseline scan in evidence mode
+        run: |
+          docker run --rm --network host \
+            --user root \
+            -w /zap/wrk \
+            -v "$PWD/target/zap-reports:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+              -t http://localhost:8081 \
+              -r zap-baseline.html \
+              -x zap-baseline.xml \
+              -J zap-baseline.json \
+              -I
+        continue-on-error: true
+
+      - name: Upload runtime security and IAST readiness evidence artifact
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: iast-runtime-security-evidence
+          path: |
+            ghostreport/target/iast-evidence/**
+            ghostreport/target/surefire-reports/**
+          if-no-files-found: warn
+
+      - name: Upload OWASP ZAP DAST evidence artifacts
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: dast-zap-baseline-reports
+          path: |
+            ghostreport/target/zap-reports/**
+            ghostreport/target/ghostreport-dast-app.log
+          if-no-files-found: warn
+
+      - name: Publish DAST evidence summary
+        if: always()
+        run: |
+          {
+            echo "## DAST and Runtime Security"
+            echo ""
+            echo "| Evidence | Artifact |"
+            echo "| --- | --- |"
+            echo "| Runtime security-focused tests and IAST readiness | iast-runtime-security-evidence |"
+            echo "| ZAP HTML/XML/JSON reports and application log | dast-zap-baseline-reports |"
+            echo "| Gate mode | Runtime security tests blocking; ZAP evidence review |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Stop GhostReport background process
+        if: always()
+        run: |
+          if [ -f target/ghostreport-dast-app.pid ]; then
+            kill "$(cat target/ghostreport-dast-app.pid)" || true
+          fi

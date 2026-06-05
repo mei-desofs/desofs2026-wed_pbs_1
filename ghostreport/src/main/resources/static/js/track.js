@@ -8,13 +8,13 @@ const params = new URLSearchParams(window.location.search);
         const resultDiv = document.getElementById("result");
 
         try {
-            const response = await fetch(`${API_BASE}/reports/verify`, {
+            const response = await fetch(`${API_BASE}/reports/verify`, csrfFetchOptions({
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({ trackingCode })
-            });
+            }));
 
             const data = await handleJsonResponse(response);
 
@@ -43,13 +43,13 @@ const params = new URLSearchParams(window.location.search);
         const listDiv = document.getElementById("attachmentsList");
 
         try {
-            const response = await fetch(`${API_BASE}/reports/${reportId}/attachments/list`, {
+            const response = await fetch(`${API_BASE}/reports/${reportId}/attachments/list`, csrfFetchOptions({
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({ trackingCode })
-            });
+            }));
 
             const data = await handleJsonResponse(response);
 

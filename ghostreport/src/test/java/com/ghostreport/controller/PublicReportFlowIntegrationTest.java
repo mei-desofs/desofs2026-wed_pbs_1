@@ -23,6 +23,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -104,6 +105,7 @@ class PublicReportFlowIntegrationTest {
     @Test
     void createReportWithInvalidPayloadReturnsBadRequestAndDoesNotCreateReport() throws Exception {
         String response = mockMvc.perform(post("/reports")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "title", "",
@@ -130,6 +132,7 @@ class PublicReportFlowIntegrationTest {
         );
 
         String response = mockMvc.perform(post("/reports/verify")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "trackingCode", created.get("trackingCode").asText()
@@ -151,6 +154,7 @@ class PublicReportFlowIntegrationTest {
     @Test
     void verifyWithUnknownTrackingCodeReturnsControlledErrorWithoutStackTrace() throws Exception {
         String response = mockMvc.perform(post("/reports/verify")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "trackingCode", "GR-aaaaaaaaaaaaaaaaaaaa"
@@ -167,6 +171,7 @@ class PublicReportFlowIntegrationTest {
     @Test
     void verifyWithInvalidTrackingCodeFormatReturnsSafeError() throws Exception {
         String response = mockMvc.perform(post("/reports/verify")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "trackingCode", "../invalid"
@@ -191,6 +196,7 @@ class PublicReportFlowIntegrationTest {
         );
 
         mockMvc.perform(post("/reports/verify")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "trackingCode", created.get("trackingCode").asText()
@@ -204,6 +210,7 @@ class PublicReportFlowIntegrationTest {
             String category
     ) throws Exception {
         return mockMvc.perform(post("/reports")
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(Map.of(
                         "title", title,

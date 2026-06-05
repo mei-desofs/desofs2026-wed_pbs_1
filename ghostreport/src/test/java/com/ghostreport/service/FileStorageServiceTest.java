@@ -2,6 +2,8 @@ package com.ghostreport.service;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.core.io.Resource;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -22,8 +24,13 @@ class FileStorageServiceTest {
     @TempDir
     Path tempDir;
 
-    @Test
-    void loadFileRejectsRelativeTraversal() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "../secret.txt",
+            "..\\secret.txt",
+            "reports/1/attachments/../../../../secret.txt"
+    })
+    void loadFileRejectsTraversalPath(String storagePath) throws Exception {
         Path uploadDir = tempDir.resolve("uploads");
         Files.createDirectories(uploadDir);
         Files.writeString(tempDir.resolve("secret.txt"), "secret");
@@ -33,12 +40,12 @@ class FileStorageServiceTest {
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.loadFileAsResource("../secret.txt")
+                () -> service.loadFileAsResource(storagePath)
         );
 
         assertEquals(400, exception.getStatusCode().value());
         assertEquals("Invalid file path", exception.getReason());
-        verify(monitoringService).recordPathTraversalAttempt("../secret.txt");
+        verify(monitoringService).recordPathTraversalAttempt(storagePath);
     }
 
     @Test
@@ -57,6 +64,45 @@ class FileStorageServiceTest {
 
         assertEquals(400, exception.getStatusCode().value());
         assertEquals("Invalid file path", exception.getReason());
+    }
+
+    @Test
+    void loadFileRejectsAbsolutePathInsideBase() throws Exception {
+        Path uploadDir = tempDir.resolve("uploads");
+        Path attachment = uploadDir.resolve("reports/1/attachments/file.txt");
+        Files.createDirectories(attachment.getParent());
+        Files.writeString(attachment, "inside");
+
+        FileStorageService service = new FileStorageService(uploadDir.toString());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.loadFileAsResource(attachment.toString())
+        );
+
+        assertEquals(400, exception.getStatusCode().value());
+        assertEquals("Invalid file path", exception.getReason());
+    }
+
+    @Test
+    void storeAttachmentUsesServerGeneratedNameForValidFilename() {
+        Path uploadDir = tempDir.resolve("uploads");
+        FileStorageService service = new FileStorageService(uploadDir.toString());
+
+        FileStorageService.StoredFileInfo stored = service.storeAttachment(
+                1L,
+                new MockMultipartFile(
+                        "files",
+                        "evidence.txt",
+                        "text/plain",
+                        "valid text evidence".getBytes(StandardCharsets.UTF_8)
+                )
+        );
+
+        assertEquals("evidence.txt", stored.originalName());
+        assertTrue(stored.storedName().matches("[0-9a-f-]{36}\\.txt"));
+        assertTrue(stored.storagePath().matches("reports/1/attachments/[0-9a-f-]{36}\\.txt"));
+        assertTrue(Files.exists(uploadDir.resolve(stored.storagePath())));
     }
 
     @Test

@@ -64,13 +64,10 @@ let analystAuth = sessionStorage.getItem("analystAuth");
     }
 
     async function safeFetch(url, options = {}) {
-        const response = await fetch(url, {
-            ...options,
-            credentials: "omit",
-            headers: {
-                ...(options.headers || {})
-            }
-        });
+        const fetchOptions = typeof csrfFetchOptions === "function"
+            ? csrfFetchOptions(options)
+            : options;
+        const response = await fetch(url, fetchOptions);
 
         if (response.status === 401) {
             sessionStorage.removeItem("analystAuth");

@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -79,6 +80,7 @@ class AdminUserManagementSecurityTest {
     @Test
     void adminCanDeactivateAndReactivateUserWithAuditLog() throws Exception {
         mockMvc.perform(patch("/admin/users/{id}/deactivate", analystId)
+                        .with(csrf())
                         .header("Authorization", bearerToken(adminUsername, PASSWORD)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(analystId))
@@ -89,6 +91,7 @@ class AdminUserManagementSecurityTest {
                 .contains("USER_DEACTIVATED");
 
         mockMvc.perform(patch("/admin/users/{id}/activate", analystId)
+                        .with(csrf())
                         .header("Authorization", bearerToken(adminUsername, PASSWORD)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(analystId))
@@ -102,10 +105,12 @@ class AdminUserManagementSecurityTest {
     @Test
     void nonAdminCannotActivateOrDeactivateUsers() throws Exception {
         mockMvc.perform(patch("/admin/users/{id}/deactivate", analystId)
+                        .with(csrf())
                         .header("Authorization", bearerToken(analystUsername, PASSWORD)))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(patch("/admin/users/{id}/activate", analystId)
+                        .with(csrf())
                         .header("Authorization", bearerToken(analystUsername, PASSWORD)))
                 .andExpect(status().isForbidden());
     }
@@ -115,6 +120,7 @@ class AdminUserManagementSecurityTest {
         Long adminId = userRepository.findByUsername(adminUsername).orElseThrow().getId();
 
         mockMvc.perform(patch("/admin/users/{id}/deactivate", adminId)
+                        .with(csrf())
                         .header("Authorization", bearerToken(adminUsername, PASSWORD)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("At least one active administrator is required"));
@@ -125,10 +131,12 @@ class AdminUserManagementSecurityTest {
     @Test
     void inactiveUserCannotLoginAndCreatesAuditLog() throws Exception {
         mockMvc.perform(patch("/admin/users/{id}/deactivate", analystId)
+                        .with(csrf())
                         .header("Authorization", bearerToken(adminUsername, PASSWORD)))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/auth/login")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -188,6 +196,7 @@ class AdminUserManagementSecurityTest {
 
     private String bearerToken(String username, String password) throws Exception {
         String response = mockMvc.perform(post("/auth/login")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {

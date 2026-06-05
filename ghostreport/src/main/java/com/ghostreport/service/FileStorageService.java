@@ -37,7 +37,7 @@ public class FileStorageService {
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     );
 
-    private final Path baseStoragePath;
+    private final Path storageRoot;
     private final SecurityMonitoringService securityMonitoringService;
 
     @Autowired
@@ -45,11 +45,12 @@ public class FileStorageService {
             @Value("${app.upload-dir:uploads}") String uploadDir,
             SecurityMonitoringService securityMonitoringService
     ) {
-        this.baseStoragePath = Paths.get(uploadDir).toAbsolutePath().normalize();
         this.securityMonitoringService = securityMonitoringService;
 
         try {
-            Files.createDirectories(this.baseStoragePath);
+            Path configuredRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
+            Files.createDirectories(configuredRoot);
+            this.storageRoot = configuredRoot.toRealPath();
         } catch (IOException e) {
             throw new RuntimeException("Erro ao criar pasta uploads", e);
         }
@@ -64,29 +65,23 @@ public class FileStorageService {
         validateFile(file);
 
         try {
-            Path attachmentsDir = baseStoragePath
-                    .resolve("reports")
-                    .resolve(String.valueOf(reportId))
-                    .resolve("attachments")
-                    .toAbsolutePath()
-                    .normalize();
-
-            ensureInsideBase(attachmentsDir);
+            Path attachmentsDir = resolveSafeStoragePath(
+                    "reports/%d/attachments".formatted(reportId)
+            );
 
             Files.createDirectories(attachmentsDir);
-            ensureRealPathInsideBase(attachmentsDir);
+            ensureRealPathInsideStorageRoot(attachmentsDir);
 
             String originalName = sanitizeFilename(file.getOriginalFilename());
             String extension = getExtension(originalName);
 
             String fileRef = UUID.randomUUID().toString();
-            String storedName = fileRef + extension;
-
-            Path target = attachmentsDir.resolve(storedName)
-                    .toAbsolutePath()
-                    .normalize();
-
-            ensureInsideBase(target);
+            String storedName = requireSafeStorageFilename(fileRef + extension);
+            Path target = resolveSafeStoragePath(
+                    "reports/%d/attachments/%s".formatted(reportId, storedName)
+            );
+            ensureRealPathInsideStorageRoot(target.getParent());
+            rejectExistingSymlink(target);
 
             try (InputStream input = file.getInputStream()) {
                 Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING);
@@ -98,7 +93,7 @@ public class FileStorageService {
                     originalName,
                     storedName,
                     fileRef,
-                    baseStoragePath.relativize(target).toString().replace('\\', '/'),
+                    storageRoot.relativize(target).toString().replace('\\', '/'),
                     file.getContentType(),
                     file.getSize(),
                     hash
@@ -112,23 +107,19 @@ public class FileStorageService {
     public void generateReportDocument(Long reportId, String description, String category, String status) {
 
         try {
-            Path dir = baseStoragePath
-                    .resolve("reports")
-                    .resolve(String.valueOf(reportId))
-                    .resolve("documents")
-                    .toAbsolutePath()
-                    .normalize();
-
-            ensureInsideBase(dir);
+            Path dir = resolveSafeStoragePath(
+                    "reports/%d/documents".formatted(reportId)
+            );
 
             Files.createDirectories(dir);
-            ensureRealPathInsideBase(dir);
+            ensureRealPathInsideStorageRoot(dir);
 
-            Path file = dir.resolve("report_" + reportId + ".txt")
-                    .toAbsolutePath()
-                    .normalize();
-
-            ensureInsideBase(file);
+            String documentName = requireSafeStorageFilename("report_" + reportId + ".txt");
+            Path file = resolveSafeStoragePath(
+                    "reports/%d/documents/%s".formatted(reportId, documentName)
+            );
+            ensureRealPathInsideStorageRoot(file.getParent());
+            rejectExistingSymlink(file);
 
             String newline = System.lineSeparator();
             String content = String.join(newline,
@@ -164,42 +155,12 @@ public class FileStorageService {
     }
 
     private Path resolveStoredPath(String path) {
-        if (path == null || path.isBlank()) {
-            return rejectInvalidPath(path);
-        }
-
-        Path rawPath;
+        Path resolved = resolveSafeStoragePath(path);
 
         try {
-            rawPath = Paths.get(path);
-        } catch (InvalidPathException e) {
-            return rejectInvalidPath(path);
-        }
-
-        if (rawPath.isAbsolute()) {
-            return rejectInvalidPath(path);
-        }
-
-        if (rawPath.normalize().startsWith("..") || path.contains("..")) {
-            return rejectInvalidPath(path);
-        }
-
-        Path resolved = baseStoragePath.resolve(rawPath).toAbsolutePath().normalize();
-
-        if (!Files.exists(resolved)) {
-            Path legacyRelativePath = rawPath.toAbsolutePath().normalize();
-            if (legacyRelativePath.startsWith(baseStoragePath)) {
-                resolved = legacyRelativePath;
-            }
-        }
-
-        ensureInsideBase(resolved);
-
-        try {
-            Path realBase = baseStoragePath.toRealPath();
             Path realFile = resolved.toRealPath();
 
-            if (!realFile.startsWith(realBase) || !Files.isRegularFile(realFile)) {
+            if (!realFile.startsWith(storageRoot) || !Files.isRegularFile(realFile)) {
                 return rejectInvalidPath(path);
             }
 
@@ -211,19 +172,78 @@ public class FileStorageService {
         }
     }
 
-    private void ensureInsideBase(Path path) {
+    private Path resolveSafeStoragePath(String userProvidedPath) {
+        String path = userProvidedPath;
+
+        if (path == null || path.isBlank()) {
+            return rejectInvalidPath(path);
+        }
+
+        if (path.contains("\\") || path.contains("..")) {
+            return rejectInvalidPath(path);
+        }
+
+        Path rawPath;
+        try {
+            rawPath = Paths.get(path);
+        } catch (InvalidPathException e) {
+            return rejectInvalidPath(path);
+        }
+
+        if (rawPath.isAbsolute()) {
+            return rejectInvalidPath(path);
+        }
+
+        for (Path segment : rawPath) {
+            String value = segment.toString();
+            if (value.isBlank() || ".".equals(value) || "..".equals(value)) {
+                return rejectInvalidPath(path);
+            }
+        }
+
+        Path resolved = storageRoot.resolve(rawPath).normalize();
+        ensureInsideStorageRoot(resolved);
+        return resolved;
+    }
+
+    private String requireSafeStorageFilename(String filename) {
+        if (filename == null || filename.isBlank()
+                || filename.contains("..")
+                || filename.contains("/")
+                || filename.contains("\\")) {
+            rejectInvalidPath(filename);
+        }
+
+        try {
+            Path rawFilename = Paths.get(filename);
+            if (rawFilename.isAbsolute() || rawFilename.getNameCount() != 1) {
+                rejectInvalidPath(filename);
+            }
+        } catch (InvalidPathException e) {
+            rejectInvalidPath(filename);
+        }
+
+        return filename;
+    }
+
+    private void ensureInsideStorageRoot(Path path) {
         Path normalized = path.toAbsolutePath().normalize();
 
-        if (!normalized.startsWith(baseStoragePath)) {
+        if (!normalized.startsWith(storageRoot)) {
             rejectInvalidPath(path.toString());
         }
     }
 
-    private void ensureRealPathInsideBase(Path path) throws IOException {
-        Path realBase = baseStoragePath.toRealPath();
+    private void ensureRealPathInsideStorageRoot(Path path) throws IOException {
         Path realPath = path.toRealPath();
 
-        if (!realPath.startsWith(realBase)) {
+        if (!realPath.startsWith(storageRoot)) {
+            rejectInvalidPath(path.toString());
+        }
+    }
+
+    private void rejectExistingSymlink(Path path) {
+        if (Files.isSymbolicLink(path)) {
             rejectInvalidPath(path.toString());
         }
     }

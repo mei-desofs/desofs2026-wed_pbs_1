@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.Comparator;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -71,7 +72,9 @@ class AdminBackupControllerSecurityTest {
 
     @Test
     void adminCanCreateAndVerifyBackupThroughEndpoints() throws Exception {
-        String body = mockMvc.perform(post("/admin/backups").header("Authorization", bearerToken("admin", "AdminPassword123!")))
+        String body = mockMvc.perform(post("/admin/backups")
+                        .with(csrf())
+                        .header("Authorization", bearerToken("admin", "AdminPassword123!")))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -79,13 +82,17 @@ class AdminBackupControllerSecurityTest {
 
         String filename = body.replaceAll(".*\"filename\":\"([^\"]+)\".*", "$1");
 
-        mockMvc.perform(post("/admin/backups/{filename}/verify", filename).header("Authorization", bearerToken("admin", "AdminPassword123!")))
+        mockMvc.perform(post("/admin/backups/{filename}/verify", filename)
+                        .with(csrf())
+                        .header("Authorization", bearerToken("admin", "AdminPassword123!")))
                 .andExpect(status().isOk());
     }
 
     @Test
     void pathTraversalInEndpointFilenameIsRejected() throws Exception {
-        mockMvc.perform(post("/admin/backups/{filename}/verify", "ghostreport-backup-20260507-154500..zip").header("Authorization", bearerToken("admin", "AdminPassword123!")))
+        mockMvc.perform(post("/admin/backups/{filename}/verify", "ghostreport-backup-20260507-154500..zip")
+                        .with(csrf())
+                        .header("Authorization", bearerToken("admin", "AdminPassword123!")))
                 .andExpect(status().isBadRequest());
 
         assertThat(securityAlertRepository.findAll())
@@ -110,6 +117,7 @@ class AdminBackupControllerSecurityTest {
 
         String response = mockMvc.perform(
                         post("/auth/login")
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(body)
                 )

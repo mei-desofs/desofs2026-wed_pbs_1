@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -90,6 +91,7 @@ class LoginRateLimitSecurityTest {
         failedLogin("WrongPassword123!").andExpect(status().isUnauthorized());
 
         mockMvc.perform(post("/auth/login")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .with(request -> {
                             request.setRemoteAddr(clientIp);
@@ -117,6 +119,7 @@ class LoginRateLimitSecurityTest {
         userRepository.save(secondUser);
 
         mockMvc.perform(post("/auth/login")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .with(request -> {
                             request.setRemoteAddr(clientIp);
@@ -128,6 +131,7 @@ class LoginRateLimitSecurityTest {
 
     private org.springframework.test.web.servlet.ResultActions failedLogin(String password) throws Exception {
         return mockMvc.perform(post("/auth/login")
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .with(request -> {
                     request.setRemoteAddr(clientIp);
