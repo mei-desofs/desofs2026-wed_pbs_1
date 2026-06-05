@@ -60,7 +60,7 @@ downloaded-artifacts/
 If the artifacts are in a different folder, pass it explicitly:
 
 ```powershell
-.\scripts\collect-evidence.ps1 -ArtifactsDir "C:\Users\Barbara Silva\Downloads\ghostreport-artifacts"
+.\scripts\collect-evidence.ps1 -ArtifactsDir "C:\Users\user\Downloads\ghostreport-artifacts"
 ```
 
 The script copies recognized artifacts into the evidence categories above.
