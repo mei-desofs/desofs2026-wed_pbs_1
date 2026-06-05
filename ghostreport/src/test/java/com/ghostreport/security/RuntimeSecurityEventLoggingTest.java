@@ -99,9 +99,12 @@ class RuntimeSecurityEventLoggingTest {
         List<AuditLog> logs = auditLogRepository.findAll();
 
         assertThat(logs)
-                .anyMatch(log -> "LOGIN_SUCCESS".equals(log.getAction()));
-        assertThat(logs)
-                .allMatch(log -> doesNotContainSensitiveValues(log.getDetails(), response, PASSWORD));
+                .anyMatch(log -> "LOGIN_SUCCESS".equals(log.getAction()))
+                .allMatch(log -> doesNotContainSensitiveValues(
+                        log.getDetails(),
+                        response,
+                        PASSWORD
+                ));
     }
 
     @Test
@@ -115,9 +118,12 @@ class RuntimeSecurityEventLoggingTest {
         List<AuditLog> logs = auditLogRepository.findAll();
 
         assertThat(logs)
-                .anyMatch(log -> "LOGIN_FAILED".equals(log.getAction()));
-        assertThat(logs)
-                .allMatch(log -> doesNotContainSensitiveValues(log.getDetails(), WRONG_PASSWORD, PASSWORD));
+                .anyMatch(log -> "LOGIN_FAILED".equals(log.getAction()))
+                .allMatch(log -> doesNotContainSensitiveValues(
+                        log.getDetails(),
+                        WRONG_PASSWORD,
+                        PASSWORD
+                ));
     }
 
     @Test
@@ -131,9 +137,11 @@ class RuntimeSecurityEventLoggingTest {
         assertThat(alerts)
                 .anyMatch(alert -> "INVALID_JWT_TOKEN".equals(alert.getAlertType())
                         && alert.getDescription() != null
-                        && alert.getDescription().contains("/analyst/panel"));
-        assertThat(alerts)
-                .allMatch(alert -> doesNotContainSensitiveValues(alert.getDescription(), INVALID_TOKEN));
+                        && alert.getDescription().contains("/analyst/panel"))
+                .allMatch(alert -> doesNotContainSensitiveValues(
+                        alert.getDescription(),
+                        INVALID_TOKEN
+                ));
     }
 
     @Test
@@ -146,7 +154,10 @@ class RuntimeSecurityEventLoggingTest {
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        String token = objectMapper.readTree(response).path("token").asText();
+
+        String token = objectMapper.readTree(response)
+                .path("token")
+                .asText();
 
         mockMvc.perform(post("/auth/logout")
                         .with(csrf())
@@ -158,10 +169,14 @@ class RuntimeSecurityEventLoggingTest {
                 .andExpect(status().isUnauthorized());
 
         List<AuditLog> logs = auditLogRepository.findAll();
+
         assertThat(logs)
-                .anyMatch(log -> "LOGOUT".equals(log.getAction()));
-        assertThat(logs)
-                .allMatch(log -> doesNotContainSensitiveValues(log.getDetails(), token, PASSWORD));
+                .anyMatch(log -> "LOGOUT".equals(log.getAction()))
+                .allMatch(log -> doesNotContainSensitiveValues(
+                        log.getDetails(),
+                        token,
+                        PASSWORD
+                ));
     }
 
     private String loginBody(String password) {
