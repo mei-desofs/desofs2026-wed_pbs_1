@@ -1,97 +1,114 @@
 # Final Demo Guide
 
-This guide explains how to demonstrate GhostReport's secure development
-evidence during the final assessment.
+This guide is the recommended Sprint 2 presentation path for GhostReport. It is
+focused on the professor's feedback: show the pipeline running, show concrete
+security evidence, explain Pull Request governance and connect the evidence to
+ASVS.
 
 ## 1. Pull Request and Governance
 
-Open a Pull Request and show:
+Start in the Pull Request view and show:
 
-- the PR template checklist;
-- required review approval;
-- branch protection settings;
-- required CI status checks.
+- the Pull Request template checklist;
+- at least one reviewer requirement;
+- branch protection rules;
+- required status checks;
+- conversation resolution before merge.
 
-Use `docs/BRANCH_PROTECTION_RULES.md` and
-`docs/CODE_REVIEW_GUIDELINES.md` as the project rules.
+Use `docs/BRANCH_PROTECTION_RULES.md`, `docs/CODE_REVIEW_GUIDELINES.md` and
+`docs/CODING_STANDARDS.md` as the governance evidence.
 
-## 2. Pipeline Execution
+## 2. Pipeline Timeline
 
-Open GitHub Actions and show the numbered workflow sequence:
+Open GitHub Actions and select the `dev` workflow. This workflow is the current
+security evidence pipeline and is defined in `.github/workflows/dev.yml`.
 
-- `00 - Secret Scanning Gitleaks`
-- `01 - CI Build, Tests and Coverage`
-- `02A - SAST SpotBugs`
-- `02B - SCA OWASP Dependency-Check`
-- `02C - SAST CodeQL`
-- `02D - SBOM CycloneDX`
-- `03 - DAST OWASP ZAP Baseline`
-- `04 - Runtime Security Evidence and IAST Readiness`
-- `05 - Mutation Testing PIT`
+Show the jobs in this order:
 
-Explain that build/tests/coverage and secret scanning are gates, while the
-security analysis workflows produce artifacts for review. The numbered
-workflows are the presentation timeline; they remain separate so each scanner
-can be rerun and archived independently.
+1. `build-test / build-and-test`
+2. `security-secrets / secrets`
+3. `sast / SonarCloud SAST Scan`
+4. `dependency-scanning / Dependency Vulnerability Scanning`
+5. `dast-scan / dast-scan`
 
-## 3. Artifacts
+Explain that `sast`, `dependency-scanning` and `dast-scan` depend on
+`build-test` and `security-secrets`, so the GitHub Actions graph gives a single
+timeline for the presentation.
 
-Show the artifacts created by each workflow:
+## 3. What Each Job Proves
 
-- Surefire test reports.
-- JaCoCo coverage report.
-- SpotBugs XML report.
-- CodeQL Code Scanning alerts and `sast-codeql-evidence-summary`.
-- Dependency-Check reports.
-- CycloneDX SBOM.
-- Gitleaks JSON report.
-- ZAP HTML/JSON/XML reports.
-- Runtime security evidence and optional IAST readiness notes.
-- PIT mutation testing report or fallback PIT triage summary.
+| Job | What to show | Artifact/evidence |
+| --- | --- | --- |
+| `build-test / build-and-test` | Compile, automated tests, JaCoCo and PIT evidence review. | `ci-surefire-test-reports`, `ci-jacoco-coverage-report`, `pit-mutation-testing-report` |
+| `security-secrets / secrets` | Gitleaks scan and no confirmed repository secrets. | `secret-scan-gitleaks-json` |
+| `sast / SonarCloud SAST Scan` | SpotBugs, SonarCloud and CodeQL. | `sast-reports`, GitHub Code Scanning |
+| `dependency-scanning / Dependency Vulnerability Scanning` | Dependency-Check and CycloneDX SBOM. | `dependency-check-sca-reports`, `sbom-cyclonedx` |
+| `dast-scan / dast-scan` | Runtime security tests, IAST readiness evidence and ZAP baseline. | `iast-runtime-security-evidence`, `dast-zap-baseline-reports` |
 
-Downloaded GitHub Actions artifacts can be copied into
-`Deliverables/Phase 2/Evidence` with:
+## 4. Gate Policy To Explain
+
+- Blocking: Maven compile, tests, JaCoCo coverage, runtime security tests,
+  application startup for DAST and confirmed Gitleaks findings.
+- Evidence review: PIT mutation score/output, SpotBugs findings, CodeQL alerts,
+  SonarCloud quality findings, Dependency-Check findings, SBOM and ZAP baseline
+  alerts.
+
+This wording is important. It shows that the pipeline is not "green by hiding
+security issues"; it separates hard build gates from findings that require
+manual security triage.
+
+## 5. ASVS Evidence
+
+Open the ASVS tracker and `docs/ASVS_EVIDENCE.md`. For each major area, connect
+one implementation file, one test or pipeline artifact and one residual risk:
+
+- Authentication and JWT: `JwtService`, `AuthService`, JWT tests and runtime
+  security evidence.
+- Authorization: `SecurityConfig`, RBAC/ownership tests and controller/service
+  rules.
+- Validation and sanitization: DTO validation, domain value objects and upload
+  tests.
+- File handling: `FileStorageService`, file validation tests and ZAP/runtime
+  evidence.
+- Configuration: profiles, environment variables, fail-fast validation and
+  Gitleaks/SCA evidence.
+- Logging and error handling: audit/security event services, error handler tests
+  and sanitized runtime evidence.
+
+## 6. Evidence Folder
+
+Explain that `Deliverables/Phase 2/Evidence` is a local archive, not a folder
+written by GitHub Actions. The correct process is:
+
+1. Run the `dev` workflow in GitHub Actions.
+2. Download the workflow artifacts.
+3. Extract them under `downloaded-artifacts/`.
+4. Run:
 
 ```powershell
 .\scripts\collect-evidence.ps1
 ```
 
-## 4. ASVS Evidence
+Then show the organized folders under `Deliverables/Phase 2/Evidence`.
 
-Open `docs/ASVS_LEVEL2_EVIDENCE.md` and show how controls map to:
+## 7. Scope Boundaries
 
-- source code;
-- automated tests;
-- GitHub Actions workflows;
-- generated artifacts;
-- configuration files.
+Use precise wording in the demo:
 
-## 5. Secure Coding Evidence
+- Runtime security evidence exists in every `dast-scan` run.
+- External IAST telemetry exists only if the optional Contrast agent variables
+  and secrets are configured.
+- PIT is evidence review, not a blocking mutation threshold gate.
+- CodeQL's primary evidence is GitHub Code Scanning.
+- ZAP is baseline DAST against a live application, not authenticated deep DAST.
+- Production TLS, SIEM integration and advanced operational monitoring are
+  documented as future operational hardening.
 
-Use one or two concrete examples:
+## 8. Closing Message
 
-- `SecurityConfig` for RBAC and security headers.
-- `JwtService` for signed and expiring tokens.
-- `TrackingCode`, `SafeFilename` and `ReportDescription` for domain invariants.
-- `AuditLogResponse` and `SecurityAlertResponse` as DTO response records.
-- `SecurityConfigurationValidator` for fail-fast configuration validation.
+Close by showing the artifacts page and saying:
 
-## 6. Scope Boundaries
-
-When discussing boundaries, keep the wording technical:
-
-> The project implements the required secure development evidence for the
-> current coursework scope. Production hardening items such as external SIEM,
-> distributed token revocation, advanced deployment TLS management and authenticated DAST
-> are documented as next-step operational hardening.
-
-Also state the exact evidence boundaries:
-
-- runtime security tests exist in every Stage 04 run;
-- external IAST telemetry exists only if the optional Contrast agent is
-  configured;
-- PIT is evidence review, not a blocking quality gate;
-- CodeQL evidence is primarily GitHub Code Scanning, with an archiveable summary
-  artifact;
-- CSP no longer allows `unsafe-inline` in code; the existing ZAP artifact is
-  pre-remediation and should be regenerated before the final presentation.
+> Sprint 1 failed mainly because the pipeline evidence was not demonstrated.
+> Sprint 2 now has a single visible workflow timeline, blocking quality gates,
+> security evidence artifacts and ASVS mapping that links implementation,
+> tests, pipeline output and residual risks.

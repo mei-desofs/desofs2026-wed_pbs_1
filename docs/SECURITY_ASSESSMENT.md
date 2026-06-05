@@ -1,26 +1,27 @@
 # Security Assessment
 
 This assessment summarizes GhostReport's implemented security controls and the
-evidence used to verify them.
+evidence used to verify them. It should be read together with
+`docs/ASVS_EVIDENCE.md`, `docs/DEVSECOPS_PIPELINE.md` and the ASVS tracker.
 
 ## Assessment Scope
 
 | Area | Scope |
 | --- | --- |
 | Authentication | JWT login/logout flow, BCrypt password hashing, inactive-user checks and login rate limiting. |
-| Authorization | RBAC for ADMIN, ANALYST and AUDITOR, plus analyst ownership controls. |
+| Authorization | RBAC for `ADMIN`, `ANALYST` and `AUDITOR`, plus analyst ownership controls. |
 | Input validation | DTO validation, domain primitives and upload validation. |
 | File handling | Safe upload storage, attachment access, evidence packages and backup verification. |
 | Audit and monitoring | Audit logs and security alerts for security-relevant events. |
 | Configuration | Runtime profiles, environment variables, JWT secret validation and seed-user controls. |
-| DevSecOps | Build, tests, coverage, SAST, SCA, SBOM, secret scanning, DAST, runtime security/IAST readiness evidence and mutation testing. |
+| DevSecOps | The single `dev` GitHub Actions workflow: build, tests, coverage, secret scanning, SAST, SCA, SBOM, DAST, runtime security/IAST readiness and PIT evidence review. |
 
 ## Evidence Matrix
 
 | Control | Evidence | Result | Status |
 | --- | --- | --- | --- |
 | Password hashing | `SecurityConfig.passwordEncoder()`, user creation tests | Passwords are stored with BCrypt. | Implemented |
-| JWT signing, validation and revocation | `JwtService`, `AuthController`, `JwtServiceSecurityTest`, `RuntimeSecurityEventLoggingTest` | Signature, expiry, issuer, audience, role validation and logout-driven token revocation are tested. | Implemented with residual risk |
+| JWT signing, validation and revocation | `JwtService`, `AuthController`, `JwtServiceSecurityTest`, `RuntimeSecurityEventLoggingTest` | Signature, expiry, issuer, audience, role validation and logout-driven revocation are tested. | Implemented with residual risk |
 | JWT secret validation | `SecurityConfigurationValidator`, `.env.example`, validator tests | Unsafe production-like JWT configuration fails fast. | Implemented |
 | Login abuse protection | `RateLimiterService`, `LoginRateLimitSecurityTest` | Repeated failures trigger rate limiting and alerts. | Implemented |
 | Runtime auth monitoring | `RuntimeSecurityEventLoggingTest`, `AuditLogService`, `SecurityMonitoringService` | Auth events are recorded without passwords or tokens. | Implemented |
@@ -35,12 +36,13 @@ evidence used to verify them.
 | Security alerts | `SecurityMonitoringService`, alert tests | Suspicious activity creates security alerts. | Implemented |
 | Backup integrity | `BackupService`, backup tests | Manifests and SHA-256 validation are implemented. | Implemented |
 | Evidence packages | `CasePackageService`, package tests | Closed-case packages can be generated and verified. | Implemented |
-| SAST | SpotBugs and CodeQL workflows | Static analysis evidence is generated; CodeQL primary evidence is GitHub Code Scanning plus a run summary artifact. | Evidence review |
-| SCA/SBOM | Dependency-Check and CycloneDX workflows | Dependency risk and inventory evidence is generated. | Evidence review |
-| Secret scanning | Gitleaks workflow | Repository secret scan evidence is generated. | Implemented |
-| DAST | ZAP baseline workflow | Runtime HTTP baseline evidence is generated. | Evidence review |
-| Runtime security / IAST readiness evidence | Runtime security workflow | Runtime security tests and optional Java agent readiness are documented. | Evidence review |
-| Coverage and mutation testing | JaCoCo and PIT workflows | Coverage evidence is blocking in CI; PIT evidence captures report output or a fallback triage summary. | Evidence review |
+| DevSecOps pipeline | `.github/workflows/dev.yml` | One visible workflow timeline with dependent jobs and downloadable artifacts. | Implemented |
+| SAST | SpotBugs, SonarCloud and CodeQL in the `sast` job | Static analysis evidence is generated; CodeQL primary evidence is GitHub Code Scanning. | Evidence review |
+| SCA/SBOM | Dependency-Check and CycloneDX in the `dependency-scanning` job | Dependency risk and inventory evidence is generated. | Evidence review |
+| Secret scanning | Gitleaks in `security-secrets` | Repository secret scan evidence is generated and confirmed leaks block the workflow. | Implemented |
+| DAST | ZAP baseline in `dast-scan` | Runtime HTTP baseline evidence is generated against a live CI application instance. | Evidence review |
+| Runtime security / IAST readiness | Runtime tests and optional Contrast readiness notes in `dast-scan` | Runtime security tests always run; external IAST telemetry is optional. | Evidence review |
+| Coverage and mutation testing | JaCoCo and PIT in `build-test` | Coverage is blocking; PIT is evidence review with report/fallback artifact. | Evidence review |
 
 ## Gate Policy
 
@@ -48,32 +50,37 @@ evidence used to verify them.
 | --- | --- |
 | Maven compile/test | Blocking |
 | Security configuration validator tests | Blocking |
-| JaCoCo report and baseline thresholds | Blocking in CI |
+| JaCoCo report and coverage check | Blocking in `build-test` |
 | Gitleaks | Blocking for confirmed leaks |
-| SpotBugs, CodeQL, Dependency-Check, SBOM, ZAP, runtime security/IAST readiness and PIT | Evidence review |
+| Runtime security tests | Blocking inside `dast-scan` |
+| Application startup for ZAP | Blocking inside `dast-scan` |
+| PIT | Evidence review |
+| SpotBugs, SonarCloud, CodeQL, Dependency-Check, CycloneDX and ZAP | Evidence review with manual triage |
 
 ## Tool Assessment Matrix
 
-| Tool | Result | Evidence | Issues Identified | Issues Mitigated | Residual Risk |
-| --- | --- | --- | --- | --- | --- |
-| SpotBugs | Evidence generated and post-remediation report available | `Deliverables/Phase 2/Evidence/sast/spotbugs-post-remediation`, `docs/SPOTBUGS_TRIAGE.md` | Original report had 35 findings; post-remediation report has 21 findings | High-value mutable exposure, broad exception and newline findings reduced | Remaining framework/model findings require triage before suppression |
-| Dependency-Check | Post-remediation evidence generated locally | `Deliverables/Phase 2/Evidence/sca/dependency-check-post-remediation`, `docs/SCA_TRIAGE.md` | Old report included critical/high dependency findings; new report leaves `angus-activation` and `hibernate-validator` CVEs | Spring Boot, Tomcat, PostgreSQL JDBC and Log4j findings removed | Two residual findings remain under manual compatibility/applicability triage |
-| Gitleaks | Empty JSON report in downloaded evidence and clean tracked-HEAD local scan | `Deliverables/Phase 2/Evidence/secret-scanning`, `Deliverables/Phase 2/Evidence/secret-scanning/gitleaks-clean-tracked-head` | No leaked secrets in tracked repository scope | Artifact reorganized into secret-scanning evidence | Full local workspace scans can include ignored Office diagnostic logs and create false-positive `AuthCorrelationId` findings |
-| ZAP | Baseline evidence generated before CSP remediation | `Deliverables/Phase 2/Evidence/dast` | CSP `unsafe-inline`, comments and cache informational alerts | Inline frontend code removed and CSP updated in code | Fresh ZAP run required to prove closure |
-| CodeQL | Code Scanning plus archiveable summary | `Deliverables/Phase 2/Evidence/sast/sast-codeql-evidence-summary` | Findings are reviewed in GitHub Code Scanning | Summary artifact documents the run for local archive | Full local SARIF export is not claimed |
-| PIT | Evidence-review workflow configured for HTML/XML output | `Deliverables/Phase 2/Evidence/testing`, `docs/SECURITY_TESTING.md` | Local default path fails before report generation; local JDK 17 plus ASCII Maven repo produced partial output but timed out | PIT plugin/configuration updated and local classpath issue narrowed | Confirm real PIT report in CI or reduce mutation scope further |
-| actionlint | Local workflow validation passed | `Deliverables/Phase 2/Evidence/pipelines/actionlint-local-validation` | Previous local YAML validation lacked a parser | Workflow files validated with actionlint 1.7.12 | Does not replace an actual GitHub Actions run |
-| JaCoCo | Blocking coverage gate passes locally | `ghostreport/target/site/jacoco`, CI JaCoCo artifact | Critical controllers/services still have uneven coverage | Added tests for session/security and admin evidence flows | Add more service/controller branch tests over time |
-| JUnit/MockMvc | 110 tests pass locally | Surefire output, `ghostreport/src/test/java` | Security regression gaps remain in some negative paths | JWT revocation, login rate limit and admin evidence tests added | Upload fresh CI artifacts after push |
+| Tool | Result | Evidence | Residual risk |
+| --- | --- | --- | --- |
+| JUnit/MockMvc | Latest local run passed with 117 tests. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Add more negative-path tests for admin, report and backup workflows over time. |
+| JaCoCo | Coverage gate passes locally and runs in CI. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco` | Some controllers/services can still be improved, but the current gate is passing. |
+| Gitleaks | Generates JSON evidence and blocks confirmed leaks. | `secret-scan-gitleaks-json` | Workspace-wide local scans can include ignored diagnostic files; use repository-scope CI evidence for assessment. |
+| SpotBugs | Runs in the SAST job and uploads XML evidence. | `sast-reports` | Findings require triage before suppression or acceptance. |
+| SonarCloud | Runs when `SONAR_TOKEN` is configured. | `sast-reports`, SonarCloud UI | The job depends on repository secrets/variables being configured. |
+| CodeQL | Publishes primary findings to GitHub Code Scanning. | GitHub Code Scanning, `sast-reports` summary | Local full SARIF archive is not claimed by this workflow. |
+| Dependency-Check | Runs in evidence mode and uploads reports. | `dependency-check-sca-reports` | Findings require applicability and upgrade triage. |
+| CycloneDX | Generates JSON/XML SBOM. | `sbom-cyclonedx` | SBOM is inventory evidence, not vulnerability triage by itself. |
+| ZAP | Baseline DAST runs against a live app in CI. | `dast-zap-baseline-reports` | Baseline scan is unauthenticated and should be treated as first-line DAST evidence. |
+| Runtime security / IAST readiness | Security-focused tests run with JaCoCo skipped and upload Surefire plus readiness notes. | `iast-runtime-security-evidence` | Contrast/IAST telemetry is optional and only exists when configured. |
+| PIT | Runs in evidence review mode and uploads summary/exit code. | `pit-mutation-testing-report` | Mutation score is not a blocking Sprint 2 gate. |
+| actionlint | Current `dev.yml` validated locally with actionlint 1.7.12. | Local command output or pipeline validation notes | Does not replace a real GitHub Actions run. |
 
 ## Scope Boundaries
 
-The assessment covers the implemented coursework application and its automated
-security evidence. Additional production operations such as external SIEM,
-privileged-user MFA, centralized rate limiting, distributed token revocation and advanced
-deployment TLS management are considered operational hardening.
+The current assessment covers the implemented coursework application and its
+automated security evidence. External SIEM, privileged-user MFA, distributed
+token revocation, authenticated deep DAST, production TLS operations and
+advanced monitoring are documented as future operational hardening.
 
-The current code removes `unsafe-inline` from the CSP and externalizes the
-frontend scripts/styles that previously required it. The downloaded ZAP
-artifact is pre-remediation, so the DAST evidence should be regenerated before
-closing that finding in the final assessment.
+The local folder `Deliverables/Phase 2/Evidence` is not automatically written by
+GitHub Actions. It is a curated archive populated from downloaded workflow
+artifacts using `scripts/collect-evidence.ps1`.

@@ -6,8 +6,8 @@ Phase 2 Sprint 2.
 | Test/tool | Purpose | Evidence | Gate mode |
 | --- | --- | --- | --- |
 | JUnit/MockMvc | Authentication, authorization, validation, error handling and file/backup flows | Surefire reports and `ghostreport/src/test/java` | Blocking |
-| JaCoCo | Coverage visibility and minimum coverage gate | `target/site/jacoco` and CI artifact | Blocking in Stage 01 |
-| Runtime security tests | Focused tests for JWT, rate limiting, headers and security events | `iast-runtime-security-evidence` | Evidence review |
+| JaCoCo | Coverage visibility and minimum coverage gate | `target/site/jacoco` and `ci-jacoco-coverage-report` | Blocking in `build-test / build-and-test` |
+| Runtime security tests | Focused tests for JWT, rate limiting, CSRF, headers and security events | `iast-runtime-security-evidence` | Blocking inside `dast-scan / dast-scan` |
 | OWASP ZAP | Baseline DAST against the running app | ZAP HTML/JSON/XML artifacts | Evidence review |
 | PIT | Mutation testing for test-quality evidence | `target/pit-reports` and CI artifact | Evidence review |
 
@@ -42,7 +42,7 @@ Local execution on this workstation was tested in two ways:
 
 The generated partial evidence is archived under
 `Deliverables/Phase 2/Evidence/testing/pit-local-jdk17-ascii-m2-partial`.
-The GitHub Actions workflow remains the expected place to produce the final
+The `dev` GitHub Actions workflow remains the expected place to produce the final
 PIT artifact. If the CI run is still too slow, reduce the PIT scope further to
 a smaller service/domain package and keep the exit code plus summary as
 evidence review.

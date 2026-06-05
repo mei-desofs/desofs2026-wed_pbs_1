@@ -1,7 +1,7 @@
 # Branch Protection Rules
 
 GitHub branch protection is configured in repository settings. These are the
-project rules for `main` and `develop`.
+recommended project rules for `main` and `develop`.
 
 ## Required Rules
 
@@ -11,35 +11,45 @@ project rules for `main` and `develop`.
 | Required approvals | 1 minimum | Ensures peer review. |
 | Dismiss stale approvals | Enabled | Requires re-review after meaningful changes. |
 | Require status checks | Enabled | Ensures automated validation before merge. |
-| Required CI check | `01 - CI Build, Tests and Coverage` | Blocks broken build/tests/coverage. |
 | Require branches to be up to date | Enabled | Reduces merge-time regressions. |
 | Require conversation resolution | Enabled | Ensures review comments are handled. |
 | Restrict who can push | Recommended for `main` | Protects the release branch. |
 | Allow force pushes | Disabled | Protects history and evidence. |
 | Allow deletions | Disabled | Protects protected branches. |
 
-## Security Evidence Workflows
+## Recommended Required Checks
 
-The following workflows should run on Pull Requests or be manually triggered for
-assessment evidence:
+The current GitHub Actions evidence workflow is `.github/workflows/dev.yml`.
+These checks are the best candidates for required status checks:
 
-- `00 - Secret Scanning Gitleaks`
-- `01 - CI Build, Tests and Coverage`
-- `02A - SAST SpotBugs`
-- `02B - SCA OWASP Dependency-Check`
-- `02C - SAST CodeQL`
-- `02D - SBOM CycloneDX`
-- `03 - DAST OWASP ZAP Baseline`
-- `04 - Runtime Security Evidence and IAST Readiness`
-- `05 - Mutation Testing PIT`
+| Check | Required? | Reason |
+| --- | --- | --- |
+| `build-test / build-and-test` | Yes | Blocks broken builds, failing tests and failing JaCoCo coverage. |
+| `security-secrets / secrets` | Yes | Blocks confirmed repository secret leaks. |
+| `sast / SonarCloud SAST Scan` | Conditional | Require it only when `SONAR_TOKEN` and SonarCloud project variables are configured for all protected branches. |
+| `dependency-scanning / Dependency Vulnerability Scanning` | Optional/evidence review | Produces SCA and SBOM evidence; findings require manual triage. |
+| `dast-scan / dast-scan` | Optional/evidence review | Produces runtime security and ZAP evidence; baseline DAST findings require manual triage. |
 
-CI is the primary required status check. Security analysis workflows produce
-reviewable evidence, and confirmed secret findings are treated as blocking.
+If the team wants strict Sprint 2 demonstration governance, it can require all
+five checks. For day-to-day development, the minimum defensible gate is
+`build-test / build-and-test` plus `security-secrets / secrets`, with the
+remaining jobs reviewed as security evidence.
+
+## Security Evidence Workflow
+
+The `dev` workflow should run on Pull Requests and can also be triggered
+manually with `workflow_dispatch`. It provides one timeline with:
+
+- build, tests, JaCoCo and PIT evidence review;
+- Gitleaks secret scanning;
+- SpotBugs, SonarCloud and CodeQL SAST;
+- OWASP Dependency-Check and CycloneDX SBOM;
+- runtime security tests, optional IAST readiness notes and OWASP ZAP baseline.
 
 ## Demonstration Checklist
 
 1. Open repository settings.
 2. Show branch protection for `main` or `develop`.
 3. Show required Pull Request approval.
-4. Show required status checks.
-5. Open a PR and show the workflows running or completed.
+4. Show required status checks with the current `dev` job names.
+5. Open a Pull Request and show the `dev` workflow running or completed.

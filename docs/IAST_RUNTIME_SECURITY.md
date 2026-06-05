@@ -1,32 +1,36 @@
 # Runtime Security Evidence and IAST Readiness
 
-GhostReport includes a runtime security evidence stage that exercises the
-application while security-sensitive code paths are active. The workflow is
-implemented in `.github/workflows/iast-runtime.yml`.
+GhostReport produces runtime security evidence in the `dast-scan / dast-scan`
+job of the main GitHub Actions workflow:
+
+```text
+.github/workflows/dev.yml
+```
+
+This is not presented as complete IAST by default. The project always produces
+runtime security evidence through automated tests. External IAST telemetry is
+optional and depends on Contrast Java agent variables/secrets being configured.
 
 ## Architecture
 
 ```text
-GitHub Actions
+GitHub Actions dev workflow
+  -> dast-scan / dast-scan
   -> Maven security-focused tests
   -> Spring Boot application context / MockMvc runtime
   -> AuditLogService and SecurityMonitoringService
   -> Surefire reports and runtime security evidence artifact
-  -> optional Contrast Java Agent telemetry when configured
+  -> optional Contrast Java Agent readiness notes
 ```
-
-The default workflow executes runtime security tests and publishes evidence.
-For environments with an IAST tenant, the workflow documents the required
-Contrast Java agent configuration variables so the application can be run with a
-JVM `-javaagent` and external IAST telemetry.
 
 ## Runtime Coverage
 
-The runtime security evidence workflow executes tests for:
+The runtime security evidence job executes tests for:
 
 - successful and failed authentication events;
 - invalid/expired JWT handling;
 - login rate limiting and brute-force alert generation;
+- CSRF security behaviour;
 - generic error responses without stack traces;
 - browser security headers;
 - audit/security event sanitization.
@@ -44,29 +48,20 @@ The runtime security evidence workflow executes tests for:
 
 ## Pipeline Integration
 
-Workflow:
-
-```text
-.github/workflows/iast-runtime.yml
-```
-
-Artifact:
-
-```text
-iast-runtime-security-evidence
-```
+| Item | Value |
+| --- | --- |
+| Workflow | `.github/workflows/dev.yml` |
+| Job | `dast-scan / dast-scan` |
+| Artifact | `iast-runtime-security-evidence` |
+| Gate mode | Runtime security tests are blocking; external IAST telemetry is optional |
 
 The artifact contains:
 
 - Surefire reports for the security-focused runtime tests;
 - `target/iast-evidence/iast-runtime-evidence.md`;
-- readiness notes for external IAST agent telemetry.
+- readiness notes for optional external IAST agent telemetry.
 
 ## Optional Contrast Java Agent Integration
-
-The selected compatible IAST agent for a Java/Spring Boot runtime is Contrast
-Java Agent because it supports JVM instrumentation through `-javaagent` and can
-observe application behavior while tests or runtime traffic exercise the app.
 
 To enable external IAST telemetry in GitHub Actions, configure:
 
