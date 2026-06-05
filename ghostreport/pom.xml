@@ -24,6 +24,7 @@
 		<log4j2.version>2.26.0</log4j2.version>
 		<postgresql.version>42.7.11</postgresql.version>
 		<tomcat.version>10.1.55</tomcat.version>
+		<sonar.organization>mei-desofs-ghostreport1</sonar.organization>
 	</properties>
 
 	<dependencies>
