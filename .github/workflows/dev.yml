@@ -196,7 +196,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   sast:
-    name: sast / SonarQube SAST Scan
+    name: sast / SonarCloud SAST Scan
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [build-test, security-secrets]
@@ -213,6 +213,8 @@ jobs:
     steps:
       - name: Checkout repository content
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Prepare Java 17 with Maven cache
         uses: actions/setup-java@v5
@@ -221,6 +223,13 @@ jobs:
           java-version: 17
           cache: maven
           cache-dependency-path: ghostreport/pom.xml
+
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
 
       - name: Initialize CodeQL for Java
         uses: github/codeql-action/init@v4
@@ -233,25 +242,29 @@ jobs:
       - name: Run SpotBugs static analysis in evidence mode
         run: ./mvnw -DskipTests compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true
 
-      - name: Run SonarQube SAST scan when configured
+      - name: Build and analyze with SonarCloud
         run: |
           mkdir -p target/sast-evidence
-          if [ -n "${SONAR_TOKEN:-}" ] && [ -n "${SONAR_HOST_URL:-}" ]; then
-            ./mvnw -DskipTests org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-              -Dsonar.host.url="$SONAR_HOST_URL" \
-              -Dsonar.token="$SONAR_TOKEN" \
-              -Dsonar.projectKey="${SONAR_PROJECT_KEY:-ghostreport}"
-            echo "SonarQube scan executed." > target/sast-evidence/sonarqube-summary.txt
-          else
-            {
-              echo "SonarQube scan skipped because SONAR_TOKEN or SONAR_HOST_URL is not configured."
-              echo "CodeQL and SpotBugs SAST still ran in this job."
-            } > target/sast-evidence/sonarqube-summary.txt
+          if [ -z "${SONAR_TOKEN:-}" ]; then
+            echo "SonarCloud scan failed because SONAR_TOKEN is not configured." > target/sast-evidence/sonarcloud-summary.txt
+            exit 1
           fi
+
+          ./mvnw -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.projectKey="${SONAR_PROJECT_KEY:-mei-desofs-ghostreport1_ghostreport}" \
+            -Dsonar.organization="${SONAR_ORGANIZATION:-mei-desofs-ghostreport1}" \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+
+          {
+            echo "SonarCloud scan executed."
+            echo "Project key: ${SONAR_PROJECT_KEY:-mei-desofs-ghostreport1_ghostreport}"
+            echo "Organization: ${SONAR_ORGANIZATION:-mei-desofs-ghostreport1}"
+          } > target/sast-evidence/sonarcloud-summary.txt
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
           SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
 
       - name: Run CodeQL analysis
         uses: github/codeql-action/analyze@v4
@@ -266,7 +279,7 @@ jobs:
             echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo ""
             echo "CodeQL results are uploaded to GitHub Code Scanning."
-            echo "SpotBugs XML and SonarQube run notes are uploaded as artifacts."
+            echo "SpotBugs XML and SonarCloud run notes are uploaded as artifacts."
           } > target/sast-evidence/sast-evidence-summary.md
 
       - name: Upload SAST evidence artifacts
@@ -291,8 +304,8 @@ jobs:
             echo "| --- | --- |"
             echo "| CodeQL semantic analysis | GitHub Code Scanning alerts |"
             echo "| SpotBugs XML/static analysis report | sast-reports |"
-            echo "| SonarQube execution notes | sast-reports |"
-            echo "| Gate mode | Evidence review; SonarQube fails only when configured and failing |"
+            echo "| SonarCloud execution notes | sast-reports |"
+            echo "| Gate mode | Evidence review; SonarCloud fails when SONAR_TOKEN is missing or analysis fails |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   dependency-scanning:
