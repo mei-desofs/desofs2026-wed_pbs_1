@@ -96,6 +96,10 @@ automatically by GitHub Actions. Download the run artifacts and use
 `scripts/collect-evidence.ps1` to organize them locally for presentation and
 archive.
 
+The workflow files were also validated locally with `actionlint` 1.7.12. The
+validation summary is archived under
+`Deliverables/Phase 2/Evidence/pipelines/actionlint-local-validation`.
+
 ## Presentation Path
 
 For the final demonstration:

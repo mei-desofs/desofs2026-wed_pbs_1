@@ -32,9 +32,17 @@ The Maven PIT plugin was updated to `1.25.3`, HTML and XML output are enabled,
 and reports are configured with `timestampedReports=false` for a predictable
 `target/pit-reports` path.
 
-Local execution on this workstation still fails before report generation
-because the installed JVM is Java 23 and PIT exits with `MINION_DIED` /
-`CoverageMinion` startup failure. The GitHub Actions workflow uses Java 17 and
-is the expected environment for producing the real PIT artifact. If the CI run
-still fails, keep the generated exit code and summary as evidence review and
-triage the workflow logs.
+Local execution on this workstation was tested in two ways:
+
+- With the default local Maven repository under the Windows user profile, PIT
+  fails with `MINION_DIED` / `CoverageMinion` startup failure.
+- With a temporary Temurin JDK 17 and an ASCII-only Maven repository
+  (`C:\Projetos\m2-pit`), PIT starts and generates partial report output, but
+  did not finish within the local execution window.
+
+The generated partial evidence is archived under
+`Deliverables/Phase 2/Evidence/testing/pit-local-jdk17-ascii-m2-partial`.
+The GitHub Actions workflow remains the expected place to produce the final
+PIT artifact. If the CI run is still too slow, reduce the PIT scope further to
+a smaller service/domain package and keep the exit code plus summary as
+evidence review.

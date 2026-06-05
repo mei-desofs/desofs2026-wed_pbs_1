@@ -1,0 +1,3610 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+    <link rel="stylesheet" type="text/css" href="../style.css">
+</head>
+<body>
+
+
+<h1>JwtService.java</h1>
+
+<table class="src">
+
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_1'/>
+1
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_1'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>package com.ghostreport.service;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_2'/>
+2
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_2'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_3'/>
+3
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_3'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import com.fasterxml.jackson.core.type.TypeReference;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_4'/>
+4
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_4'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import com.fasterxml.jackson.core.JsonProcessingException;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_5'/>
+5
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_5'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import com.fasterxml.jackson.databind.ObjectMapper;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_6'/>
+6
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_6'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import org.springframework.beans.factory.annotation.Value;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_7'/>
+7
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_7'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import org.springframework.security.core.userdetails.UserDetails;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_8'/>
+8
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_8'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import org.springframework.stereotype.Service;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_9'/>
+9
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_9'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_10'/>
+10
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_10'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import javax.crypto.Mac;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_11'/>
+11
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_11'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import javax.crypto.spec.SecretKeySpec;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_12'/>
+12
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_12'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import java.io.IOException;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_13'/>
+13
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_13'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import java.nio.charset.StandardCharsets;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_14'/>
+14
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_14'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import java.security.GeneralSecurityException;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_15'/>
+15
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_15'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import java.security.MessageDigest;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_16'/>
+16
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_16'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import java.time.Instant;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_17'/>
+17
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_17'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import java.util.Base64;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_18'/>
+18
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_18'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import java.util.LinkedHashMap;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_19'/>
+19
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_19'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import java.util.List;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_20'/>
+20
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_20'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import java.util.Map;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_21'/>
+21
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_21'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import java.util.UUID;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_22'/>
+22
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_22'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import java.util.concurrent.ConcurrentHashMap;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_23'/>
+23
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_23'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_24'/>
+24
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_24'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>@Service</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_25'/>
+25
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_25'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>public class JwtService {</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_26'/>
+26
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_26'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_27'/>
+27
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_27'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private static final String HMAC_ALGORITHM = &#34;HmacSHA256&#34;;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_28'/>
+28
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_28'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private static final String ISSUER = &#34;ghostreport&#34;;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_29'/>
+29
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_29'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private static final String AUDIENCE = &#34;ghostreport-api&#34;;</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_30'/>
+30
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_30'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    private static final Base64.Encoder BASE64_URL_ENCODER = Base64.getUrlEncoder().withoutPadding();</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_31'/>
+31
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_31'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    private static final Base64.Decoder BASE64_URL_DECODER = Base64.getUrlDecoder();</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_32'/>
+32
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_32'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_33'/>
+33
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_33'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private final ObjectMapper objectMapper;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_34'/>
+34
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_34'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private final byte[] secret;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_35'/>
+35
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_35'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private final long expirationSeconds;</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_36'/>
+36
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_36'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    private final Map&#60;String, Long&#62; revokedTokenExpirations = new ConcurrentHashMap&#60;&#62;();</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_37'/>
+37
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_37'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_38'/>
+38
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_38'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    public JwtService(</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_39'/>
+39
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_39'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            ObjectMapper objectMapper,</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_40'/>
+40
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_40'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            @Value(&#34;${ghostreport.jwt.secret}&#34;) String secret,</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_41'/>
+41
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_41'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            @Value(&#34;${ghostreport.jwt.expiration-seconds:3600}&#34;) long expirationSeconds</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_42'/>
+42
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_42'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    ) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_43'/>
+43
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_43'>3</a>
+<span>
+
+1. &#60;init&#62; : changed conditional boundary &rarr; SURVIVED<br/>
+
+2. &#60;init&#62; : negated conditional &rarr; KILLED<br/>
+
+3. &#60;init&#62; : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='survived'>        if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length &#60; 32) {</span></pre></td></tr>
+
+
+<tr>
+<td class='uncovered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_44'/>
+44
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_44'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='uncovered'><pre><span  class=''>            throw new IllegalStateException(&#34;ghostreport.jwt.secret must be configured with at least 32 characters&#34;);</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_45'/>
+45
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_45'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        }</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_46'/>
+46
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_46'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        this.objectMapper = objectMapper;</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_47'/>
+47
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_47'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        this.secret = secret.getBytes(StandardCharsets.UTF_8);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_48'/>
+48
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_48'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        this.expirationSeconds = expirationSeconds;</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_49'/>
+49
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_49'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_50'/>
+50
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_50'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_51'/>
+51
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_51'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    public String generateToken(UserDetails userDetails) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_52'/>
+52
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_52'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        long now = Instant.now().getEpochSecond();</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_53'/>
+53
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_53'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_54'/>
+54
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_54'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        Map&#60;String, Object&#62; header = new LinkedHashMap&#60;&#62;();</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_55'/>
+55
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_55'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        header.put(&#34;alg&#34;, &#34;HS256&#34;);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_56'/>
+56
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_56'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        header.put(&#34;typ&#34;, &#34;JWT&#34;);</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_57'/>
+57
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_57'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_58'/>
+58
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_58'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        Map&#60;String, Object&#62; payload = new LinkedHashMap&#60;&#62;();</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_59'/>
+59
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_59'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        payload.put(&#34;sub&#34;, userDetails.getUsername());</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_60'/>
+60
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_60'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        payload.put(&#34;iss&#34;, ISSUER);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_61'/>
+61
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_61'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        payload.put(&#34;aud&#34;, AUDIENCE);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_62'/>
+62
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_62'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        payload.put(&#34;jti&#34;, UUID.randomUUID().toString());</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_63'/>
+63
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_63'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        payload.put(&#34;role&#34;, userDetails.getAuthorities().stream()</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_64'/>
+64
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_64'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>                .findFirst()</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_65'/>
+65
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_65'>1</a>
+<span>
+
+1. lambda$generateToken$0 : replaced return value with &#34;&#34; for com/ghostreport/service/JwtService::lambda$generateToken$0 &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                .map(authority -&#62; authority.getAuthority().replace(&#34;ROLE_&#34;, &#34;&#34;))</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_66'/>
+66
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_66'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>                .orElse(&#34;&#34;));</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_67'/>
+67
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_67'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        payload.put(&#34;iat&#34;, now);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_68'/>
+68
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_68'>1</a>
+<span>
+
+1. generateToken : Replaced long addition with subtraction &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        payload.put(&#34;exp&#34;, now + expirationSeconds);</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_69'/>
+69
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_69'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_70'/>
+70
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_70'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        String unsignedToken = encodeJson(header) + &#34;.&#34; + encodeJson(payload);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_71'/>
+71
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_71'>1</a>
+<span>
+
+1. generateToken : replaced return value with &#34;&#34; for com/ghostreport/service/JwtService::generateToken &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        return unsignedToken + &#34;.&#34; + sign(unsignedToken);</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_72'/>
+72
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_72'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_73'/>
+73
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_73'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_74'/>
+74
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_74'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    public String extractUsername(String token) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_75'/>
+75
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_75'>1</a>
+<span>
+
+1. extractUsername : replaced return value with &#34;&#34; for com/ghostreport/service/JwtService::extractUsername &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        return readVerifiedClaims(token).subject();</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_76'/>
+76
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_76'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_77'/>
+77
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_77'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_78'/>
+78
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_78'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    public long getExpirationSeconds() {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_79'/>
+79
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_79'>1</a>
+<span>
+
+1. getExpirationSeconds : replaced long return with 0 for com/ghostreport/service/JwtService::getExpirationSeconds &rarr; SURVIVED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='survived'>        return expirationSeconds;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_80'/>
+80
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_80'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_81'/>
+81
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_81'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_82'/>
+82
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_82'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    public void revokeToken(String token) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_83'/>
+83
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_83'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        JwtClaims claims = readVerifiedClaims(token);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_84'/>
+84
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_84'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        revokedTokenExpirations.put(claims.tokenId(), claims.expiration());</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_85'/>
+85
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_85'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_86'/>
+86
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_86'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_87'/>
+87
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_87'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    public boolean isTokenValid(String token, UserDetails userDetails) {</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_88'/>
+88
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_88'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        try {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_89'/>
+89
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_89'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            JwtClaims claims = readVerifiedClaims(token);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_90'/>
+90
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_90'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            List&#60;String&#62; expectedRoles = userDetails.getAuthorities().stream()</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_91'/>
+91
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_91'>1</a>
+<span>
+
+1. lambda$isTokenValid$1 : replaced return value with &#34;&#34; for com/ghostreport/service/JwtService::lambda$isTokenValid$1 &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                    .map(authority -&#62; authority.getAuthority().replaceFirst(&#34;^ROLE_&#34;, &#34;&#34;))</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_92'/>
+92
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_92'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>                    .toList();</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_93'/>
+93
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_93'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_94'/>
+94
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_94'>2</a>
+<span>
+
+1. isTokenValid : negated conditional &rarr; KILLED<br/>
+
+2. isTokenValid : replaced boolean return with true for com/ghostreport/service/JwtService::isTokenValid &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            return userDetails.isEnabled()</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_95'/>
+95
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_95'>1</a>
+<span>
+
+1. isTokenValid : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                    &#38;&#38; userDetails.isAccountNonExpired()</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_96'/>
+96
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_96'>1</a>
+<span>
+
+1. isTokenValid : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                    &#38;&#38; userDetails.isAccountNonLocked()</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_97'/>
+97
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_97'>1</a>
+<span>
+
+1. isTokenValid : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                    &#38;&#38; userDetails.isCredentialsNonExpired()</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_98'/>
+98
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_98'>1</a>
+<span>
+
+1. isTokenValid : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                    &#38;&#38; !isTokenRevoked(claims)</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_99'/>
+99
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_99'>1</a>
+<span>
+
+1. isTokenValid : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                    &#38;&#38; claims.subject().equals(userDetails.getUsername())</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_100'/>
+100
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_100'>1</a>
+<span>
+
+1. isTokenValid : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                    &#38;&#38; expectedRoles.contains(claims.role());</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_101'/>
+101
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_101'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        } catch (RuntimeException e) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_102'/>
+102
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_102'>1</a>
+<span>
+
+1. isTokenValid : replaced boolean return with true for com/ghostreport/service/JwtService::isTokenValid &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            return false;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_103'/>
+103
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_103'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_104'/>
+104
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_104'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_105'/>
+105
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_105'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_106'/>
+106
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_106'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private String encodeJson(Map&#60;String, Object&#62; values) {</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_107'/>
+107
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_107'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        try {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_108'/>
+108
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_108'>1</a>
+<span>
+
+1. encodeJson : replaced return value with &#34;&#34; for com/ghostreport/service/JwtService::encodeJson &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            return BASE64_URL_ENCODER.encodeToString(objectMapper.writeValueAsBytes(values));</span></pre></td></tr>
+
+
+<tr>
+<td class='uncovered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_109'/>
+109
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_109'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='uncovered'><pre><span  class=''>        } catch (JsonProcessingException e) {</span></pre></td></tr>
+
+
+<tr>
+<td class='uncovered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_110'/>
+110
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_110'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='uncovered'><pre><span  class=''>            throw new IllegalStateException(&#34;Could not encode JWT&#34;, e);</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_111'/>
+111
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_111'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_112'/>
+112
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_112'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_113'/>
+113
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_113'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_114'/>
+114
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_114'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private JwtClaims readVerifiedClaims(String token) {</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_115'/>
+115
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_115'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        try {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_116'/>
+116
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_116'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            String[] parts = token.split(&#34;\\.&#34;, -1);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_117'/>
+117
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_117'>1</a>
+<span>
+
+1. readVerifiedClaims : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            if (parts.length != 3) {</span></pre></td></tr>
+
+
+<tr>
+<td class='uncovered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_118'/>
+118
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_118'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='uncovered'><pre><span  class=''>                throw new IllegalArgumentException(&#34;Invalid JWT structure&#34;);</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_119'/>
+119
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_119'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_120'/>
+120
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_120'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_121'/>
+121
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_121'>1</a>
+<span>
+
+1. readVerifiedClaims : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            if (!signatureMatches(token)) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_122'/>
+122
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_122'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>                throw new IllegalArgumentException(&#34;Invalid JWT signature&#34;);</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_123'/>
+123
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_123'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_124'/>
+124
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_124'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_125'/>
+125
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_125'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            Map&#60;String, Object&#62; header = objectMapper.readValue(</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_126'/>
+126
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_126'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>                    BASE64_URL_DECODER.decode(parts[0]),</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_127'/>
+127
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_127'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>                    new TypeReference&#60;&#62;() {</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_128'/>
+128
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_128'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>                    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_129'/>
+129
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_129'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            );</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_130'/>
+130
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_130'>2</a>
+<span>
+
+1. readVerifiedClaims : negated conditional &rarr; KILLED<br/>
+
+2. readVerifiedClaims : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            if (!&#34;HS256&#34;.equals(header.get(&#34;alg&#34;)) || !&#34;JWT&#34;.equals(header.get(&#34;typ&#34;))) {</span></pre></td></tr>
+
+
+<tr>
+<td class='uncovered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_131'/>
+131
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_131'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='uncovered'><pre><span  class=''>                throw new IllegalArgumentException(&#34;Invalid JWT header&#34;);</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_132'/>
+132
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_132'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_133'/>
+133
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_133'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_134'/>
+134
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_134'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            byte[] payloadBytes = BASE64_URL_DECODER.decode(parts[1]);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_135'/>
+135
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_135'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            Map&#60;String, Object&#62; payload = objectMapper.readValue(payloadBytes, new TypeReference&#60;&#62;() {</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_136'/>
+136
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_136'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            });</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_137'/>
+137
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_137'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            Object subject = payload.get(&#34;sub&#34;);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_138'/>
+138
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_138'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            Object issuer = payload.get(&#34;iss&#34;);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_139'/>
+139
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_139'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            Object audience = payload.get(&#34;aud&#34;);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_140'/>
+140
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_140'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            Object tokenId = payload.get(&#34;jti&#34;);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_141'/>
+141
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_141'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            Object role = payload.get(&#34;role&#34;);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_142'/>
+142
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_142'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            Object expiration = payload.get(&#34;exp&#34;);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_143'/>
+143
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_143'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            Object issuedAt = payload.get(&#34;iat&#34;);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_144'/>
+144
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_144'>2</a>
+<span>
+
+1. readVerifiedClaims : negated conditional &rarr; KILLED<br/>
+
+2. readVerifiedClaims : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            if (!(subject instanceof String username) || username.isBlank()</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_145'/>
+145
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_145'>1</a>
+<span>
+
+1. readVerifiedClaims : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                    || !ISSUER.equals(issuer)</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_146'/>
+146
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_146'>2</a>
+<span>
+
+1. readVerifiedClaims : negated conditional &rarr; KILLED<br/>
+
+2. readVerifiedClaims : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                    || !AUDIENCE.equals(audience)</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_147'/>
+147
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_147'>2</a>
+<span>
+
+1. readVerifiedClaims : negated conditional &rarr; KILLED<br/>
+
+2. readVerifiedClaims : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                    || !(tokenId instanceof String jti) || jti.isBlank()</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_148'/>
+148
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_148'>2</a>
+<span>
+
+1. readVerifiedClaims : negated conditional &rarr; KILLED<br/>
+
+2. readVerifiedClaims : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                    || !(role instanceof String authorityRole) || authorityRole.isBlank()</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_149'/>
+149
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_149'>1</a>
+<span>
+
+1. readVerifiedClaims : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                    || !(expiration instanceof Number exp)</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_150'/>
+150
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_150'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>                    || !(issuedAt instanceof Number)) {</span></pre></td></tr>
+
+
+<tr>
+<td class='uncovered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_151'/>
+151
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_151'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='uncovered'><pre><span  class=''>                throw new IllegalArgumentException(&#34;Invalid JWT claims&#34;);</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_152'/>
+152
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_152'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            }</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_153'/>
+153
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_153'>2</a>
+<span>
+
+1. readVerifiedClaims : changed conditional boundary &rarr; SURVIVED<br/>
+
+2. readVerifiedClaims : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='survived'>            if (exp.longValue() &#60;= Instant.now().getEpochSecond()) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_154'/>
+154
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_154'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>                throw new IllegalArgumentException(&#34;Expired JWT&#34;);</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_155'/>
+155
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_155'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            }</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_156'/>
+156
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_156'>1</a>
+<span>
+
+1. readVerifiedClaims : replaced return value with null for com/ghostreport/service/JwtService::readVerifiedClaims &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            return new JwtClaims(username, authorityRole, jti, exp.longValue());</span></pre></td></tr>
+
+
+<tr>
+<td class='uncovered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_157'/>
+157
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_157'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='uncovered'><pre><span  class=''>        } catch (IOException e) {</span></pre></td></tr>
+
+
+<tr>
+<td class='uncovered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_158'/>
+158
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_158'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='uncovered'><pre><span  class=''>            throw new IllegalArgumentException(&#34;Invalid JWT&#34;, e);</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_159'/>
+159
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_159'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_160'/>
+160
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_160'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_161'/>
+161
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_161'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_162'/>
+162
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_162'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private boolean isTokenRevoked(JwtClaims claims) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_163'/>
+163
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_163'>1</a>
+<span>
+
+1. isTokenRevoked : removed call to com/ghostreport/service/JwtService::purgeExpiredRevocations &rarr; SURVIVED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='survived'>        purgeExpiredRevocations();</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_164'/>
+164
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_164'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        Long revokedUntil = revokedTokenExpirations.get(claims.tokenId());</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_165'/>
+165
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_165'>4</a>
+<span>
+
+1. isTokenRevoked : changed conditional boundary &rarr; SURVIVED<br/>
+
+2. isTokenRevoked : negated conditional &rarr; KILLED<br/>
+
+3. isTokenRevoked : negated conditional &rarr; KILLED<br/>
+
+4. isTokenRevoked : replaced boolean return with true for com/ghostreport/service/JwtService::isTokenRevoked &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='survived'>        return revokedUntil != null &#38;&#38; revokedUntil &#62; Instant.now().getEpochSecond();</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_166'/>
+166
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_166'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_167'/>
+167
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_167'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_168'/>
+168
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_168'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private void purgeExpiredRevocations() {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_169'/>
+169
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_169'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        long now = Instant.now().getEpochSecond();</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_170'/>
+170
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_170'>3</a>
+<span>
+
+1. lambda$purgeExpiredRevocations$2 : changed conditional boundary &rarr; SURVIVED<br/>
+
+2. lambda$purgeExpiredRevocations$2 : negated conditional &rarr; KILLED<br/>
+
+3. lambda$purgeExpiredRevocations$2 : replaced boolean return with true for com/ghostreport/service/JwtService::lambda$purgeExpiredRevocations$2 &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='survived'>        revokedTokenExpirations.entrySet().removeIf(entry -&#62; entry.getValue() &#60;= now);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_171'/>
+171
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_171'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_172'/>
+172
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_172'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_173'/>
+173
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_173'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private boolean signatureMatches(String token) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_174'/>
+174
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_174'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        String[] parts = token.split(&#34;\\.&#34;, -1);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_175'/>
+175
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_175'>1</a>
+<span>
+
+1. signatureMatches : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        if (parts.length != 3) {</span></pre></td></tr>
+
+
+<tr>
+<td class='uncovered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_176'/>
+176
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_176'>1</a>
+<span>
+
+1. signatureMatches : replaced boolean return with true for com/ghostreport/service/JwtService::signatureMatches &rarr; NO_COVERAGE<br/>
+
+</span>
+</span>
+</td>
+<td class='uncovered'><pre><span  class='survived'>            return false;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_177'/>
+177
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_177'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_178'/>
+178
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_178'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_179'/>
+179
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_179'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        byte[] expected = sign(parts[0] + &#34;.&#34; + parts[1]).getBytes(StandardCharsets.US_ASCII);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_180'/>
+180
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_180'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        byte[] supplied = parts[2].getBytes(StandardCharsets.US_ASCII);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_181'/>
+181
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_181'>2</a>
+<span>
+
+1. signatureMatches : replaced boolean return with true for com/ghostreport/service/JwtService::signatureMatches &rarr; SURVIVED<br/>
+
+2. signatureMatches : replaced boolean return with false for com/ghostreport/service/JwtService::signatureMatches &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='survived'>        return MessageDigest.isEqual(expected, supplied);</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_182'/>
+182
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_182'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_183'/>
+183
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_183'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_184'/>
+184
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_184'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private String sign(String value) {</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_185'/>
+185
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_185'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        try {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_186'/>
+186
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_186'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            Mac mac = Mac.getInstance(HMAC_ALGORITHM);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_187'/>
+187
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_187'>1</a>
+<span>
+
+1. sign : removed call to javax/crypto/Mac::init &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            mac.init(new SecretKeySpec(secret, HMAC_ALGORITHM));</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_188'/>
+188
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_188'>1</a>
+<span>
+
+1. sign : replaced return value with &#34;&#34; for com/ghostreport/service/JwtService::sign &rarr; SURVIVED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='survived'>            return BASE64_URL_ENCODER.encodeToString(mac.doFinal(value.getBytes(StandardCharsets.UTF_8)));</span></pre></td></tr>
+
+
+<tr>
+<td class='uncovered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_189'/>
+189
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_189'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='uncovered'><pre><span  class=''>        } catch (GeneralSecurityException e) {</span></pre></td></tr>
+
+
+<tr>
+<td class='uncovered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_190'/>
+190
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_190'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='uncovered'><pre><span  class=''>            throw new IllegalStateException(&#34;Could not sign JWT&#34;, e);</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_191'/>
+191
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_191'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_192'/>
+192
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_192'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_193'/>
+193
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_193'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_194'/>
+194
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_194'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    private record JwtClaims(String subject, String role, String tokenId, long expiration) {</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_195'/>
+195
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_195'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_196'/>
+196
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_196'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>}</span></pre></td></tr>
+
+
+
+<tr><td></td><td></td><td><h2>Mutations</h2></td></tr>
+
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_43'>43</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_43'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>&#60;init&#62;<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:tamperedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> <p class='SURVIVED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>&#60;init&#62;<br/><b>Killed by : </b>none</span></span> changed conditional boundary &rarr; SURVIVED</span>
+<a title="Click to view covering tests" class="view-covered-by-tests" onClick="document.getElementById('MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=<init>,-methodDesc=(Lcom/fasterxml/jackson/databind/ObjectMapper;Ljava/lang/String;J)V],-indexes=[21],-mutator=org.pitest.mutationtest.engine.gregor.mutators.ConditionalsBoundaryMutator]').style.display=(document.getElementById('MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=<init>,-methodDesc=(Lcom/fasterxml/jackson/databind/ObjectMapper;Ljava/lang/String;J)V],-indexes=[21],-mutator=org.pitest.mutationtest.engine.gregor.mutators.ConditionalsBoundaryMutator]').style.display == 'block')?'none':'block';">Covering tests</a>
+<div class="covered-tests" id="MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=<init>,-methodDesc=(Lcom/fasterxml/jackson/databind/ObjectMapper;Ljava/lang/String;J)V],-indexes=[21],-mutator=org.pitest.mutationtest.engine.gregor.mutators.ConditionalsBoundaryMutator]" style="display:none;">Covered by tests:
+<ul>
+<li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:tamperedTokenIsRejected()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:generatedTokenContainsIssuerAudienceAndUniqueIdentifier()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:expiredTokenIsRejected()]</li> <li>com.ghostreport.security.ErrorHandlingSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.ErrorHandlingSecurityTest]/[method:malformedJsonReturnsGenericErrorWithoutInternals()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:tokenRoleMustMatchCurrentUserAuthorities()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:validTokenIsAcceptedForMatchingUserAndRole()]</li> <li>com.ghostreport.security.SecurityHeadersTest.[engine:junit-jupiter]/[class:com.ghostreport.security.SecurityHeadersTest]/[method:publicPageIncludesSecurityHeaders()]</li> <li>com.ghostreport.security.AnalystCaseOwnershipTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AnalystCaseOwnershipTest]/[method:analystCannotDownloadAttachmentFromCaseAssignedToAnotherAnalyst()]</li> <li>com.ghostreport.security.AnonymousDataLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AnonymousDataLoggingTest]/[method:auditLogsShouldNotContainPlainTrackingCode()]</li> <li>com.ghostreport.service.BackupServiceIntegrationTest.[engine:junit-jupiter]/[class:com.ghostreport.service.BackupServiceIntegrationTest]/[method:verifiesValidBackup()]</li> <li>com.ghostreport.config.DataInitializerDisabledTest.[engine:junit-jupiter]/[class:com.ghostreport.config.DataInitializerDisabledTest]/[method:defaultUsersAreNotCreatedWhenSeedingIsDisabled()]</li> <li>com.ghostreport.controller.ReportControllerAttachmentUploadTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.ReportControllerAttachmentUploadTest]/[method:uploadRejectsTooManyFilesInSingleRequest()]</li> <li>com.ghostreport.controller.PublicReportFlowIntegrationTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.PublicReportFlowIntegrationTest]/[method:createReportWithValidPayloadCreatesReportAndReturnsTrackingCodeWithoutInternalHash()]</li> <li>com.ghostreport.security.RuntimeSecurityEventLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RuntimeSecurityEventLoggingTest]/[method:logoutRevokesTokenAndCreatesAuditLogWithoutStoringToken()]</li> <li>com.ghostreport.security.LoginRateLimitSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.LoginRateLimitSecurityTest]/[method:repeatedFailedLoginAttemptsCreateAlertAndEventuallyReturn429()]</li> <li>com.ghostreport.security.AdminAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminAuthorizationTest]/[method:analystCannotAccessAdminPanel()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:lastActiveAdminCannotBeDeactivated()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorClosedCaseHistoryDoesNotExposeSensitiveReportData()]</li> <li>com.ghostreport.GhostreportApplicationTests.[engine:junit-jupiter]/[class:com.ghostreport.GhostreportApplicationTests]/[method:contextLoads()]</li> <li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:backupEndpointsRequireAdminRole()]</li> <li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:auditorCanReadAuditEndpointsOnlyAndCannotChangeReportsOrRunAdminActions()]</li> 
+</ul>
+</div></div> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>&#60;init&#62;<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:tamperedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_65'>65</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_65'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>lambda$generateToken$0<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> replaced return value with &#34;&#34; for com/ghostreport/service/JwtService::lambda$generateToken$0 &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_68'>68</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_68'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>generateToken<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:expiredTokenIsRejected()]</span></span> Replaced long addition with subtraction &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_71'>71</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_71'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>generateToken<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:tamperedTokenIsRejected()]</span></span> replaced return value with &#34;&#34; for com/ghostreport/service/JwtService::generateToken &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_75'>75</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_75'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>extractUsername<br/><b>Killed by : </b>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:pathTraversalInEndpointFilenameIsRejected()]</span></span> replaced return value with &#34;&#34; for com/ghostreport/service/JwtService::extractUsername &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_79'>79</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_79'/> 
+
+<p class='SURVIVED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>getExpirationSeconds<br/><b>Killed by : </b>none</span></span> replaced long return with 0 for com/ghostreport/service/JwtService::getExpirationSeconds &rarr; SURVIVED</span>
+<a title="Click to view covering tests" class="view-covered-by-tests" onClick="document.getElementById('MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=getExpirationSeconds,-methodDesc=()J],-indexes=[5],-mutator=org.pitest.mutationtest.engine.gregor.mutators.returns.PrimitiveReturnsMutator]').style.display=(document.getElementById('MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=getExpirationSeconds,-methodDesc=()J],-indexes=[5],-mutator=org.pitest.mutationtest.engine.gregor.mutators.returns.PrimitiveReturnsMutator]').style.display == 'block')?'none':'block';">Covering tests</a>
+<div class="covered-tests" id="MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=getExpirationSeconds,-methodDesc=()J],-indexes=[5],-mutator=org.pitest.mutationtest.engine.gregor.mutators.returns.PrimitiveReturnsMutator]" style="display:none;">Covered by tests:
+<ul>
+<li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:pathTraversalInEndpointFilenameIsRejected()]</li> <li>com.ghostreport.security.RuntimeSecurityEventLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RuntimeSecurityEventLoggingTest]/[method:successfulLoginCreatesAuditLogWithoutTokenOrPassword()]</li> <li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:adminCanCreateAndVerifyBackupThroughEndpoints()]</li> <li>com.ghostreport.security.RuntimeSecurityEventLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RuntimeSecurityEventLoggingTest]/[method:logoutRevokesTokenAndCreatesAuditLogWithoutStoringToken()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanVerifyEvidencePackageWithoutReceivingPathsOrFilenames()]</li> <li>com.ghostreport.security.LoginRateLimitSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.LoginRateLimitSecurityTest]/[method:successfulLoginClearsPreviousFailuresForClient()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:adminCanReadAuditEndpoints()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:inactiveUserCannotLoginAndCreatesAuditLog()]</li> <li>com.ghostreport.security.AdminAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminAuthorizationTest]/[method:analystCannotAccessAdminPanel()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:nonAdminCannotActivateOrDeactivateUsers()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:lastActiveAdminCannotBeDeactivated()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCannotUseAdminEndpoints()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:adminCanDeactivateAndReactivateUserWithAuditLog()]</li> <li>com.ghostreport.security.LoginRateLimitSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.LoginRateLimitSecurityTest]/[method:loginRateLimitIsScopedToUsernameAndClientAddress()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:adminCanReadAuditLogsAndSecurityAlertsAsDtos()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorClosedCaseHistoryDoesNotExposeSensitiveReportData()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:analystAndAnonymousCannotReadAuditEndpoints()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCannotUseAnalystWriteEndpoints()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanReadAuditEndpoints()]</li> <li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:backupEndpointsRequireAdminRole()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanVerifyBackupButCannotCreateOrRestoreBackup()]</li> <li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:adminCanUseAdminEndpointsAndHasOversightAccess()]</li> <li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:analystCanUseAnalysisEndpointsButCannotUseAdminOrRestrictedAuditEndpoints()]</li> <li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:auditorCanReadAuditEndpointsOnlyAndCannotChangeReportsOrRunAdminActions()]</li> 
+</ul>
+</div></div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_91'>91</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_91'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>lambda$isTokenValid$1<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:validTokenIsAcceptedForMatchingUserAndRole()]</span></span> replaced return value with &#34;&#34; for com/ghostreport/service/JwtService::lambda$isTokenValid$1 &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_94'>94</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_94'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>isTokenValid<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:validTokenIsAcceptedForMatchingUserAndRole()]</span></span> negated conditional &rarr; KILLED</span>
+</div> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>isTokenValid<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> replaced boolean return with true for com/ghostreport/service/JwtService::isTokenValid &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_95'>95</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_95'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>isTokenValid<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:validTokenIsAcceptedForMatchingUserAndRole()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_96'>96</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_96'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>isTokenValid<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:validTokenIsAcceptedForMatchingUserAndRole()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_97'>97</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_97'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>isTokenValid<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:validTokenIsAcceptedForMatchingUserAndRole()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_98'>98</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_98'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>isTokenValid<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_99'>99</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_99'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>isTokenValid<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:validTokenIsAcceptedForMatchingUserAndRole()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_100'>100</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_100'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>isTokenValid<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:tokenRoleMustMatchCurrentUserAuthorities()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_102'>102</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_102'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>isTokenValid<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:tamperedTokenIsRejected()]</span></span> replaced boolean return with true for com/ghostreport/service/JwtService::isTokenValid &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_108'>108</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_108'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>encodeJson<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:generatedTokenContainsIssuerAudienceAndUniqueIdentifier()]</span></span> replaced return value with &#34;&#34; for com/ghostreport/service/JwtService::encodeJson &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_117'>117</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_117'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_121'>121</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_121'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_130'>130</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_130'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_144'>144</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_144'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_145'>145</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_145'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_146'>146</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_146'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_147'>147</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_147'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_148'>148</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_148'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_149'>149</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_149'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_153'>153</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_153'/> 
+
+<p class='SURVIVED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>none</span></span> changed conditional boundary &rarr; SURVIVED</span>
+<a title="Click to view covering tests" class="view-covered-by-tests" onClick="document.getElementById('MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=readVerifiedClaims,-methodDesc=(Ljava/lang/String;)Lcom/ghostreport/service/JwtService$JwtClaims;],-indexes=[217],-mutator=org.pitest.mutationtest.engine.gregor.mutators.ConditionalsBoundaryMutator]').style.display=(document.getElementById('MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=readVerifiedClaims,-methodDesc=(Ljava/lang/String;)Lcom/ghostreport/service/JwtService$JwtClaims;],-indexes=[217],-mutator=org.pitest.mutationtest.engine.gregor.mutators.ConditionalsBoundaryMutator]').style.display == 'block')?'none':'block';">Covering tests</a>
+<div class="covered-tests" id="MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=readVerifiedClaims,-methodDesc=(Ljava/lang/String;)Lcom/ghostreport/service/JwtService$JwtClaims;],-indexes=[217],-mutator=org.pitest.mutationtest.engine.gregor.mutators.ConditionalsBoundaryMutator]" style="display:none;">Covered by tests:
+<ul>
+<li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:expiredTokenIsRejected()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:tokenRoleMustMatchCurrentUserAuthorities()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:validTokenIsAcceptedForMatchingUserAndRole()]</li> <li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:pathTraversalInEndpointFilenameIsRejected()]</li> <li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:adminCanCreateAndVerifyBackupThroughEndpoints()]</li> <li>com.ghostreport.security.RuntimeSecurityEventLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RuntimeSecurityEventLoggingTest]/[method:logoutRevokesTokenAndCreatesAuditLogWithoutStoringToken()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanVerifyEvidencePackageWithoutReceivingPathsOrFilenames()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:adminCanReadAuditEndpoints()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:inactiveUserCannotLoginAndCreatesAuditLog()]</li> <li>com.ghostreport.security.AdminAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminAuthorizationTest]/[method:analystCannotAccessAdminPanel()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:nonAdminCannotActivateOrDeactivateUsers()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:lastActiveAdminCannotBeDeactivated()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCannotUseAdminEndpoints()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:adminCanDeactivateAndReactivateUserWithAuditLog()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:adminCanReadAuditLogsAndSecurityAlertsAsDtos()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorClosedCaseHistoryDoesNotExposeSensitiveReportData()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:analystAndAnonymousCannotReadAuditEndpoints()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCannotUseAnalystWriteEndpoints()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanReadAuditEndpoints()]</li> <li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:backupEndpointsRequireAdminRole()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanVerifyBackupButCannotCreateOrRestoreBackup()]</li> <li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:adminCanUseAdminEndpointsAndHasOversightAccess()]</li> <li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:analystCanUseAnalysisEndpointsButCannotUseAdminOrRestrictedAuditEndpoints()]</li> <li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:auditorCanReadAuditEndpointsOnlyAndCannotChangeReportsOrRunAdminActions()]</li> 
+</ul>
+</div></div> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:expiredTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_156'>156</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_156'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>readVerifiedClaims<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> replaced return value with null for com/ghostreport/service/JwtService::readVerifiedClaims &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_163'>163</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_163'/> 
+
+<p class='SURVIVED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>isTokenRevoked<br/><b>Killed by : </b>none</span></span> removed call to com/ghostreport/service/JwtService::purgeExpiredRevocations &rarr; SURVIVED</span>
+<a title="Click to view covering tests" class="view-covered-by-tests" onClick="document.getElementById('MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=isTokenRevoked,-methodDesc=(Lcom/ghostreport/service/JwtService$JwtClaims;)Z],-indexes=[4],-mutator=org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator]').style.display=(document.getElementById('MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=isTokenRevoked,-methodDesc=(Lcom/ghostreport/service/JwtService$JwtClaims;)Z],-indexes=[4],-mutator=org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator]').style.display == 'block')?'none':'block';">Covering tests</a>
+<div class="covered-tests" id="MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=isTokenRevoked,-methodDesc=(Lcom/ghostreport/service/JwtService$JwtClaims;)Z],-indexes=[4],-mutator=org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator]" style="display:none;">Covered by tests:
+<ul>
+<li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:tokenRoleMustMatchCurrentUserAuthorities()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:validTokenIsAcceptedForMatchingUserAndRole()]</li> <li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:pathTraversalInEndpointFilenameIsRejected()]</li> <li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:adminCanCreateAndVerifyBackupThroughEndpoints()]</li> <li>com.ghostreport.security.RuntimeSecurityEventLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RuntimeSecurityEventLoggingTest]/[method:logoutRevokesTokenAndCreatesAuditLogWithoutStoringToken()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanVerifyEvidencePackageWithoutReceivingPathsOrFilenames()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:adminCanReadAuditEndpoints()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:inactiveUserCannotLoginAndCreatesAuditLog()]</li> <li>com.ghostreport.security.AdminAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminAuthorizationTest]/[method:analystCannotAccessAdminPanel()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:nonAdminCannotActivateOrDeactivateUsers()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:lastActiveAdminCannotBeDeactivated()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCannotUseAdminEndpoints()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:adminCanDeactivateAndReactivateUserWithAuditLog()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:adminCanReadAuditLogsAndSecurityAlertsAsDtos()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorClosedCaseHistoryDoesNotExposeSensitiveReportData()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:analystAndAnonymousCannotReadAuditEndpoints()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCannotUseAnalystWriteEndpoints()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanReadAuditEndpoints()]</li> <li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:backupEndpointsRequireAdminRole()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanVerifyBackupButCannotCreateOrRestoreBackup()]</li> <li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:adminCanUseAdminEndpointsAndHasOversightAccess()]</li> <li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:analystCanUseAnalysisEndpointsButCannotUseAdminOrRestrictedAuditEndpoints()]</li> <li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:auditorCanReadAuditEndpointsOnlyAndCannotChangeReportsOrRunAdminActions()]</li> 
+</ul>
+</div></div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_165'>165</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_165'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>isTokenRevoked<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> <p class='SURVIVED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>isTokenRevoked<br/><b>Killed by : </b>none</span></span> changed conditional boundary &rarr; SURVIVED</span>
+<a title="Click to view covering tests" class="view-covered-by-tests" onClick="document.getElementById('MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=isTokenRevoked,-methodDesc=(Lcom/ghostreport/service/JwtService$JwtClaims;)Z],-indexes=[23],-mutator=org.pitest.mutationtest.engine.gregor.mutators.ConditionalsBoundaryMutator]').style.display=(document.getElementById('MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=isTokenRevoked,-methodDesc=(Lcom/ghostreport/service/JwtService$JwtClaims;)Z],-indexes=[23],-mutator=org.pitest.mutationtest.engine.gregor.mutators.ConditionalsBoundaryMutator]').style.display == 'block')?'none':'block';">Covering tests</a>
+<div class="covered-tests" id="MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=isTokenRevoked,-methodDesc=(Lcom/ghostreport/service/JwtService$JwtClaims;)Z],-indexes=[23],-mutator=org.pitest.mutationtest.engine.gregor.mutators.ConditionalsBoundaryMutator]" style="display:none;">Covered by tests:
+<ul>
+<li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</li> <li>com.ghostreport.security.RuntimeSecurityEventLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RuntimeSecurityEventLoggingTest]/[method:logoutRevokesTokenAndCreatesAuditLogWithoutStoringToken()]</li> 
+</ul>
+</div></div> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>isTokenRevoked<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> <p class='KILLED'><span class='pop'>4.<span><b>4</b><br/><b>Location : </b>isTokenRevoked<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:validTokenIsAcceptedForMatchingUserAndRole()]</span></span> replaced boolean return with true for com/ghostreport/service/JwtService::isTokenRevoked &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_170'>170</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_170'/> 
+
+<p class='SURVIVED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>lambda$purgeExpiredRevocations$2<br/><b>Killed by : </b>none</span></span> changed conditional boundary &rarr; SURVIVED</span>
+<a title="Click to view covering tests" class="view-covered-by-tests" onClick="document.getElementById('MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=lambda$purgeExpiredRevocations$2,-methodDesc=(JLjava/util/Map$Entry;)Z],-indexes=[9],-mutator=org.pitest.mutationtest.engine.gregor.mutators.ConditionalsBoundaryMutator]').style.display=(document.getElementById('MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=lambda$purgeExpiredRevocations$2,-methodDesc=(JLjava/util/Map$Entry;)Z],-indexes=[9],-mutator=org.pitest.mutationtest.engine.gregor.mutators.ConditionalsBoundaryMutator]').style.display == 'block')?'none':'block';">Covering tests</a>
+<div class="covered-tests" id="MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=lambda$purgeExpiredRevocations$2,-methodDesc=(JLjava/util/Map$Entry;)Z],-indexes=[9],-mutator=org.pitest.mutationtest.engine.gregor.mutators.ConditionalsBoundaryMutator]" style="display:none;">Covered by tests:
+<ul>
+<li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</li> <li>com.ghostreport.security.RuntimeSecurityEventLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RuntimeSecurityEventLoggingTest]/[method:logoutRevokesTokenAndCreatesAuditLogWithoutStoringToken()]</li> 
+</ul>
+</div></div> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>lambda$purgeExpiredRevocations$2<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>lambda$purgeExpiredRevocations$2<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> replaced boolean return with true for com/ghostreport/service/JwtService::lambda$purgeExpiredRevocations$2 &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_175'>175</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_175'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>signatureMatches<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> negated conditional &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_176'>176</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_176'/> 
+
+<p class='NO_COVERAGE'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>signatureMatches<br/><b>Killed by : </b>none</span></span> replaced boolean return with true for com/ghostreport/service/JwtService::signatureMatches &rarr; NO_COVERAGE</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_181'>181</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_181'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>signatureMatches<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</span></span> replaced boolean return with false for com/ghostreport/service/JwtService::signatureMatches &rarr; KILLED</span>
+</div> <p class='SURVIVED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>signatureMatches<br/><b>Killed by : </b>none</span></span> replaced boolean return with true for com/ghostreport/service/JwtService::signatureMatches &rarr; SURVIVED</span>
+<a title="Click to view covering tests" class="view-covered-by-tests" onClick="document.getElementById('MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=signatureMatches,-methodDesc=(Ljava/lang/String;)Z],-indexes=[46],-mutator=org.pitest.mutationtest.engine.gregor.mutators.returns.BooleanTrueReturnValsMutator]').style.display=(document.getElementById('MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=signatureMatches,-methodDesc=(Ljava/lang/String;)Z],-indexes=[46],-mutator=org.pitest.mutationtest.engine.gregor.mutators.returns.BooleanTrueReturnValsMutator]').style.display == 'block')?'none':'block';">Covering tests</a>
+<div class="covered-tests" id="MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=signatureMatches,-methodDesc=(Ljava/lang/String;)Z],-indexes=[46],-mutator=org.pitest.mutationtest.engine.gregor.mutators.returns.BooleanTrueReturnValsMutator]" style="display:none;">Covered by tests:
+<ul>
+<li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:tamperedTokenIsRejected()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:expiredTokenIsRejected()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:tokenRoleMustMatchCurrentUserAuthorities()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:validTokenIsAcceptedForMatchingUserAndRole()]</li> <li>com.ghostreport.security.RuntimeSecurityEventLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RuntimeSecurityEventLoggingTest]/[method:invalidJwtCreatesSecurityAlertWithoutStoringToken()]</li> <li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:pathTraversalInEndpointFilenameIsRejected()]</li> <li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:adminCanCreateAndVerifyBackupThroughEndpoints()]</li> <li>com.ghostreport.security.RuntimeSecurityEventLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RuntimeSecurityEventLoggingTest]/[method:logoutRevokesTokenAndCreatesAuditLogWithoutStoringToken()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanVerifyEvidencePackageWithoutReceivingPathsOrFilenames()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:adminCanReadAuditEndpoints()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:inactiveUserCannotLoginAndCreatesAuditLog()]</li> <li>com.ghostreport.security.AdminAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminAuthorizationTest]/[method:analystCannotAccessAdminPanel()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:nonAdminCannotActivateOrDeactivateUsers()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:lastActiveAdminCannotBeDeactivated()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCannotUseAdminEndpoints()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:adminCanDeactivateAndReactivateUserWithAuditLog()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:adminCanReadAuditLogsAndSecurityAlertsAsDtos()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorClosedCaseHistoryDoesNotExposeSensitiveReportData()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:analystAndAnonymousCannotReadAuditEndpoints()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCannotUseAnalystWriteEndpoints()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanReadAuditEndpoints()]</li> <li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:backupEndpointsRequireAdminRole()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanVerifyBackupButCannotCreateOrRestoreBackup()]</li> <li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:adminCanUseAdminEndpointsAndHasOversightAccess()]</li> <li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:analystCanUseAnalysisEndpointsButCannotUseAdminOrRestrictedAuditEndpoints()]</li> <li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:auditorCanReadAuditEndpointsOnlyAndCannotChangeReportsOrRunAdminActions()]</li> 
+</ul>
+</div></div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_187'>187</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_187'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>sign<br/><b>Killed by : </b>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:tamperedTokenIsRejected()]</span></span> removed call to javax/crypto/Mac::init &rarr; KILLED</span>
+</div> 
+</td>
+</tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@30a1b9b0_188'>188</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@30a1b9b0_188'/> 
+
+<p class='SURVIVED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>sign<br/><b>Killed by : </b>none</span></span> replaced return value with &#34;&#34; for com/ghostreport/service/JwtService::sign &rarr; SURVIVED</span>
+<a title="Click to view covering tests" class="view-covered-by-tests" onClick="document.getElementById('MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=sign,-methodDesc=(Ljava/lang/String;)Ljava/lang/String;],-indexes=[26],-mutator=org.pitest.mutationtest.engine.gregor.mutators.returns.EmptyObjectReturnValsMutator]').style.display=(document.getElementById('MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=sign,-methodDesc=(Ljava/lang/String;)Ljava/lang/String;],-indexes=[26],-mutator=org.pitest.mutationtest.engine.gregor.mutators.returns.EmptyObjectReturnValsMutator]').style.display == 'block')?'none':'block';">Covering tests</a>
+<div class="covered-tests" id="MutationIdentifier-[location=Location-[clazz=com.ghostreport.service.JwtService,-method=sign,-methodDesc=(Ljava/lang/String;)Ljava/lang/String;],-indexes=[26],-mutator=org.pitest.mutationtest.engine.gregor.mutators.returns.EmptyObjectReturnValsMutator]" style="display:none;">Covered by tests:
+<ul>
+<li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:tamperedTokenIsRejected()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:generatedTokenContainsIssuerAudienceAndUniqueIdentifier()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:expiredTokenIsRejected()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:tokenRoleMustMatchCurrentUserAuthorities()]</li> <li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:validTokenIsAcceptedForMatchingUserAndRole()]</li> <li>com.ghostreport.security.RuntimeSecurityEventLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RuntimeSecurityEventLoggingTest]/[method:invalidJwtCreatesSecurityAlertWithoutStoringToken()]</li> <li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:pathTraversalInEndpointFilenameIsRejected()]</li> <li>com.ghostreport.security.RuntimeSecurityEventLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RuntimeSecurityEventLoggingTest]/[method:successfulLoginCreatesAuditLogWithoutTokenOrPassword()]</li> <li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:adminCanCreateAndVerifyBackupThroughEndpoints()]</li> <li>com.ghostreport.security.RuntimeSecurityEventLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RuntimeSecurityEventLoggingTest]/[method:logoutRevokesTokenAndCreatesAuditLogWithoutStoringToken()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanVerifyEvidencePackageWithoutReceivingPathsOrFilenames()]</li> <li>com.ghostreport.security.LoginRateLimitSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.LoginRateLimitSecurityTest]/[method:successfulLoginClearsPreviousFailuresForClient()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:adminCanReadAuditEndpoints()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:inactiveUserCannotLoginAndCreatesAuditLog()]</li> <li>com.ghostreport.security.AdminAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminAuthorizationTest]/[method:analystCannotAccessAdminPanel()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:nonAdminCannotActivateOrDeactivateUsers()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:lastActiveAdminCannotBeDeactivated()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCannotUseAdminEndpoints()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:adminCanDeactivateAndReactivateUserWithAuditLog()]</li> <li>com.ghostreport.security.LoginRateLimitSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.LoginRateLimitSecurityTest]/[method:loginRateLimitIsScopedToUsernameAndClientAddress()]</li> <li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:adminCanReadAuditLogsAndSecurityAlertsAsDtos()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorClosedCaseHistoryDoesNotExposeSensitiveReportData()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:analystAndAnonymousCannotReadAuditEndpoints()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCannotUseAnalystWriteEndpoints()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanReadAuditEndpoints()]</li> <li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:backupEndpointsRequireAdminRole()]</li> <li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanVerifyBackupButCannotCreateOrRestoreBackup()]</li> <li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:adminCanUseAdminEndpointsAndHasOversightAccess()]</li> <li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:analystCanUseAnalysisEndpointsButCannotUseAdminOrRestrictedAuditEndpoints()]</li> <li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:auditorCanReadAuditEndpointsOnlyAndCannotChangeReportsOrRunAdminActions()]</li> 
+</ul>
+</div></div> 
+</td>
+</tr>
+
+</table>
+
+
+<h2>Active mutators</h2>
+<ul>
+
+<li class='mutator'>CONDITIONALS_BOUNDARY</li>
+
+<li class='mutator'>EMPTY_RETURNS</li>
+
+<li class='mutator'>FALSE_RETURNS</li>
+
+<li class='mutator'>INCREMENTS</li>
+
+<li class='mutator'>INVERT_NEGS</li>
+
+<li class='mutator'>MATH</li>
+
+<li class='mutator'>NEGATE_CONDITIONALS</li>
+
+<li class='mutator'>NULL_RETURNS</li>
+
+<li class='mutator'>PRIMITIVE_RETURNS</li>
+
+<li class='mutator'>TRUE_RETURNS</li>
+
+<li class='mutator'>VOID_METHOD_CALLS</li>
+
+</ul>
+
+<h2>Tests examined</h2>
+<ul>
+<li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:expiredTokenIsRejected()] (3 ms)</li><li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:revokedTokenIsRejected()] (1 ms)</li><li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:tokenRoleMustMatchCurrentUserAuthorities()] (2 ms)</li><li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:validTokenIsAcceptedForMatchingUserAndRole()] (3 ms)</li><li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:pathTraversalInEndpointFilenameIsRejected()] (105 ms)</li><li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:adminCanCreateAndVerifyBackupThroughEndpoints()] (193 ms)</li><li>com.ghostreport.security.RuntimeSecurityEventLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RuntimeSecurityEventLoggingTest]/[method:logoutRevokesTokenAndCreatesAuditLogWithoutStoringToken()] (213 ms)</li><li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanVerifyEvidencePackageWithoutReceivingPathsOrFilenames()] (230 ms)</li><li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:adminCanReadAuditEndpoints()] (256 ms)</li><li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:inactiveUserCannotLoginAndCreatesAuditLog()] (254 ms)</li><li>com.ghostreport.security.AdminAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminAuthorizationTest]/[method:analystCannotAccessAdminPanel()] (256 ms)</li><li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:nonAdminCannotActivateOrDeactivateUsers()] (277 ms)</li><li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:lastActiveAdminCannotBeDeactivated()] (281 ms)</li><li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCannotUseAdminEndpoints()] (294 ms)</li><li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:adminCanDeactivateAndReactivateUserWithAuditLog()] (299 ms)</li><li>com.ghostreport.security.AdminUserManagementSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AdminUserManagementSecurityTest]/[method:adminCanReadAuditLogsAndSecurityAlertsAsDtos()] (330 ms)</li><li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorClosedCaseHistoryDoesNotExposeSensitiveReportData()] (333 ms)</li><li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:analystAndAnonymousCannotReadAuditEndpoints()] (360 ms)</li><li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCannotUseAnalystWriteEndpoints()] (398 ms)</li><li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanReadAuditEndpoints()] (423 ms)</li><li>com.ghostreport.controller.AdminBackupControllerSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.AdminBackupControllerSecurityTest]/[method:backupEndpointsRequireAdminRole()] (470 ms)</li><li>com.ghostreport.security.AuditorAuthorizationTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AuditorAuthorizationTest]/[method:auditorCanVerifyBackupButCannotCreateOrRestoreBackup()] (522 ms)</li><li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:adminCanUseAdminEndpointsAndHasOversightAccess()] (568 ms)</li><li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:analystCanUseAnalysisEndpointsButCannotUseAdminOrRestrictedAuditEndpoints()] (784 ms)</li><li>com.ghostreport.security.RbacAuthorizationMatrixTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RbacAuthorizationMatrixTest]/[method:auditorCanReadAuditEndpointsOnlyAndCannotChangeReportsOrRunAdminActions()] (799 ms)</li><li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:tamperedTokenIsRejected()] (1 ms)</li><li>com.ghostreport.security.JwtServiceSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.JwtServiceSecurityTest]/[method:generatedTokenContainsIssuerAudienceAndUniqueIdentifier()] (8 ms)</li><li>com.ghostreport.security.ErrorHandlingSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.ErrorHandlingSecurityTest]/[method:malformedJsonReturnsGenericErrorWithoutInternals()] (9 ms)</li><li>com.ghostreport.security.SecurityHeadersTest.[engine:junit-jupiter]/[class:com.ghostreport.security.SecurityHeadersTest]/[method:publicPageIncludesSecurityHeaders()] (30 ms)</li><li>com.ghostreport.security.AnalystCaseOwnershipTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AnalystCaseOwnershipTest]/[method:analystCannotDownloadAttachmentFromCaseAssignedToAnotherAnalyst()] (31 ms)</li><li>com.ghostreport.security.AnonymousDataLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.AnonymousDataLoggingTest]/[method:auditLogsShouldNotContainPlainTrackingCode()] (28 ms)</li><li>com.ghostreport.service.BackupServiceIntegrationTest.[engine:junit-jupiter]/[class:com.ghostreport.service.BackupServiceIntegrationTest]/[method:verifiesValidBackup()] (47 ms)</li><li>com.ghostreport.config.DataInitializerDisabledTest.[engine:junit-jupiter]/[class:com.ghostreport.config.DataInitializerDisabledTest]/[method:defaultUsersAreNotCreatedWhenSeedingIsDisabled()] (90 ms)</li><li>com.ghostreport.controller.ReportControllerAttachmentUploadTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.ReportControllerAttachmentUploadTest]/[method:uploadRejectsTooManyFilesInSingleRequest()] (130 ms)</li><li>com.ghostreport.controller.PublicReportFlowIntegrationTest.[engine:junit-jupiter]/[class:com.ghostreport.controller.PublicReportFlowIntegrationTest]/[method:createReportWithValidPayloadCreatesReportAndReturnsTrackingCodeWithoutInternalHash()] (210 ms)</li><li>com.ghostreport.security.LoginRateLimitSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.LoginRateLimitSecurityTest]/[method:repeatedFailedLoginAttemptsCreateAlertAndEventuallyReturn429()] (255 ms)</li><li>com.ghostreport.GhostreportApplicationTests.[engine:junit-jupiter]/[class:com.ghostreport.GhostreportApplicationTests]/[method:contextLoads()] (356 ms)</li><li>com.ghostreport.security.RuntimeSecurityEventLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RuntimeSecurityEventLoggingTest]/[method:invalidJwtCreatesSecurityAlertWithoutStoringToken()] (77 ms)</li><li>com.ghostreport.security.RuntimeSecurityEventLoggingTest.[engine:junit-jupiter]/[class:com.ghostreport.security.RuntimeSecurityEventLoggingTest]/[method:successfulLoginCreatesAuditLogWithoutTokenOrPassword()] (135 ms)</li><li>com.ghostreport.security.LoginRateLimitSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.LoginRateLimitSecurityTest]/[method:successfulLoginClearsPreviousFailuresForClient()] (249 ms)</li><li>com.ghostreport.security.LoginRateLimitSecurityTest.[engine:junit-jupiter]/[class:com.ghostreport.security.LoginRateLimitSecurityTest]/[method:loginRateLimitIsScopedToUsernameAndClientAddress()] (317 ms)</li>
+</ul>
+
+<br/>
+
+Report generated by <a href='https://pitest.org'>PIT</a> 1.25.3 <a href='https://github.com/sponsors/hcoles'>support</a>
+
+</body>
+</html>

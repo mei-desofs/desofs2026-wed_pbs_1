@@ -9,12 +9,12 @@ downloaded artifacts.
 
 | Folder | Tool/evidence | DESOFS rubric | ASVS chapters | Current limitation / residual risk |
 | --- | --- | --- | --- | --- |
-| `testing/` | Surefire/JUnit, JaCoCo, runtime security evidence, PIT | Build and Test, ASVS | V2, V5, V6, V7, V8, V9, V16 | Runtime tests now include JWT logout/revocation locally; download a fresh CI artifact after pushing. PIT is configured for HTML/XML reports in CI Java 17; local Java 23 failure is documented separately. |
+| `testing/` | Surefire/JUnit, JaCoCo, runtime security evidence, PIT | Build and Test, ASVS | V2, V5, V6, V7, V8, V9, V16 | Runtime tests now include JWT logout/revocation locally; download a fresh CI artifact after pushing. PIT is evidence review; local JDK 17 with an ASCII Maven repository produced partial output but did not finish in the local time window. |
 | `sast/` | SpotBugs and CodeQL summary | Development, Pipeline Automation | V15, V16 | CodeQL primary evidence is GitHub Code Scanning; SpotBugs remediation is documented in `docs/SPOTBUGS_TRIAGE.md` pending a fresh scan. |
 | `sca/` | OWASP Dependency-Check and CycloneDX SBOM | Build and Test, Pipeline Automation | V13, V15 | Includes original and post-remediation Dependency-Check evidence; `docs/SCA_TRIAGE.md` records remaining residual-risk findings. |
-| `secret-scanning/` | Gitleaks JSON report | Pipeline Automation, Production | V13, V14, V15 | Empty `[]` report means no leaked secrets were found in the scanned scope. |
+| `secret-scanning/` | Gitleaks JSON report | Pipeline Automation, Production | V13, V14, V15 | Empty `[]` report means no leaked secrets were found in the scanned scope. A clean scan of tracked `HEAD` is archived separately from noisy local workspace diagnostics. |
 | `dast/` | OWASP ZAP baseline reports | Build and Test, ASVS | V3, V4, V12 | Existing ZAP reports are pre-CSP-remediation evidence; rerun ZAP to archive the updated result. |
-| `pipelines/` | GitHub Actions screenshots, job summaries and run links | Pipeline Automation | V15 | Screenshots/job summaries must be manually downloaded or captured. |
+| `pipelines/` | GitHub Actions screenshots, job summaries, run links and workflow validation | Pipeline Automation | V15 | Screenshots/job summaries must be manually downloaded or captured. `actionlint-local-validation` records local workflow validation. |
 | `asvs/` | Tracker exports and ASVS notes | ASVS, Overall Project | V1-V17 | Formal checklist lives in `Deliverables/Phase 2/ASVS_5.0_Tracker_Phase 2_Sprint 2.xlsx`. |
 | `code-review/` | Pull request templates, review screenshots and governance evidence | Development, Overall Project | V15, V16 | GitHub branch protection must be shown in the repository UI. |
 | `assessment/` | Security assessment summaries and triage notes | Production, Operate, Overall Project | V13, V15, V16 | Manual triage must remain traceable to actual reports. |
