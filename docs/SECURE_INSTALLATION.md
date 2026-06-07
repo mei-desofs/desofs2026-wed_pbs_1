@@ -166,7 +166,16 @@ Operational guidance:
 
 ## Error Handling and Logs
 
-Stack traces are disabled in application configuration. Runtime audit and security events must not include passwords, JWTs, raw secrets or full sensitive payloads. Security alerts are operational evidence, not tamper-proof logs.
+Stack traces are disabled in application configuration. Runtime audit and
+security events include a correlation ID, UTC timestamp and SHA-256 integrity
+hash. Event details are sanitized to redact passwords, bearer tokens, reset
+tokens, authorization values and tracking codes.
+
+Security alerts are operational evidence. The application provides
+tamper-evident fields inside the database record, but it does not provide
+external WORM storage, SIEM forwarding or automated retention. Production
+deployments should export logs/events to protected centralized storage and
+define retention, access review and incident response procedures.
 
 ## Security Configuration Checklist
 
@@ -183,3 +192,4 @@ Stack traces are disabled in application configuration. Runtime audit and securi
 | Upload dir | Controlled, not source-controlled |
 | Backup dir | Separate from upload dir |
 | Rate limits | Positive values |
+| Log storage | Protected database plus external SIEM/WORM storage for production |

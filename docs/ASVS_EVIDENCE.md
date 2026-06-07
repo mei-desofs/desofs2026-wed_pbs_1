@@ -39,7 +39,7 @@ evidence.
 | V13 Configuration | Partially Compliant | Profiles, environment variables, fail-fast validation, Gitleaks and SCA evidence. | Residual dependency findings require documented triage. |
 | V14 Data Protection | Partially Compliant | DTO responses avoid passwords/tokens and file/package integrity checks exist. | Retention, deletion and encryption-at-rest policies are incomplete. |
 | V15 Secure Coding and Architecture | Partially Compliant | Single `dev` pipeline, tests, JaCoCo, SpotBugs, SonarCloud, CodeQL, Dependency-Check, CycloneDX, Gitleaks, ZAP and PIT evidence review. | Security findings remain triage-driven; PIT is not a blocking quality gate. |
-| V16 Security Logging and Error Handling | Partially Compliant | Audit/security event services, sanitized error handling and runtime security tests. | No tamper-resistant logs or external SIEM integration. |
+| V16 Security Logging and Error Handling | Partially Compliant | Audit/security event services, correlation IDs, UTC timestamps, redaction, integrity hashes, sanitized error handling and runtime security tests. | No external SIEM, WORM storage or automated retention policy. |
 | V17 WebRTC | Not Applicable | No WebRTC, TURN/STUN, media capture or real-time browser communication exists. | None in current scope. |
 
 ## Evidence References
@@ -54,9 +54,27 @@ evidence.
 | File handling | `ghostreport/src/main/java/com/ghostreport/service/FileStorageService.java`, `ghostreport/src/test/java/com/ghostreport/service/FileStorageServiceTest.java` |
 | Backup and integrity | `ghostreport/src/main/java/com/ghostreport/service/BackupService.java`, `ghostreport/src/test/java/com/ghostreport/service/BackupServiceIntegrationTest.java`, `docs/SECURE_INSTALLATION.md` |
 | Error handling | `ghostreport/src/main/java/com/ghostreport/exception/GlobalExceptionHandler.java`, `ghostreport/src/test/java/com/ghostreport/security/ErrorHandlingSecurityTest.java` |
-| Runtime security events | `ghostreport/src/main/java/com/ghostreport/service/SecurityMonitoringService.java`, `ghostreport/src/test/java/com/ghostreport/security/RuntimeSecurityEventLoggingTest.java` |
+| Runtime security events | `ghostreport/src/main/java/com/ghostreport/service/SecurityMonitoringService.java`, `ghostreport/src/main/java/com/ghostreport/service/AuditLogService.java`, `ghostreport/src/main/java/com/ghostreport/security/CorrelationIdFilter.java`, `ghostreport/src/test/java/com/ghostreport/security/RuntimeSecurityEventLoggingTest.java` |
 | Pipeline evidence | `.github/workflows/dev.yml`, GitHub Actions job summaries and downloaded artifacts |
 | Local evidence archive | `Deliverables/Phase 2/Evidence`, populated manually from downloaded GitHub Actions artifacts |
+
+## Requested Logging and Monitoring ASVS Items
+
+| ASVS ID | Status | Evidence | Notes |
+| --- | --- | --- | --- |
+| V16.1.1 | Compliant | `AuditLogService`, `SecurityMonitoringService`, `RuntimeSecurityEventLoggingTest` | Security-relevant events are recorded as audit logs or security alerts. |
+| V16.2.2 | Compliant | `AuthService`, `AuthController`, `RuntimeSecurityEventLoggingTest` | Login success, login failure and logout are logged without passwords/tokens. |
+| V16.2.3 | Compliant | `JwtAuthenticationFilter`, `SecurityMonitoringService`, `RuntimeSecurityEventLoggingTest` | Invalid JWTs create security alerts without storing token values. |
+| V16.2.4 | Compliant | `SecurityConfig`, `SecurityMonitoringService`, `RuntimeSecurityEventLoggingTest` | Forbidden access attempts create security alerts with endpoint context. |
+| V16.2.5 | Compliant | `ReportService.recordUploadRejected`, upload security tests | Rejected uploads are logged and repeated rejection creates alerts. |
+| V16.3.1 | Compliant | `CorrelationIdFilter`, `GlobalExceptionHandler`, DTO responses, runtime tests | `X-Correlation-ID` is accepted/created, propagated to responses and stored with audit/security events. |
+| V16.3.2 | Compliant | `AuditLog`, `SecurityAlert`, `AuditLogService`, `SecurityMonitoringService` | Audit and alert timestamps are generated using UTC. |
+| V16.3.4 | Partially Compliant | `AuditLog.integrityHash`, `SecurityAlert.integrityHash`, DTOs | Events include a SHA-256 integrity hash. External append-only/WORM storage is not implemented. |
+| V16.4.1 | Compliant | `SecurityLogSanitizer`, runtime tests | Passwords, bearer tokens, reset tokens, authorization values and tracking codes are redacted from event details. |
+| V16.4.2 | Compliant | `GlobalExceptionHandler`, `ErrorHandlingSecurityTest` | Error responses use generic messages and correlation IDs, avoiding stack traces. |
+| V16.4.3 | Compliant | `AuditController`, `AdminController`, DTO responses | Audit/security event access is role-protected and returned through DTOs. |
+| V16.5.2 | Partially Compliant | `SecurityMonitoringService`, `SecurityAlertRepository`, runtime tests | Security alerts are generated for relevant suspicious events; no external SIEM integration. |
+| V16.5.3 | Partially Compliant | `docs/SECURITY_ASSESSMENT.md`, `docs/SECURE_INSTALLATION.md` | Retention/protection expectations are documented; automated retention and tamper-proof archive are future operational hardening. |
 
 ## Requested Cryptography and Backup Protection ASVS Items
 
@@ -115,7 +133,7 @@ evidence.
 
 | Tool | Current evidence | Artifact/location | Status wording |
 | --- | --- | --- | --- |
-| JUnit/MockMvc | Local run passed with 134 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
+| JUnit/MockMvc | Local run passed with 136 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
 | JaCoCo | Coverage report and coverage check run in `build-test`. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco` | Blocking coverage evidence. |
 | PIT | PIT runs in evidence review mode and uploads fallback summary/exit code when needed. | `pit-mutation-testing-report` | Evidence review, not a blocking mutation score gate. |
 | Gitleaks | Repository secret scan runs before dependent security jobs. Empty JSON means no leaks in scanned scope. | `secret-scan-gitleaks-json` | Blocking for confirmed leaks. |
