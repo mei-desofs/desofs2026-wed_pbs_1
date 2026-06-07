@@ -41,6 +41,9 @@ ghostreport:
   jwt:
     secret: ${JWT_SECRET}
     expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+  password-reset:
+    token-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:30}
+    expose-token: false
   seed-users:
     enabled: false
   backup-dir: backups

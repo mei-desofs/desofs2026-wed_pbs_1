@@ -26,6 +26,9 @@ ghostreport:
   jwt:
     secret: ${JWT_SECRET:dev-only-change-this-secret-32-chars}
     expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+  password-reset:
+    token-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:30}
+    expose-token: ${PASSWORD_RESET_EXPOSE_TOKEN:false}
   seed-users:
     enabled: ${GHOSTREPORT_SEED_USERS_ENABLED:true}
 

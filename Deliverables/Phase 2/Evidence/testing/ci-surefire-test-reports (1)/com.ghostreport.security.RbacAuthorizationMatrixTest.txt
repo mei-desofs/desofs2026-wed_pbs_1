@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.ghostreport.security.RbacAuthorizationMatrixTest
--------------------------------------------------------------------------------
-Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.259 s -- in com.ghostreport.security.RbacAuthorizationMatrixTest

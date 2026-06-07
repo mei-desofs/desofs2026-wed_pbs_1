@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.ghostreport.security.AuditorAuthorizationTest
--------------------------------------------------------------------------------
-Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.796 s -- in com.ghostreport.security.AuditorAuthorizationTest
