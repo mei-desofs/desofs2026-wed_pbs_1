@@ -21,6 +21,8 @@ The default `application.yaml` is production-like. If no profile is active, the 
 | `DB_PASSWORD` | Yes | Database password. |
 | `JWT_SECRET` | Yes | HMAC signing secret for JWT tokens. Must be at least 32 characters. |
 | `JWT_EXPIRATION_SECONDS` | No | Token lifetime. Defaults to `3600`. |
+| `PASSWORD_RESET_TOKEN_TTL_MINUTES` | No | Password reset token lifetime. Defaults to `30`. |
+| `PASSWORD_RESET_EXPOSE_TOKEN` | No | Development/test-only helper to expose reset tokens in API responses. Defaults to `false`; keep disabled outside controlled demos/tests. |
 | `APP_UPLOAD_MAX_FILES_PER_REQUEST` | No | Maximum number of files accepted in a single public upload request. Defaults to `5`. |
 
 Use `.env.example` as a template, but never commit real values.
@@ -79,6 +81,17 @@ For local containerized execution, the provided compose setup defaults to the `d
 
 JWT tokens are signed using HMAC SHA-256. The secret must be unique per environment and must not be reused between development, CI and production. The code validates minimum secret length, and the production-like configuration requires the value to be provided externally.
 
+## Password Reset Configuration
+
+Password reset tokens are generated with `SecureRandom`, stored only as SHA-256
+hashes, expire after `PASSWORD_RESET_TOKEN_TTL_MINUTES` and are invalidated
+after first use. The public reset request endpoint returns a generic response
+to avoid account enumeration.
+
+`PASSWORD_RESET_EXPOSE_TOKEN` exists only to support local academic testing or
+controlled demonstrations where no email/SMS delivery provider is configured.
+It must remain disabled in production-like environments.
+
 ## Database Configuration
 
 The production-like profile uses PostgreSQL and `ddl-auto=validate`. Schema changes must therefore be handled deliberately rather than generated implicitly at runtime. The development profile uses `ddl-auto=update` for easier local iteration.
@@ -126,6 +139,7 @@ Stack traces are disabled in application configuration. Runtime audit and securi
 |---|---|
 | Active profile | default/prod with external env vars |
 | `JWT_SECRET` | External, unique, at least 32 chars |
+| `PASSWORD_RESET_EXPOSE_TOKEN` | `false` |
 | Seed users | Disabled |
 | `ddl-auto` | `validate` |
 | Stack traces | Disabled |

@@ -29,7 +29,7 @@ evidence.
 | V3 Web Frontend Security | Partially Compliant | Security headers, CSP, externalized frontend scripts/styles and `SecurityHeadersTest`. | Fresh ZAP evidence should confirm the latest CSP behaviour. |
 | V4 API and Web Service | Partially Compliant | Controllers use DTOs, generic JSON errors and role-protected endpoints. | Cache behaviour, method restrictions and API abuse cases need more complete tests. |
 | V5 File Handling | Partially Compliant | Upload validation, safe path handling, MIME/extension checks and file service tests. | No antivirus scanning, quarantine workflow or per-user storage quotas. |
-| V6 Authentication | Partially Compliant | BCrypt, inactive-user checks, login rate limiting and login/logout audit events. | No MFA, secure password reset or password history/reuse policy. |
+| V6 Authentication | Partially Compliant | BCrypt, inactive-user checks, login rate limiting, compromised-password denylist, password history/reuse prevention, authenticated password change and one-time expiring password reset tokens. | MFA is not implemented; reset delivery is represented by a generated token because no email/SMS provider is in scope. |
 | V7 Session Management | Partially Compliant | Stateless JWT expiry, validation and logout-driven revocation evidence. | No refresh-token rotation, distributed revocation store or concurrent-session controls. |
 | V8 Authorization | Partially Compliant | `ADMIN`, `ANALYST`, `AUDITOR` rules, RBAC tests and analyst ownership tests. | Field-level authorization and service-level negative paths can be expanded. |
 | V9 Self-contained Tokens | Partially Compliant | JWT signature, expiry, issuer/audience and revocation tests. | No key rotation or distributed revocation strategy. |
@@ -47,6 +47,7 @@ evidence.
 | Evidence type | Repository references |
 | --- | --- |
 | Authentication | `ghostreport/src/main/java/com/ghostreport/controller/AuthController.java`, `ghostreport/src/main/java/com/ghostreport/service/AuthService.java`, `ghostreport/src/main/java/com/ghostreport/service/JwtService.java` |
+| Password policy and reset | `ghostreport/src/main/java/com/ghostreport/service/PasswordPolicyService.java`, `ghostreport/src/main/java/com/ghostreport/service/PasswordResetService.java`, `ghostreport/src/main/java/com/ghostreport/model/PasswordHistory.java`, `ghostreport/src/main/java/com/ghostreport/model/PasswordResetToken.java`, `ghostreport/src/test/java/com/ghostreport/security/PasswordPolicyAndResetSecurityTest.java` |
 | Authorization | `ghostreport/src/main/java/com/ghostreport/security/SecurityConfig.java`, `ghostreport/src/test/java/com/ghostreport/security/RbacAuthorizationMatrixTest.java` |
 | Input validation | `ghostreport/src/main/java/com/ghostreport/dto`, `ghostreport/src/main/java/com/ghostreport/domain`, `ghostreport/src/test/java/com/ghostreport/domain` |
 | File handling | `ghostreport/src/main/java/com/ghostreport/service/FileStorageService.java`, `ghostreport/src/test/java/com/ghostreport/service/FileStorageServiceTest.java` |
@@ -56,11 +57,22 @@ evidence.
 | Pipeline evidence | `.github/workflows/dev.yml`, GitHub Actions job summaries and downloaded artifacts |
 | Local evidence archive | `Deliverables/Phase 2/Evidence`, populated manually from downloaded GitHub Actions artifacts |
 
+## Requested Authentication ASVS Items
+
+| ASVS ID | Status | Evidence | Notes |
+| --- | --- | --- | --- |
+| V6.1.1 | Partially Compliant | `CreateUserRequest`, `ChangePasswordRequest`, `PasswordResetConfirmRequest`, `PasswordPolicyService` | Minimum length and complexity are enforced; local denylist adds compromised-password screening. |
+| V6.2.2 | Compliant | `PasswordPolicyService`, `PasswordHistory`, `PasswordPolicyAndResetSecurityTest` | New passwords are checked against current and recent password hashes with `PasswordEncoder.matches`. |
+| V6.2.3 | Compliant | `PasswordPolicyService`, `UserService`, `PasswordPolicyAndResetSecurityTest` | Compromised examples from the local denylist are rejected before hashing/storage. |
+| V6.2.4 | Compliant | `PasswordResetService`, `PasswordResetToken`, `PasswordPolicyAndResetSecurityTest` | Reset tokens are random, stored as SHA-256 hashes, single-use and expiring. |
+| V6.2.5 | Compliant | `UserService.changePassword`, `AuthController`, `PasswordPolicyAndResetSecurityTest` | Authenticated password change requires the current password. |
+| V6.3.1 | Not Applicable / Out of Scope | Documentation in this file and `docs/SECURITY_ASSESSMENT.md` | MFA is not implemented because the coursework app has no authenticator app, email/SMS provider or external IdP integration. |
+
 ## Tool Evidence Status
 
 | Tool | Current evidence | Artifact/location | Status wording |
 | --- | --- | --- | --- |
-| JUnit/MockMvc | Local run passed with 117 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
+| JUnit/MockMvc | Local run passed with 123 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
 | JaCoCo | Coverage report and coverage check run in `build-test`. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco` | Blocking coverage evidence. |
 | PIT | PIT runs in evidence review mode and uploads fallback summary/exit code when needed. | `pit-mutation-testing-report` | Evidence review, not a blocking mutation score gate. |
 | Gitleaks | Repository secret scan runs before dependent security jobs. Empty JSON means no leaks in scanned scope. | `secret-scan-gitleaks-json` | Blocking for confirmed leaks. |
