@@ -30,11 +30,11 @@ evidence.
 | V4 API and Web Service | Partially Compliant | Controllers use DTOs, generic JSON errors and role-protected endpoints. | Cache behaviour, method restrictions and API abuse cases need more complete tests. |
 | V5 File Handling | Partially Compliant | Upload validation, safe path handling, MIME/extension checks and file service tests. | No antivirus scanning, quarantine workflow or per-user storage quotas. |
 | V6 Authentication | Partially Compliant | BCrypt, inactive-user checks, login rate limiting and login/logout audit events. | No MFA, secure password reset or password history/reuse policy. |
-| V7 Session Management | Partially Compliant | Stateless JWT expiry, validation and logout-driven revocation evidence. | No refresh-token rotation, distributed revocation store or concurrent-session controls. |
+| V7 Session Management | Partially Compliant | Stateless JWT expiry, validation and database-backed logout revocation evidence. | No refresh-token rotation or concurrent-session inventory controls. |
 | V8 Authorization | Partially Compliant | `ADMIN`, `ANALYST`, `AUDITOR` rules, RBAC tests and analyst ownership tests. | Field-level authorization and service-level negative paths can be expanded. |
-| V9 Self-contained Tokens | Partially Compliant | JWT signature, expiry, issuer/audience and revocation tests. | No key rotation or distributed revocation strategy. |
+| V9 Self-contained Tokens | Partially Compliant | JWT signature, expiry, issuer/audience, `jti`, `kid`, key rotation and persistent revocation tests. | Rotation is configuration-driven; there is no JWKS endpoint or automated rollover scheduler. |
 | V10 OAuth and OIDC | Not Applicable | GhostReport does not use OAuth/OIDC or an external IdP. | Becomes applicable if an IdP is added. |
-| V11 Cryptography | Partially Compliant | BCrypt, JWT HMAC and SHA-256 integrity hashes. | No formal key lifecycle/rotation plan. |
+| V11 Cryptography | Partially Compliant | BCrypt, JWT HMAC with key identifiers and SHA-256 integrity hashes. | JWT rotation is implemented, but broader key custody and backup key lifecycle remain operational controls. |
 | V12 Secure Communication | Partially Compliant | Security headers and installation guidance for TLS deployment. | CI DAST runs on local HTTP and does not prove production TLS/cipher configuration. |
 | V13 Configuration | Partially Compliant | Profiles, environment variables, fail-fast validation, Gitleaks and SCA evidence. | Residual dependency findings require documented triage. |
 | V14 Data Protection | Partially Compliant | DTO responses avoid passwords/tokens and file/package integrity checks exist. | Retention, deletion and encryption-at-rest policies are incomplete. |
@@ -56,11 +56,30 @@ evidence.
 | Pipeline evidence | `.github/workflows/dev.yml`, GitHub Actions job summaries and downloaded artifacts |
 | Local evidence archive | `Deliverables/Phase 2/Evidence`, populated manually from downloaded GitHub Actions artifacts |
 
+## Stateless Session and JWT Evidence
+
+Scope covered in this sprint update: `V7.2.1`, `V7.2.4`, `V7.4.2`,
+`V7.5.3`, `V9.2.1`, `V9.2.2`, `V9.2.3`, `V9.2.4`, `V11.3.1` and
+`V11.3.2`.
+
+| ASVS ID | Evidence | Status rationale |
+| --- | --- | --- |
+| V7.2.1 | `ghostreport/src/main/java/com/ghostreport/service/JwtService.java`; `ghostreport/src/main/java/com/ghostreport/security/JwtAuthenticationFilter.java`; `ghostreport/src/test/java/com/ghostreport/security/JwtServiceSecurityTest.java` | JWTs remain stateless, include `exp`, `iat`, `jti`, `iss`, `aud`, `role` and `kid`, and are rejected when expired, malformed, signed with an unknown key or issued for the wrong user/role. |
+| V7.2.4 | `ghostreport/src/main/java/com/ghostreport/controller/AuthController.java`; `ghostreport/src/main/java/com/ghostreport/model/RevokedToken.java`; `ghostreport/src/main/java/com/ghostreport/service/PersistentRevokedTokenStore.java`; `RuntimeSecurityEventLoggingTest` | Logout extracts the Bearer token, persists its `jti` until token expiry and subsequent use of the same token is rejected. |
+| V7.4.2 | `ghostreport/src/main/java/com/ghostreport/security/SecurityConfig.java`; `JwtService` | GhostReport uses `SessionCreationPolicy.STATELESS` and Bearer JWTs rather than server HTTP sessions or authentication cookies. CSRF cookie is not an auth secret. |
+| V7.5.3 | `JwtRevocationPersistenceIntegrationTest` | Replay of a logged-out token is blocked by the persisted `jti` revocation record, including after replacing the `JwtService` instance. Concurrent-session inventory is not implemented. |
+| V9.2.1 | `JwtService`; `JwtRevocationPersistenceIntegrationTest` | Revocation is keyed by `jti`, stored in the database and considered valid until `expires_at`. Expired revocation rows are purged opportunistically during revoke operations. |
+| V9.2.2 | `JwtService`; `application.yaml`; `SECURE_INSTALLATION.md` | Issued JWT headers include `kid`; validation requires a known `kid` and rejects missing/unknown key identifiers. |
+| V9.2.3 | `JwtServiceSecurityTest` | Tokens signed by configured previous keys are accepted during rotation, while newly issued tokens use the active key identifier. |
+| V9.2.4 | `JwtServiceSecurityTest` | Tokens with invalid `issuer`, invalid `audience`, invalid signature, expiry or unknown key id are rejected even when structurally valid. |
+| V11.3.1 | `application.yaml`; `JwtService`; `SECURE_INSTALLATION.md` | JWT signing secrets are externalized, length-validated and identified by `JWT_ACTIVE_KEY_ID`; previous keys are configured separately for validation-only rotation windows. |
+| V11.3.2 | `JwtService`; `JwtServiceSecurityTest` | Key rotation is supported through active and previous key sets. Old keys validate existing tokens but are not used to issue new tokens. |
+
 ## Tool Evidence Status
 
 | Tool | Current evidence | Artifact/location | Status wording |
 | --- | --- | --- | --- |
-| JUnit/MockMvc | Local run passed with 117 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
+| JUnit/MockMvc | Local run passed with 123 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
 | JaCoCo | Coverage report and coverage check run in `build-test`. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco` | Blocking coverage evidence. |
 | PIT | PIT runs in evidence review mode and uploads fallback summary/exit code when needed. | `pit-mutation-testing-report` | Evidence review, not a blocking mutation score gate. |
 | Gitleaks | Repository secret scan runs before dependent security jobs. Empty JSON means no leaks in scanned scope. | `secret-scan-gitleaks-json` | Blocking for confirmed leaks. |
