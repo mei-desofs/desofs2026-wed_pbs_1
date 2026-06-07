@@ -2,6 +2,8 @@ package com.ghostreport.service;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.core.io.Resource;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -22,8 +24,13 @@ class FileStorageServiceTest {
     @TempDir
     Path tempDir;
 
-    @Test
-    void loadFileRejectsRelativeTraversal() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "../secret.txt",
+            "..\\secret.txt",
+            "reports/1/attachments/../../../../secret.txt"
+    })
+    void loadFileRejectsTraversalPath(String storagePath) throws Exception {
         Path uploadDir = tempDir.resolve("uploads");
         Files.createDirectories(uploadDir);
         Files.writeString(tempDir.resolve("secret.txt"), "secret");
@@ -33,12 +40,12 @@ class FileStorageServiceTest {
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.loadFileAsResource("../secret.txt")
+                () -> service.loadFileAsResource(storagePath)
         );
 
         assertEquals(400, exception.getStatusCode().value());
         assertEquals("Invalid file path", exception.getReason());
-        verify(monitoringService).recordPathTraversalAttempt("../secret.txt");
+        verify(monitoringService).recordPathTraversalAttempt(storagePath);
     }
 
     @Test
@@ -49,14 +56,55 @@ class FileStorageServiceTest {
         Files.writeString(outsideFile, "outside");
 
         FileStorageService service = new FileStorageService(uploadDir.toString());
+        String outsideStoragePath = outsideFile.toString();
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.loadFileAsResource(outsideFile.toString())
+                () -> service.loadFileAsResource(outsideStoragePath)
         );
 
         assertEquals(400, exception.getStatusCode().value());
         assertEquals("Invalid file path", exception.getReason());
+    }
+
+    @Test
+    void loadFileRejectsAbsolutePathInsideBase() throws Exception {
+        Path uploadDir = tempDir.resolve("uploads");
+        Path attachment = uploadDir.resolve("reports/1/attachments/file.txt");
+        Files.createDirectories(attachment.getParent());
+        Files.writeString(attachment, "inside");
+
+        FileStorageService service = new FileStorageService(uploadDir.toString());
+        String absoluteAttachmentPath = attachment.toString();
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.loadFileAsResource(absoluteAttachmentPath)
+        );
+
+        assertEquals(400, exception.getStatusCode().value());
+        assertEquals("Invalid file path", exception.getReason());
+    }
+
+    @Test
+    void storeAttachmentUsesServerGeneratedNameForValidFilename() {
+        Path uploadDir = tempDir.resolve("uploads");
+        FileStorageService service = new FileStorageService(uploadDir.toString());
+
+        FileStorageService.StoredFileInfo stored = service.storeAttachment(
+                1L,
+                new MockMultipartFile(
+                        "files",
+                        "evidence.txt",
+                        "text/plain",
+                        "valid text evidence".getBytes(StandardCharsets.UTF_8)
+                )
+        );
+
+        assertEquals("evidence.txt", stored.originalName());
+        assertTrue(stored.storedName().matches("[0-9a-f-]{36}\\.txt"));
+        assertTrue(stored.storagePath().matches("reports/1/attachments/[0-9a-f-]{36}\\.txt"));
+        assertTrue(Files.exists(uploadDir.resolve(stored.storagePath())));
     }
 
     @Test
@@ -102,18 +150,16 @@ class FileStorageServiceTest {
     @Test
     void storeAttachmentRejectsFakePdfMagicBytes() {
         FileStorageService service = new FileStorageService(tempDir.resolve("uploads").toString());
+        MockMultipartFile fakePdf = new MockMultipartFile(
+                "files",
+                "evidence.pdf",
+                "application/pdf",
+                "MZ executable".getBytes(StandardCharsets.UTF_8)
+        );
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.storeAttachment(
-                        1L,
-                        new MockMultipartFile(
-                                "files",
-                                "evidence.pdf",
-                                "application/pdf",
-                                "MZ executable".getBytes(StandardCharsets.UTF_8)
-                        )
-                )
+                () -> service.storeAttachment(1L, fakePdf)
         );
 
         assertEquals(400, exception.getStatusCode().value());
@@ -123,18 +169,16 @@ class FileStorageServiceTest {
     @Test
     void storeAttachmentRejectsExecutableRenamedToPdf() {
         FileStorageService service = new FileStorageService(tempDir.resolve("uploads").toString());
+        MockMultipartFile executable = new MockMultipartFile(
+                "files",
+                "payload.pdf",
+                "application/pdf",
+                new byte[]{0x4D, 0x5A, 0x00, 0x00}
+        );
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.storeAttachment(
-                        1L,
-                        new MockMultipartFile(
-                                "files",
-                                "payload.pdf",
-                                "application/pdf",
-                                new byte[]{0x4D, 0x5A, 0x00, 0x00}
-                        )
-                )
+                () -> service.storeAttachment(1L, executable)
         );
 
         assertEquals(400, exception.getStatusCode().value());
@@ -144,18 +188,16 @@ class FileStorageServiceTest {
     @Test
     void storeAttachmentRejectsMissingFilename() {
         FileStorageService service = new FileStorageService(tempDir.resolve("uploads").toString());
+        MockMultipartFile missingFilename = new MockMultipartFile(
+                "files",
+                "",
+                "text/plain",
+                "text".getBytes(StandardCharsets.UTF_8)
+        );
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.storeAttachment(
-                        1L,
-                        new MockMultipartFile(
-                                "files",
-                                "",
-                                "text/plain",
-                                "text".getBytes(StandardCharsets.UTF_8)
-                        )
-                )
+                () -> service.storeAttachment(1L, missingFilename)
         );
 
         assertEquals(400, exception.getStatusCode().value());
@@ -165,18 +207,16 @@ class FileStorageServiceTest {
     @Test
     void storeAttachmentRejectsPathTraversalFilename() {
         FileStorageService service = new FileStorageService(tempDir.resolve("uploads").toString());
+        MockMultipartFile traversalFilename = new MockMultipartFile(
+                "files",
+                "../evidence.txt",
+                "text/plain",
+                "text".getBytes(StandardCharsets.UTF_8)
+        );
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.storeAttachment(
-                        1L,
-                        new MockMultipartFile(
-                                "files",
-                                "../evidence.txt",
-                                "text/plain",
-                                "text".getBytes(StandardCharsets.UTF_8)
-                        )
-                )
+                () -> service.storeAttachment(1L, traversalFilename)
         );
 
         assertEquals(400, exception.getStatusCode().value());
@@ -187,18 +227,16 @@ class FileStorageServiceTest {
     void storeAttachmentRejectsOversizedFileUsingProductionLimit() {
         FileStorageService service = new FileStorageService(tempDir.resolve("uploads").toString());
         byte[] content = new byte[(10 * 1024 * 1024) + 1];
+        MockMultipartFile oversized = new MockMultipartFile(
+                "files",
+                "large.pdf",
+                "application/pdf",
+                content
+        );
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.storeAttachment(
-                        1L,
-                        new MockMultipartFile(
-                                "files",
-                                "large.pdf",
-                                "application/pdf",
-                                content
-                        )
-                )
+                () -> service.storeAttachment(1L, oversized)
         );
 
         assertEquals(400, exception.getStatusCode().value());
@@ -233,10 +271,11 @@ class FileStorageServiceTest {
         Files.writeString(outsideFile, "outside");
 
         FileStorageService service = new FileStorageService(uploadDir.toString());
+        String outsideStoragePath = outsideFile.toString();
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.loadFileAsResource(outsideFile.toString())
+                () -> service.loadFileAsResource(outsideStoragePath)
         );
 
         assertEquals("Invalid file path", exception.getReason());

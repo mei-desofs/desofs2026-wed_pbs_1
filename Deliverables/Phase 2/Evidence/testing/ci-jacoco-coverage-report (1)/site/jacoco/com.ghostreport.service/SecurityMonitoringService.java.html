@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SecurityMonitoringService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ghostreport</a> &gt; <a href="index.source.html" class="el_package">com.ghostreport.service</a> &gt; <span class="el_source">SecurityMonitoringService.java</span></div><h1>SecurityMonitoringService.java</h1><pre class="source lang-java linenums">package com.ghostreport.service;
+
+import com.ghostreport.model.SecurityAlert;
+import com.ghostreport.repository.SecurityAlertRepository;
+import com.ghostreport.security.SecurityUtils;
+import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+@Service
+public class SecurityMonitoringService {
+
+    private final SecurityAlertRepository securityAlertRepository;
+
+<span class="fc" id="L17">    private final Map&lt;String, AttemptCounter&gt; counters = new ConcurrentHashMap&lt;&gt;();</span>
+
+    private static final int MAX_TRACKING_FAILURES = 5;
+    private static final int MAX_UPLOAD_FAILURES = 3;
+    private static final long WINDOW_MILLIS = 60_000;
+
+<span class="fc" id="L23">    public SecurityMonitoringService(SecurityAlertRepository securityAlertRepository) {</span>
+<span class="fc" id="L24">        this.securityAlertRepository = securityAlertRepository;</span>
+<span class="fc" id="L25">    }</span>
+
+    public void recordFailedTrackingCode(Long reportId) {
+<span class="fc" id="L28">        String key = &quot;TRACKING_FAIL:&quot; + reportId;</span>
+
+<span class="fc" id="L30">        int attempts = increment(key);</span>
+
+<span class="fc bfc" id="L32" title="All 2 branches covered.">        if (attempts &gt;= MAX_TRACKING_FAILURES) {</span>
+<span class="fc" id="L33">            createAlert(</span>
+                    &quot;TRACKING_CODE_ENUMERATION&quot;,
+                    &quot;HIGH&quot;,
+                    &quot;REPORT&quot;,
+                    reportId,
+                    &quot;Multiple invalid tracking code attempts detected&quot;
+            );
+<span class="fc" id="L40">            reset(key);</span>
+        }
+<span class="fc" id="L42">    }</span>
+
+    public void recordRejectedUpload(Long reportId, String reason) {
+<span class="fc" id="L45">        String key = &quot;UPLOAD_REJECTED:&quot; + reportId;</span>
+
+<span class="fc" id="L47">        int attempts = increment(key);</span>
+
+<span class="fc bfc" id="L49" title="All 2 branches covered.">        if (attempts &gt;= MAX_UPLOAD_FAILURES) {</span>
+<span class="fc" id="L50">            createAlert(</span>
+                    &quot;SUSPICIOUS_UPLOAD_ACTIVITY&quot;,
+                    &quot;HIGH&quot;,
+                    &quot;REPORT&quot;,
+                    reportId,
+                    &quot;Multiple rejected uploads detected: &quot; + reason
+            );
+<span class="fc" id="L57">            reset(key);</span>
+        }
+<span class="fc" id="L59">    }</span>
+
+    public void recordPathTraversalAttempt(String input) {
+<span class="nc" id="L62">        createAlert(</span>
+                &quot;PATH_TRAVERSAL_ATTEMPT&quot;,
+                &quot;CRITICAL&quot;,
+                &quot;FILE_SYSTEM&quot;,
+                null,
+                &quot;Possible path traversal input detected&quot;
+        );
+<span class="nc" id="L69">    }</span>
+
+    public void recordBackupPathTraversalAttempt(String input) {
+<span class="fc" id="L72">        createAlert(</span>
+                &quot;BACKUP_PATH_TRAVERSAL_ATTEMPT&quot;,
+                &quot;CRITICAL&quot;,
+                &quot;BACKUP&quot;,
+                null,
+                &quot;Possible path traversal in backup filename&quot;
+        );
+<span class="fc" id="L79">    }</span>
+
+    public void recordMissingBackupDownload(String filename) {
+<span class="nc" id="L82">        createAlert(</span>
+                &quot;BACKUP_DOWNLOAD_NOT_FOUND&quot;,
+                &quot;HIGH&quot;,
+                &quot;BACKUP&quot;,
+                null,
+                &quot;Attempt to download missing backup&quot;
+        );
+<span class="nc" id="L89">    }</span>
+
+    public void recordBackupIntegrityFailure(String filename) {
+<span class="fc" id="L92">        createAlert(</span>
+                &quot;BACKUP_INTEGRITY_FAILURE&quot;,
+                &quot;CRITICAL&quot;,
+                &quot;BACKUP&quot;,
+                null,
+                &quot;Backup integrity validation failed&quot;
+        );
+<span class="fc" id="L99">    }</span>
+
+    public void recordUnauthorizedBackupAccess(String path) {
+<span class="fc" id="L102">        createAlert(</span>
+                &quot;BACKUP_UNAUTHORIZED_ATTEMPT&quot;,
+                &quot;HIGH&quot;,
+                &quot;BACKUP&quot;,
+                null,
+                &quot;Unauthorized attempt to access backup endpoint&quot;
+        );
+<span class="fc" id="L109">    }</span>
+
+    public void recordUnauthorizedAnalystAccess(Long reportId) {
+<span class="fc" id="L112">        createAlert(</span>
+                &quot;ANALYST_OWNERSHIP_VIOLATION&quot;,
+                &quot;HIGH&quot;,
+                &quot;REPORT&quot;,
+                reportId,
+                &quot;Analyst attempted to access a report without ownership&quot;
+        );
+<span class="fc" id="L119">    }</span>
+
+    public void recordBruteForceLoginAttempt() {
+<span class="fc" id="L122">        createAlert(</span>
+                &quot;BRUTE_FORCE_LOGIN_ATTEMPT&quot;,
+                &quot;HIGH&quot;,
+                &quot;AUTHENTICATION&quot;,
+                null,
+                &quot;Repeated failed login attempts detected&quot;
+        );
+<span class="fc" id="L129">    }</span>
+
+    public void recordInvalidJwt(String path) {
+<span class="fc" id="L132">        createAlert(</span>
+                &quot;INVALID_JWT_TOKEN&quot;,
+                &quot;MEDIUM&quot;,
+                &quot;AUTHENTICATION&quot;,
+                null,
+<span class="fc" id="L137">                &quot;Invalid or expired JWT presented to protected endpoint: &quot; + sanitizePath(path)</span>
+        );
+<span class="fc" id="L139">    }</span>
+
+    public void createAlert(String alertType, String severity, String targetType, Long targetId, String description) {
+<span class="fc" id="L142">        SecurityAlert alert = new SecurityAlert();</span>
+<span class="fc" id="L143">        alert.setAlertType(alertType);</span>
+<span class="fc" id="L144">        alert.setSeverity(severity);</span>
+<span class="fc" id="L145">        alert.setActor(getActor());</span>
+<span class="fc" id="L146">        alert.setTargetType(targetType);</span>
+<span class="fc" id="L147">        alert.setTargetId(targetId);</span>
+<span class="fc" id="L148">        alert.setDescription(sanitize(description));</span>
+
+<span class="fc" id="L150">        securityAlertRepository.save(alert);</span>
+<span class="fc" id="L151">    }</span>
+
+    private int increment(String key) {
+<span class="fc" id="L154">        long now = Instant.now().toEpochMilli();</span>
+
+<span class="fc" id="L156">        AttemptCounter counter = counters.compute(key, (k, existing) -&gt; {</span>
+<span class="pc bpc" id="L157" title="1 of 4 branches missed.">            if (existing == null || now - existing.windowStart &gt; WINDOW_MILLIS) {</span>
+<span class="fc" id="L158">                return new AttemptCounter(1, now);</span>
+            }
+
+<span class="fc" id="L161">            existing.count++;</span>
+<span class="fc" id="L162">            return existing;</span>
+        });
+
+<span class="fc" id="L165">        return counter.count;</span>
+    }
+
+    private void reset(String key) {
+<span class="fc" id="L169">        counters.remove(key);</span>
+<span class="fc" id="L170">    }</span>
+
+    private String getActor() {
+        try {
+<span class="fc" id="L174">            return SecurityUtils.getCurrentUsername();</span>
+<span class="fc" id="L175">        } catch (Exception e) {</span>
+<span class="fc" id="L176">            return &quot;anonymous&quot;;</span>
+        }
+    }
+
+    private String sanitize(String value) {
+<span class="pc bpc" id="L181" title="1 of 2 branches missed.">        if (value == null) {</span>
+<span class="nc" id="L182">            return null;</span>
+        }
+
+<span class="fc" id="L185">        return value</span>
+<span class="fc" id="L186">                .replaceAll(&quot;[\\r\\n]&quot;, &quot; &quot;)</span>
+<span class="fc" id="L187">                .replaceAll(&quot;[\\x00-\\x1F\\x7F]&quot;, &quot;&quot;)</span>
+<span class="fc" id="L188">                .trim();</span>
+    }
+
+    private String sanitizePath(String path) {
+<span class="pc bpc" id="L192" title="2 of 4 branches missed.">        if (path == null || path.isBlank()) {</span>
+<span class="nc" id="L193">            return &quot;unknown&quot;;</span>
+        }
+
+<span class="fc" id="L196">        String sanitizedPath = sanitize(path);</span>
+<span class="pc bpc" id="L197" title="1 of 2 branches missed.">        if (sanitizedPath.length() &gt; 160) {</span>
+<span class="nc" id="L198">            return sanitizedPath.substring(0, 160);</span>
+        }
+
+<span class="fc" id="L201">        return sanitizedPath;</span>
+    }
+
+    private static class AttemptCounter {
+        private int count;
+        private final long windowStart;
+
+<span class="fc" id="L208">        private AttemptCounter(int count, long windowStart) {</span>
+<span class="fc" id="L209">            this.count = count;</span>
+<span class="fc" id="L210">            this.windowStart = windowStart;</span>
+<span class="fc" id="L211">        }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Attachment.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ghostreport</a> &gt; <a href="index.source.html" class="el_package">com.ghostreport.model</a> &gt; <span class="el_source">Attachment.java</span></div><h1>Attachment.java</h1><pre class="source lang-java linenums">package com.ghostreport.model;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = &quot;attachments&quot;)
+public class Attachment {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, length = 255)
+    private String originalName;
+
+    @Column(nullable = false, length = 255, unique = true)
+    private String storedName;
+
+    @Column(nullable = false, length = 100)
+    private String mimeType;
+
+    @Column(nullable = false)
+    private Long size;
+
+    @Column(nullable = false, length = 128)
+    private String hash;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = &quot;report_id&quot;, nullable = false)
+    private Report report;
+
+    @Column(nullable = false, length = 500)
+    private String storagePath;
+
+    @Column(nullable = false, length = 100)
+    private String fileReference;
+
+<span class="fc" id="L38">    public Attachment() {</span>
+<span class="fc" id="L39">    }</span>
+
+    public Long getId() {
+<span class="fc" id="L42">        return id;</span>
+    }
+
+    public String getOriginalName() {
+<span class="fc" id="L46">        return originalName;</span>
+    }
+
+    public String getStoredName() {
+<span class="fc" id="L50">        return storedName;</span>
+    }
+
+    public String getMimeType() {
+<span class="fc" id="L54">        return mimeType;</span>
+    }
+
+    public Long getSize() {
+<span class="fc" id="L58">        return size;</span>
+    }
+
+    public String getHash() {
+<span class="fc" id="L62">        return hash;</span>
+    }
+
+    public Report getReport() {
+<span class="fc" id="L66">        return report;</span>
+    }
+
+    public void setId(Long id) {
+<span class="nc" id="L70">        this.id = id;</span>
+<span class="nc" id="L71">    }</span>
+
+    public void setOriginalName(String originalName) {
+<span class="fc" id="L74">        this.originalName = originalName;</span>
+<span class="fc" id="L75">    }</span>
+
+    public void setStoredName(String storedName) {
+<span class="fc" id="L78">        this.storedName = storedName;</span>
+<span class="fc" id="L79">    }</span>
+
+    public void setMimeType(String mimeType) {
+<span class="fc" id="L82">        this.mimeType = mimeType;</span>
+<span class="fc" id="L83">    }</span>
+
+    public void setSize(Long size) {
+<span class="fc" id="L86">        this.size = size;</span>
+<span class="fc" id="L87">    }</span>
+
+    public void setHash(String hash) {
+<span class="fc" id="L90">        this.hash = hash;</span>
+<span class="fc" id="L91">    }</span>
+
+    public void setReport(Report report) {
+<span class="fc" id="L94">        this.report = report;</span>
+<span class="fc" id="L95">    }</span>
+
+    public String getStoragePath() {
+<span class="fc" id="L98">        return storagePath;</span>
+    }
+
+    public void setStoragePath(String storagePath) {
+<span class="fc" id="L102">        this.storagePath = storagePath;</span>
+<span class="fc" id="L103">    }</span>
+
+    public String getFileReference() {
+<span class="fc" id="L106">        return fileReference;</span>
+    }
+
+    public void setFileReference(String fileReference) {
+<span class="fc" id="L110">        this.fileReference = fileReference;</span>
+<span class="fc" id="L111">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

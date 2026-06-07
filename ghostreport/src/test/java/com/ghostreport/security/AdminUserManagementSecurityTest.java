@@ -1,9 +1,11 @@
 package com.ghostreport.security;
 
 import com.ghostreport.model.AuditLog;
+import com.ghostreport.model.SecurityAlert;
 import com.ghostreport.model.User;
 import com.ghostreport.model.UserRole;
 import com.ghostreport.repository.AuditLogRepository;
+import com.ghostreport.repository.SecurityAlertRepository;
 import com.ghostreport.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -52,6 +56,9 @@ class AdminUserManagementSecurityTest {
     private AuditLogRepository auditLogRepository;
 
     @Autowired
+    private SecurityAlertRepository securityAlertRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private String adminUsername;
@@ -61,6 +68,7 @@ class AdminUserManagementSecurityTest {
     @BeforeEach
     void setUp() {
         auditLogRepository.deleteAll();
+        securityAlertRepository.deleteAll();
         userRepository.deleteAll();
 
         adminUsername = createUser(UserRole.ADMIN, true).getUsername();
@@ -72,6 +80,7 @@ class AdminUserManagementSecurityTest {
     @Test
     void adminCanDeactivateAndReactivateUserWithAuditLog() throws Exception {
         mockMvc.perform(patch("/admin/users/{id}/deactivate", analystId)
+                        .with(csrf())
                         .header("Authorization", bearerToken(adminUsername, PASSWORD)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(analystId))
@@ -82,6 +91,7 @@ class AdminUserManagementSecurityTest {
                 .contains("USER_DEACTIVATED");
 
         mockMvc.perform(patch("/admin/users/{id}/activate", analystId)
+                        .with(csrf())
                         .header("Authorization", bearerToken(adminUsername, PASSWORD)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(analystId))
@@ -95,10 +105,12 @@ class AdminUserManagementSecurityTest {
     @Test
     void nonAdminCannotActivateOrDeactivateUsers() throws Exception {
         mockMvc.perform(patch("/admin/users/{id}/deactivate", analystId)
+                        .with(csrf())
                         .header("Authorization", bearerToken(analystUsername, PASSWORD)))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(patch("/admin/users/{id}/activate", analystId)
+                        .with(csrf())
                         .header("Authorization", bearerToken(analystUsername, PASSWORD)))
                 .andExpect(status().isForbidden());
     }
@@ -108,6 +120,7 @@ class AdminUserManagementSecurityTest {
         Long adminId = userRepository.findByUsername(adminUsername).orElseThrow().getId();
 
         mockMvc.perform(patch("/admin/users/{id}/deactivate", adminId)
+                        .with(csrf())
                         .header("Authorization", bearerToken(adminUsername, PASSWORD)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("At least one active administrator is required"));
@@ -118,10 +131,12 @@ class AdminUserManagementSecurityTest {
     @Test
     void inactiveUserCannotLoginAndCreatesAuditLog() throws Exception {
         mockMvc.perform(patch("/admin/users/{id}/deactivate", analystId)
+                        .with(csrf())
                         .header("Authorization", bearerToken(adminUsername, PASSWORD)))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/auth/login")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -134,6 +149,38 @@ class AdminUserManagementSecurityTest {
 
         assertThat(auditLogRepository.findAll().stream().map(AuditLog::getAction))
                 .contains("LOGIN_BLOCKED_INACTIVE_USER");
+    }
+
+    @Test
+    void adminCanReadAuditLogsAndSecurityAlertsAsDtos() throws Exception {
+        AuditLog auditLog = new AuditLog();
+        auditLog.setActor("security-test");
+        auditLog.setAction("TEST_AUDIT_EVENT");
+        auditLog.setTargetType("AUTHENTICATION");
+        auditLog.setTargetId(42L);
+        auditLog.setDetails("Synthetic audit event for admin evidence endpoint");
+        auditLogRepository.save(auditLog);
+
+        SecurityAlert alert = new SecurityAlert();
+        alert.setAlertType("TEST_SECURITY_ALERT");
+        alert.setSeverity("HIGH");
+        alert.setActor("security-test");
+        alert.setTargetType("AUTHENTICATION");
+        alert.setTargetId(43L);
+        alert.setDescription("Synthetic security alert for admin evidence endpoint");
+        securityAlertRepository.save(alert);
+
+        mockMvc.perform(get("/admin/audit-logs")
+                        .header("Authorization", bearerToken(adminUsername, PASSWORD)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.action == 'TEST_AUDIT_EVENT')]").exists())
+                .andExpect(jsonPath("$[?(@.targetType == 'AUTHENTICATION')]").exists());
+
+        mockMvc.perform(get("/admin/security-alerts")
+                        .header("Authorization", bearerToken(adminUsername, PASSWORD)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.alertType == 'TEST_SECURITY_ALERT')]").exists())
+                .andExpect(jsonPath("$[?(@.severity == 'HIGH')]").exists());
     }
 
     private User createUser(UserRole role, boolean active) {
@@ -149,6 +196,7 @@ class AdminUserManagementSecurityTest {
 
     private String bearerToken(String username, String password) throws Exception {
         String response = mockMvc.perform(post("/auth/login")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {

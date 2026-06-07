@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuditReadService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ghostreport</a> &gt; <a href="index.source.html" class="el_package">com.ghostreport.service</a> &gt; <span class="el_source">AuditReadService.java</span></div><h1>AuditReadService.java</h1><pre class="source lang-java linenums">package com.ghostreport.service;
+
+import com.ghostreport.dto.AuditClosedCaseResponse;
+import com.ghostreport.model.CaseReview;
+import com.ghostreport.model.Report;
+import com.ghostreport.model.ReportStatus;
+import com.ghostreport.repository.CaseReviewRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+public class AuditReadService {
+
+    private final CaseReviewRepository caseReviewRepository;
+
+<span class="fc" id="L18">    public AuditReadService(CaseReviewRepository caseReviewRepository) {</span>
+<span class="fc" id="L19">        this.caseReviewRepository = caseReviewRepository;</span>
+<span class="fc" id="L20">    }</span>
+
+    @Transactional(readOnly = true)
+    public List&lt;AuditClosedCaseResponse&gt; getClosedCaseHistory() {
+<span class="fc" id="L24">        return caseReviewRepository.findAll()</span>
+<span class="fc" id="L25">                .stream()</span>
+<span class="fc" id="L26">                .filter(this::isClosedCase)</span>
+<span class="fc" id="L27">                .map(this::toClosedCaseResponse)</span>
+<span class="fc" id="L28">                .toList();</span>
+    }
+
+    private boolean isClosedCase(CaseReview caseReview) {
+<span class="fc" id="L32">        Report report = caseReview.getReport();</span>
+<span class="pc bpc" id="L33" title="1 of 2 branches missed.">        return report != null &amp;&amp;</span>
+<span class="pc bpc" id="L34" title="3 of 4 branches missed.">                (report.getStatus() == ReportStatus.RESOLVED || report.getStatus() == ReportStatus.REJECTED);</span>
+    }
+
+    private AuditClosedCaseResponse toClosedCaseResponse(CaseReview caseReview) {
+<span class="fc" id="L38">        Report report = caseReview.getReport();</span>
+
+<span class="fc" id="L40">        return new AuditClosedCaseResponse(</span>
+<span class="fc" id="L41">                report.getId(),</span>
+<span class="fc" id="L42">                caseReview.getId(),</span>
+<span class="fc" id="L43">                report.getStatus().name(),</span>
+<span class="fc" id="L44">                report.getCategory(),</span>
+<span class="pc bpc" id="L45" title="1 of 2 branches missed.">                caseReview.getPriority() != null ? caseReview.getPriority().name() : null,</span>
+<span class="pc bpc" id="L46" title="1 of 2 branches missed.">                caseReview.getAssignedAnalyst() != null ? caseReview.getAssignedAnalyst().getUsername() : null,</span>
+<span class="pc bpc" id="L47" title="1 of 2 branches missed.">                report.getAttachments() != null ? report.getAttachments().size() : 0,</span>
+<span class="fc" id="L48">                report.getCreatedAt(),</span>
+<span class="fc" id="L49">                caseReview.getUpdatedAt()</span>
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

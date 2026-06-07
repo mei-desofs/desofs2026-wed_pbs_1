@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CaseReviewService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ghostreport</a> &gt; <a href="index.source.html" class="el_package">com.ghostreport.service</a> &gt; <span class="el_source">CaseReviewService.java</span></div><h1>CaseReviewService.java</h1><pre class="source lang-java linenums">package com.ghostreport.service;
+
+import com.ghostreport.dto.AssignAnalystRequest;
+import com.ghostreport.dto.CaseReviewResponse;
+import com.ghostreport.dto.UpdateNotesRequest;
+import com.ghostreport.dto.UpdatePriorityRequest;
+import com.ghostreport.model.CasePriority;
+import com.ghostreport.model.CaseReview;
+import com.ghostreport.model.Report;
+import com.ghostreport.model.ReportStatus;
+import com.ghostreport.model.User;
+import com.ghostreport.model.UserRole;
+import com.ghostreport.repository.CaseReviewRepository;
+import com.ghostreport.repository.ReportRepository;
+import com.ghostreport.repository.UserRepository;
+import com.ghostreport.security.SecurityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
+
+@Service
+public class CaseReviewService {
+
+<span class="fc" id="L28">    private static final Logger logger = LoggerFactory.getLogger(CaseReviewService.class);</span>
+
+    private final CaseReviewRepository caseReviewRepository;
+    private final ReportRepository reportRepository;
+    private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
+
+    public CaseReviewService(
+            CaseReviewRepository caseReviewRepository,
+            ReportRepository reportRepository,
+            UserRepository userRepository,
+            AuditLogService auditLogService
+<span class="fc" id="L40">    ) {</span>
+<span class="fc" id="L41">        this.caseReviewRepository = caseReviewRepository;</span>
+<span class="fc" id="L42">        this.reportRepository = reportRepository;</span>
+<span class="fc" id="L43">        this.userRepository = userRepository;</span>
+<span class="fc" id="L44">        this.auditLogService = auditLogService;</span>
+<span class="fc" id="L45">    }</span>
+
+    public CaseReviewResponse assignAnalyst(Long reportId, AssignAnalystRequest request) {
+
+<span class="nc" id="L49">        Report report = reportRepository.findById(reportId)</span>
+<span class="nc" id="L50">                .orElseThrow(() -&gt;</span>
+<span class="nc" id="L51">                        new ResponseStatusException(</span>
+                                HttpStatus.NOT_FOUND,
+                                &quot;Report not found&quot;
+                        )
+                );
+
+<span class="nc" id="L57">        String currentUsername = SecurityUtils.getCurrentUsername();</span>
+
+<span class="nc" id="L59">        User analyst = userRepository.findByUsername(currentUsername)</span>
+<span class="nc" id="L60">                .orElseThrow(() -&gt;</span>
+<span class="nc" id="L61">                        new ResponseStatusException(</span>
+                                HttpStatus.NOT_FOUND,
+                                &quot;Analyst not found&quot;
+                        )
+                );
+
+<span class="nc bnc" id="L67" title="All 2 branches missed.">        if (analyst.getRole() != UserRole.ANALYST) {</span>
+<span class="nc" id="L68">            throw new ResponseStatusException(</span>
+                    HttpStatus.BAD_REQUEST,
+                    &quot;Current user is not an analyst&quot;
+            );
+        }
+
+<span class="nc" id="L74">        CaseReview caseReview = caseReviewRepository.findByReportId(reportId)</span>
+<span class="nc" id="L75">                .orElseGet(() -&gt; {</span>
+<span class="nc" id="L76">                    CaseReview newCaseReview = new CaseReview();</span>
+<span class="nc" id="L77">                    newCaseReview.setReport(report);</span>
+<span class="nc" id="L78">                    return newCaseReview;</span>
+                });
+
+<span class="nc" id="L81">        validateCaseCanBeAssignedTo(caseReview, analyst);</span>
+
+<span class="nc" id="L83">        caseReview.setAssignedAnalyst(analyst);</span>
+
+<span class="nc bnc" id="L85" title="All 2 branches missed.">        if (caseReview.getPriority() == null) {</span>
+<span class="nc" id="L86">            caseReview.setPriority(CasePriority.MEDIUM);</span>
+        }
+
+<span class="nc" id="L89">        CaseReview saved = caseReviewRepository.save(caseReview);</span>
+
+<span class="nc" id="L91">        auditLogService.log(</span>
+                &quot;REPORT_ASSIGNED&quot;,
+                &quot;REPORT&quot;,
+                reportId,
+<span class="nc" id="L95">                &quot;Assigned to analyst username &quot; + analyst.getUsername()</span>
+        );
+
+<span class="nc" id="L98">        logger.info(</span>
+                &quot;Report id={} assigned to analyst username={}&quot;,
+                reportId,
+<span class="nc" id="L101">                analyst.getUsername()</span>
+        );
+
+<span class="nc" id="L104">        return toResponse(saved);</span>
+    }
+
+    public CaseReviewResponse assignAnalystToCurrentUser(Long reportId) {
+
+<span class="fc" id="L109">        Report report = reportRepository.findById(reportId)</span>
+<span class="fc" id="L110">                .orElseThrow(() -&gt;</span>
+<span class="nc" id="L111">                        new ResponseStatusException(</span>
+                                HttpStatus.NOT_FOUND,
+                                &quot;Report not found&quot;
+                        )
+                );
+
+<span class="fc" id="L117">        String currentUsername = SecurityUtils.getCurrentUsername();</span>
+
+<span class="fc" id="L119">        User analyst = userRepository.findByUsername(currentUsername)</span>
+<span class="fc" id="L120">                .orElseThrow(() -&gt;</span>
+<span class="nc" id="L121">                        new ResponseStatusException(</span>
+                                HttpStatus.NOT_FOUND,
+                                &quot;Analyst not found&quot;
+                        )
+                );
+
+<span class="pc bpc" id="L127" title="1 of 2 branches missed.">        if (analyst.getRole() != UserRole.ANALYST) {</span>
+<span class="nc" id="L128">            throw new ResponseStatusException(</span>
+                    HttpStatus.BAD_REQUEST,
+                    &quot;Current user is not an analyst&quot;
+            );
+        }
+
+<span class="fc" id="L134">        CaseReview caseReview = caseReviewRepository.findByReportId(reportId)</span>
+<span class="fc" id="L135">                .orElseGet(() -&gt; {</span>
+<span class="fc" id="L136">                    CaseReview newCaseReview = new CaseReview();</span>
+<span class="fc" id="L137">                    newCaseReview.setReport(report);</span>
+<span class="fc" id="L138">                    return newCaseReview;</span>
+                });
+
+<span class="fc" id="L141">        validateCaseCanBeAssignedTo(caseReview, analyst);</span>
+
+<span class="fc" id="L143">        caseReview.setAssignedAnalyst(analyst);</span>
+
+<span class="pc bpc" id="L145" title="1 of 2 branches missed.">        if (caseReview.getPriority() == null) {</span>
+<span class="fc" id="L146">            caseReview.setPriority(CasePriority.MEDIUM);</span>
+        }
+
+<span class="fc" id="L149">        CaseReview saved = caseReviewRepository.save(caseReview);</span>
+
+<span class="fc" id="L151">        auditLogService.log(</span>
+                &quot;REPORT_ASSIGNED&quot;,
+                &quot;REPORT&quot;,
+                reportId,
+                &quot;Assigned to authenticated analyst&quot;
+        );
+
+<span class="fc" id="L158">        return toResponse(saved);</span>
+    }
+
+    public CaseReviewResponse updatePriority(Long reportId, UpdatePriorityRequest request) {
+
+<span class="nc" id="L163">        CaseReview caseReview = getAccessibleCaseReview(reportId);</span>
+
+<span class="nc" id="L165">        validateCaseIsEditable(caseReview);</span>
+
+        try {
+
+<span class="nc" id="L169">            CasePriority priority =</span>
+<span class="nc" id="L170">                    CasePriority.valueOf(request.getPriority().toUpperCase());</span>
+
+<span class="nc" id="L172">            caseReview.setPriority(priority);</span>
+
+<span class="nc" id="L174">        } catch (IllegalArgumentException e) {</span>
+
+<span class="nc" id="L176">            throw new ResponseStatusException(</span>
+                    HttpStatus.BAD_REQUEST,
+                    &quot;Invalid priority&quot;
+            );
+<span class="nc" id="L180">        }</span>
+
+<span class="nc" id="L182">        CaseReview saved = caseReviewRepository.save(caseReview);</span>
+
+<span class="nc" id="L184">        auditLogService.log(</span>
+                &quot;CASE_PRIORITY_UPDATED&quot;,
+                &quot;REPORT&quot;,
+                reportId,
+<span class="nc" id="L188">                &quot;Priority updated to &quot; + saved.getPriority()</span>
+        );
+
+<span class="nc" id="L191">        logger.info(</span>
+                &quot;Priority updated for report id={} to {}&quot;,
+                reportId,
+<span class="nc" id="L194">                saved.getPriority()</span>
+        );
+
+<span class="nc" id="L197">        return toResponse(saved);</span>
+    }
+
+    public CaseReviewResponse updateNotes(Long reportId, UpdateNotesRequest request) {
+
+<span class="nc" id="L202">        CaseReview caseReview = getAccessibleCaseReview(reportId);</span>
+
+<span class="nc" id="L204">        validateCaseIsEditable(caseReview);</span>
+
+<span class="nc" id="L206">        caseReview.setNotes(request.getNotes());</span>
+
+<span class="nc" id="L208">        CaseReview saved = caseReviewRepository.save(caseReview);</span>
+
+<span class="nc" id="L210">        auditLogService.log(</span>
+                &quot;CASE_NOTES_UPDATED&quot;,
+                &quot;REPORT&quot;,
+                reportId,
+                &quot;Internal notes updated&quot;
+        );
+
+<span class="nc" id="L217">        logger.info(&quot;Notes updated for report id={}&quot;, reportId);</span>
+
+<span class="nc" id="L219">        return toResponse(saved);</span>
+    }
+
+    public CaseReviewResponse getCaseReview(Long reportId) {
+
+<span class="nc" id="L224">        CaseReview caseReview = getAccessibleCaseReview(reportId);</span>
+
+<span class="nc" id="L226">        return toResponse(caseReview);</span>
+    }
+
+    public List&lt;CaseReviewResponse&gt; getMyAssignedCases() {
+
+<span class="nc" id="L231">        String username = SecurityUtils.getCurrentUsername();</span>
+
+<span class="nc" id="L233">        return caseReviewRepository.findByAssignedAnalystUsername(username)</span>
+<span class="nc" id="L234">                .stream()</span>
+<span class="nc" id="L235">                .map(this::toResponse)</span>
+<span class="nc" id="L236">                .toList();</span>
+    }
+
+    private CaseReview getAccessibleCaseReview(Long reportId) {
+
+<span class="fc" id="L241">        CaseReview caseReview = caseReviewRepository.findByReportId(reportId)</span>
+<span class="fc" id="L242">                .orElseThrow(() -&gt;</span>
+<span class="nc" id="L243">                        new ResponseStatusException(</span>
+                                HttpStatus.NOT_FOUND,
+                                &quot;Case review not found&quot;
+                        )
+                );
+
+<span class="pc bpc" id="L249" title="1 of 2 branches missed.">        if (SecurityUtils.hasRole(&quot;ADMIN&quot;)) {</span>
+<span class="nc" id="L250">            return caseReview;</span>
+        }
+
+<span class="fc" id="L253">        String currentUsername = SecurityUtils.getCurrentUsername();</span>
+
+<span class="pc bpc" id="L255" title="1 of 2 branches missed.">        if (caseReview.getAssignedAnalyst() == null ||</span>
+<span class="nc" id="L256">                !caseReview.getAssignedAnalyst()</span>
+<span class="nc" id="L257">                        .getUsername()</span>
+<span class="nc bnc" id="L258" title="All 2 branches missed.">                        .equals(currentUsername)) {</span>
+
+<span class="fc" id="L260">            throw new ResponseStatusException(</span>
+                    HttpStatus.FORBIDDEN,
+                    &quot;You do not have access to this case&quot;
+            );
+        }
+
+<span class="nc" id="L266">        return caseReview;</span>
+    }
+
+    private void validateCaseIsEditable(CaseReview caseReview) {
+
+<span class="nc" id="L271">        ReportStatus status = caseReview.getReport().getStatus();</span>
+
+<span class="nc bnc" id="L273" title="All 4 branches missed.">        if (status == ReportStatus.RESOLVED ||</span>
+                status == ReportStatus.REJECTED) {
+
+<span class="nc" id="L276">            throw new ResponseStatusException(</span>
+                    HttpStatus.BAD_REQUEST,
+                    &quot;Closed cases cannot be modified&quot;
+            );
+        }
+<span class="nc" id="L281">    }</span>
+
+    private void validateCaseCanBeAssignedTo(CaseReview caseReview, User analyst) {
+
+<span class="fc bfc" id="L285" title="All 2 branches covered.">        if (caseReview.getAssignedAnalyst() == null) {</span>
+<span class="fc" id="L286">            return;</span>
+        }
+
+<span class="pc bpc" id="L289" title="1 of 2 branches missed.">        if (caseReview.getAssignedAnalyst().getUsername().equals(analyst.getUsername())) {</span>
+<span class="nc" id="L290">            return;</span>
+        }
+
+<span class="fc" id="L293">        throw new ResponseStatusException(</span>
+                HttpStatus.CONFLICT,
+                &quot;Case is already assigned to another analyst&quot;
+        );
+    }
+
+    private CaseReviewResponse toResponse(CaseReview caseReview) {
+
+<span class="fc" id="L301">        return new CaseReviewResponse(</span>
+<span class="fc" id="L302">                caseReview.getReport().getId(),</span>
+<span class="fc" id="L303">                caseReview.getId(),</span>
+<span class="pc bpc" id="L304" title="1 of 2 branches missed.">                caseReview.getAssignedAnalyst() != null</span>
+<span class="fc" id="L305">                        ? caseReview.getAssignedAnalyst().getUsername()</span>
+<span class="nc" id="L306">                        : null,</span>
+<span class="pc bpc" id="L307" title="1 of 2 branches missed.">                caseReview.getPriority() != null</span>
+<span class="fc" id="L308">                        ? caseReview.getPriority().name()</span>
+<span class="pc" id="L309">                        : null,</span>
+<span class="fc" id="L310">                caseReview.getNotes(),</span>
+<span class="fc" id="L311">                caseReview.getReport().getStatus().name()</span>
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

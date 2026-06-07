@@ -1,8 +1,6 @@
 # GhostReport Coding Standards
 
-These standards are intended to reduce style drift during Sprint 2 and final
-delivery. They favor consistency with the current Spring Boot codebase over
-large refactors.
+These standards keep the codebase consistent and make security review easier.
 
 ## Naming
 
@@ -12,14 +10,13 @@ large refactors.
 | Services | `*Service` | `FileStorageService` |
 | Repositories | `*Repository` | `UserRepository` |
 | DTO requests | `*Request` | `CreateUserRequest` |
-| DTO responses | `*Response` | `LoginResponse` |
+| DTO responses | `*Response` | `AuthResponse` |
 | Tests | `ClassOrFeatureTest` | `AdminAuthorizationTest` |
 | Integration tests | `FeatureIntegrationTest` | `BackupServiceIntegrationTest` |
 | Packages | lowercase by layer/domain | `com.ghostreport.service` |
 
-Names must describe the business action, not the implementation detail. Prefer
-`verifyTrackingCode` over `checkCode`, and `createEvidencePackage` over
-`makeZip`.
+Names should describe the business action. Prefer `verifyTrackingCode` over
+`checkCode`, and `createEvidencePackage` over `makeZip`.
 
 ## Packages
 
@@ -37,9 +34,8 @@ config
 exception
 ```
 
-Do not create new top-level packages unless the feature clearly needs a new
-boundary. Security-sensitive domain primitives such as `SafeFilename` and
-`TrackingCode` should stay in `domain`.
+Security-sensitive domain primitives such as `SafeFilename`, `TrackingCode` and
+`ReportDescription` stay in `domain`.
 
 ## Controllers
 
@@ -49,10 +45,10 @@ Controllers should:
 - validate request DTOs with `@Valid`;
 - delegate business rules to services;
 - avoid direct repository access;
+- return DTOs or response records instead of JPA entities;
 - avoid leaking stack traces or internal exception messages.
 
-Endpoint names should be stable and descriptive. Protected endpoints must be
-consistent with `SecurityConfig`.
+Protected endpoints must remain consistent with `SecurityConfig`.
 
 ## Services
 
@@ -83,23 +79,6 @@ Avoid exposing:
 - whether a tracking code exists;
 - raw secrets or tokens.
 
-## Comments
-
-Use comments when they explain security intent or non-obvious trade-offs.
-Avoid comments that repeat the method name or describe obvious Java syntax.
-
-Good:
-
-```java
-// Keep the resolved path inside the configured storage directory.
-```
-
-Avoid:
-
-```java
-// Set the username field.
-```
-
 ## Tests
 
 Test names should describe behavior:
@@ -110,27 +89,32 @@ rejectsExecutableUpload()
 returnsTooManyRequestsAfterLimit()
 ```
 
-Use Given/When/Then structure inside tests:
-
-```java
-// given
-// when
-// then
-```
-
-Each security control mentioned in the report should have at least one of:
+Each security control described in documentation should have at least one of:
 
 - unit test;
 - integration test;
 - pipeline artifact;
 - ASVS evidence entry.
 
-## Security Documentation Rule
+## Pull Request Rules
 
-Do not claim a control as implemented unless it exists in code and has evidence.
-Use "planned" or "future work" for malware scanning, storage quotas, distributed
-rate limiting, MFA, tamper-proof logs and full admin user lifecycle management
-until those features are actually implemented.
+Every PR should:
+
+- use `.github/pull_request_template.md`;
+- receive at least one teammate approval;
+- pass the CI build/tests/coverage workflow;
+- include or reference security evidence when a security control changes;
+- update ASVS or security documentation when a security claim changes.
+
+## DTO and Sanitization Rules
+
+- Do not expose entities directly from controllers.
+- Use response records for immutable API responses when practical.
+- Validate request DTOs with Bean Validation and service/domain rules.
+- Trim and normalize user-controlled text before storing when the domain rule
+  requires it.
+- Sanitize audit and security event details before persistence.
+- Never log passwords, JWTs, raw secrets or full uploaded file contents.
 
 ## Workflow and Documentation Standards
 
@@ -140,8 +124,8 @@ GitHub Actions workflows should:
 - include `workflow_dispatch` for manual evidence regeneration;
 - use minimum required permissions;
 - publish artifacts with stable names;
-- explain whether the workflow is blocking or evidence/manual triage;
-- avoid changing backend code in DevSecOps-only branches.
+- explain whether the workflow is blocking or evidence review;
+- avoid changing backend code in documentation-only branches.
 
 Documentation should link claims to one of:
 
@@ -149,4 +133,4 @@ Documentation should link claims to one of:
 - automated tests;
 - GitHub Actions artifacts;
 - ASVS evidence;
-- known limitations/future work.
+- configuration files.

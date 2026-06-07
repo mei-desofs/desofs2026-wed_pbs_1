@@ -8,4 +8,7 @@ public record CasePackageResponse(
         String packagePath,
         List<String> generatedFiles
 ) {
+    public CasePackageResponse {
+        generatedFiles = generatedFiles == null ? List.of() : List.copyOf(generatedFiles);
+    }
 }

@@ -128,6 +128,16 @@ public class SecurityMonitoringService {
         );
     }
 
+    public void recordInvalidJwt(String path) {
+        createAlert(
+                "INVALID_JWT_TOKEN",
+                "MEDIUM",
+                "AUTHENTICATION",
+                null,
+                "Invalid or expired JWT presented to protected endpoint: " + sanitizePath(path)
+        );
+    }
+
     public void createAlert(String alertType, String severity, String targetType, Long targetId, String description) {
         SecurityAlert alert = new SecurityAlert();
         alert.setAlertType(alertType);
@@ -176,6 +186,19 @@ public class SecurityMonitoringService {
                 .replaceAll("[\\r\\n]", " ")
                 .replaceAll("[\\x00-\\x1F\\x7F]", "")
                 .trim();
+    }
+
+    private String sanitizePath(String path) {
+        if (path == null || path.isBlank()) {
+            return "unknown";
+        }
+
+        String sanitizedPath = sanitize(path);
+        if (sanitizedPath.length() > 160) {
+            return sanitizedPath.substring(0, 160);
+        }
+
+        return sanitizedPath;
     }
 
     private static class AttemptCounter {

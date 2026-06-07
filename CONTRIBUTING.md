@@ -1,6 +1,6 @@
 # Contributing to GhostReport
 
-This guide defines the working rules for Sprint 2 and final delivery. The goal
+This guide defines the working rules for project delivery. The goal
 is to keep the code, documentation, ASVS evidence and report coherent while
 three people work in parallel.
 
@@ -47,7 +47,7 @@ For DevSecOps/documentation pull requests, also include:
 
 - workflows changed;
 - expected artifacts;
-- whether the workflow is blocking or evidence/manual triage;
+- whether the workflow is blocking or evidence review;
 - documentation updated to match the pipeline behavior.
 
 Before requesting review, run the relevant command:
@@ -77,19 +77,19 @@ PY
 - Are endpoint roles aligned with `SecurityConfig`?
 - Are errors generic enough to avoid leaking internals?
 - Are new security claims supported by tests or artifacts?
-- Are limitations documented instead of overstated?
+- Are scope boundaries documented without overstating claims?
 
 ## Documentation Rules
 
 When a security control is added or changed, update at least one of:
 
 - `docs/ASVS_EVIDENCE.md`
-- `docs/SECURITY_CONTROLS.md`
+- `docs/ASVS_LEVEL2_EVIDENCE.md`
+- `docs/SECURITY_ASSESSMENT.md`
+- `docs/SECURITY_CONFIGURATION_ASSESSMENT.md`
 - `docs/DEVSECOPS_PIPELINE.md`
-- `docs/PIPELINE_FLOW.md`
-- `docs/PIPELINE_ARTIFACTS.md`
 - final report chapter
 - ASVS tracker spreadsheet
 
-The report should describe only what is implemented, validated or explicitly
-planned as future work.
+The report should describe only what is implemented, validated or supported by
+project evidence.

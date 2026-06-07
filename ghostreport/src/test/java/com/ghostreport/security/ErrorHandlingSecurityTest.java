@@ -9,6 +9,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -36,10 +37,12 @@ class ErrorHandlingSecurityTest {
     @Test
     void malformedJsonReturnsGenericErrorWithoutInternals() throws Exception {
         String response = mockMvc.perform(post("/auth/login")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ invalid json"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Malformed request"))
+                .andExpect(jsonPath("$.correlationId").isString())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -52,6 +55,7 @@ class ErrorHandlingSecurityTest {
         String response = mockMvc.perform(get("/admin/users"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.correlationId").isString())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();

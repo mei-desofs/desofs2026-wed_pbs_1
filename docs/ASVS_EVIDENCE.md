@@ -1,85 +1,88 @@
-# ASVS Evidence Mapping
+# ASVS 5.0 Evidence Mapping
 
-This document supports the ASVS tracker for Phase 2 Sprint 2. It maps controls
-to implemented code, tests and pipeline evidence. The spreadsheet remains the
-formal tracker, but this file explains how each claim can be defended.
-
-## Coverage Summary
-
-| Area | Status | Evidence |
-| --- | --- | --- |
-| Authentication | Strong baseline | `AuthController`, `AuthService`, `JwtService`, `JwtAuthenticationFilter`, BCrypt, inactive-user checks, login rate limiting and JWT security tests. |
-| Authorization / RBAC | Strong | `SecurityConfig`, `AdminAuthorizationTest`, `AuditorAuthorizationTest`, `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`. |
-| Input validation | Strong | DTO validation, `ReportDescription`, `SafeFilename`, `TrackingCode`, controller/service tests. |
-| File upload security | Strong baseline | `FileStorageService`, MIME/extension/magic byte checks, path normalization, upload tests. |
-| Error handling | Strong baseline | Controlled JSON errors and tests for malformed/unauthorized responses without stack traces. |
-| Logging and monitoring | Partial/strong | `AuditLogService`, `SecurityMonitoringService`, audit/security tests and brute-force alerts. Logs are not tamper-proof. |
-| Rate limiting | Strong baseline | `RateLimiterService`, public tracking/upload/download limits and login rate limiting. |
-| Backup integrity | Strong baseline | `BackupService`, manifests, SHA-256, restore staging, integration tests. |
-| DevSecOps | Strong evidence | CI, SpotBugs, Dependency-Check, Gitleaks, ZAP and JaCoCo artifacts mapped in `docs/PIPELINE_ARTIFACTS.md`. |
-
-## Suggested ASVS Control Evidence
-
-| ASVS topic | GhostReport evidence | Status |
-| --- | --- | --- |
-| Password storage | BCrypt `PasswordEncoder`; password complexity in `CreateUserRequest`. | Implemented |
-| Session management | Stateless JWT; no server-side session state for API authentication; signature, expiry and role validation tested. | Implemented |
-| Access control | Centralized RBAC in `SecurityConfig`; ownership checks in services; admin activate/deactivate tests. | Implemented |
-| Generic error handling | Generic responses for unauthorized/forbidden/malformed flows; tests check absence of internals. | Implemented |
-| Input validation | Bean Validation DTOs and domain primitives. | Implemented |
-| File upload validation | Size, MIME, extension, magic bytes, safe names and controlled storage. | Implemented |
-| Path traversal prevention | `SafeFilename`, normalized paths and storage boundary checks. | Implemented |
-| Logging | Audit logs for critical operations; sanitization of log details. | Implemented |
-| Monitoring | Security alerts for suspicious tracking, upload, path traversal, backup, ownership and brute-force login events. | Implemented baseline |
-| Data integrity | SHA-256 hashes for evidence and backups. | Implemented |
-| Secret management | GitHub Actions secrets and Gitleaks workflow. | Implemented |
-| Dependency monitoring | OWASP Dependency-Check workflow and artifacts. | Implemented |
-| Static analysis | SpotBugs workflow and XML artifacts. | Implemented |
-| Dynamic analysis | OWASP ZAP baseline workflow and reports. | Implemented |
-
-## Pipeline Evidence by ASVS Area
-
-| ASVS evidence area | Artifact evidence |
-| --- | --- |
-| Secure verification | `ci-surefire-test-reports`, `ci-jacoco-coverage-report` |
-| Static analysis | `sast-spotbugs-report` |
-| Dependency management | `dependency-check-sca-html`, `dependency-check-sca-json`, `dependency-check-sca-xml`, `dependency-check-sca-sarif` |
-| Secret management | `secret-scan-gitleaks-json` |
-| Dynamic analysis | `dast-zap-baseline-html`, `dast-zap-baseline-json`, `dast-zap-baseline-xml` |
-| Runtime evidence | `dast-ghostreport-app-log` |
-
-The full artifact map is maintained in `docs/PIPELINE_ARTIFACTS.md`.
-
-## Known Gaps to Track Honestly
-
-| Gap | Recommended wording |
-| --- | --- |
-| Malware scanning | Planned future hardening; current upload security is validation-based, not antivirus scanning. |
-| Storage quotas | Not implemented; future work for abuse and capacity control. |
-| Tamper-proof audit logs | Audit logs exist but are not append-only/hash-chained. |
-| Distributed rate limiting | Current implementation is in-memory and suitable for single-instance/dev use. |
-| Full admin lifecycle | Admin currently creates/lists/activates/deactivates users; edit/delete/role changes/password resets are not implemented. |
-| Authenticated DAST | ZAP baseline is unauthenticated and passive. |
-| MFA | Not implemented. |
-
-## Sprint 2 High-Value ASVS Improvements
-
-| Improvement | Why it matters | Evidence to add |
-| --- | --- | --- |
-| Login rate limiting | Strengthens authentication abuse protection. | `LoginRateLimitSecurityTest` and `BRUTE_FORCE_LOGIN_ATTEMPT` alert. |
-| Inactive users | Makes admin user management more credible. | `AdminUserManagementSecurityTest` verifies deactivate/reactivate and login rejection. |
-| JWT tamper/expired tests | Proves token validation behavior. | `JwtServiceSecurityTest`. |
-| Error response tests | Supports information disclosure controls. | `ErrorHandlingSecurityTest`. |
-| ASVS screenshots/artifacts | Makes tracker defensible. | Link workflow artifacts and test output. |
-
-## Evidence Storage
-
-Recommended evidence location:
+This document supports the formal spreadsheet:
 
 ```text
-Deliverables/Phase 2/Evidence/
+Deliverables/Phase 2/ASVS_5.0_Tracker_Phase 2_Sprint 2.xlsx
 ```
 
-Store only curated evidence there: screenshots, downloaded workflow artifacts,
-coverage summaries and ASVS notes. Do not store local build folders or runtime
-backups.
+The spreadsheet is the checklist of record. This file explains what evidence can
+be used to justify the ASVS status values. Do not mark a requirement as
+`Compliant` unless there is implementation plus test, pipeline or report
+evidence.
+
+## Assessment Rules
+
+- `Compliant`: implemented and supported by automated test, pipeline evidence
+  or a concrete artifact.
+- `Partially Compliant`: implemented only partly, missing operational maturity,
+  missing test depth or still under security triage.
+- `Not Applicable`: outside GhostReport's architecture or coursework scope.
+- `Not Started`: no defensible evidence found.
+
+## Chapter Summary
+
+| ASVS chapter | Current status | Evidence | Main gaps |
+| --- | --- | --- | --- |
+| V1 Encoding and Sanitization | Partially Compliant | DTO validation, domain value objects, safe filenames, CSP tests and ZAP baseline. | More output-encoding evidence and negative-path tests would strengthen this. |
+| V2 Validation and Business Logic | Partially Compliant | DTO validation, service checks, domain invariants, rate limiting and ownership tests. | Business limits and workflow abuse cases need more explicit documentation/tests. |
+| V3 Web Frontend Security | Partially Compliant | Security headers, CSP, externalized frontend scripts/styles and `SecurityHeadersTest`. | Fresh ZAP evidence should confirm the latest CSP behaviour. |
+| V4 API and Web Service | Partially Compliant | Controllers use DTOs, generic JSON errors and role-protected endpoints. | Cache behaviour, method restrictions and API abuse cases need more complete tests. |
+| V5 File Handling | Partially Compliant | Upload validation, safe path handling, MIME/extension checks and file service tests. | No antivirus scanning, quarantine workflow or per-user storage quotas. |
+| V6 Authentication | Partially Compliant | BCrypt, inactive-user checks, login rate limiting and login/logout audit events. | No MFA, secure password reset or password history/reuse policy. |
+| V7 Session Management | Partially Compliant | Stateless JWT expiry, validation and logout-driven revocation evidence. | No refresh-token rotation, distributed revocation store or concurrent-session controls. |
+| V8 Authorization | Partially Compliant | `ADMIN`, `ANALYST`, `AUDITOR` rules, RBAC tests and analyst ownership tests. | Field-level authorization and service-level negative paths can be expanded. |
+| V9 Self-contained Tokens | Partially Compliant | JWT signature, expiry, issuer/audience and revocation tests. | No key rotation or distributed revocation strategy. |
+| V10 OAuth and OIDC | Not Applicable | GhostReport does not use OAuth/OIDC or an external IdP. | Becomes applicable if an IdP is added. |
+| V11 Cryptography | Partially Compliant | BCrypt, JWT HMAC and SHA-256 integrity hashes. | No formal key lifecycle/rotation plan. |
+| V12 Secure Communication | Partially Compliant | Security headers and installation guidance for TLS deployment. | CI DAST runs on local HTTP and does not prove production TLS/cipher configuration. |
+| V13 Configuration | Partially Compliant | Profiles, environment variables, fail-fast validation, Gitleaks and SCA evidence. | Residual dependency findings require documented triage. |
+| V14 Data Protection | Partially Compliant | DTO responses avoid passwords/tokens and file/package integrity checks exist. | Retention, deletion and encryption-at-rest policies are incomplete. |
+| V15 Secure Coding and Architecture | Partially Compliant | Single `dev` pipeline, tests, JaCoCo, SpotBugs, SonarCloud, CodeQL, Dependency-Check, CycloneDX, Gitleaks, ZAP and PIT evidence review. | Security findings remain triage-driven; PIT is not a blocking quality gate. |
+| V16 Security Logging and Error Handling | Partially Compliant | Audit/security event services, sanitized error handling and runtime security tests. | No tamper-resistant logs or external SIEM integration. |
+| V17 WebRTC | Not Applicable | No WebRTC, TURN/STUN, media capture or real-time browser communication exists. | None in current scope. |
+
+## Evidence References
+
+| Evidence type | Repository references |
+| --- | --- |
+| Authentication | `ghostreport/src/main/java/com/ghostreport/controller/AuthController.java`, `ghostreport/src/main/java/com/ghostreport/service/AuthService.java`, `ghostreport/src/main/java/com/ghostreport/service/JwtService.java` |
+| Authorization | `ghostreport/src/main/java/com/ghostreport/security/SecurityConfig.java`, `ghostreport/src/test/java/com/ghostreport/security/RbacAuthorizationMatrixTest.java` |
+| Input validation | `ghostreport/src/main/java/com/ghostreport/dto`, `ghostreport/src/main/java/com/ghostreport/domain`, `ghostreport/src/test/java/com/ghostreport/domain` |
+| File handling | `ghostreport/src/main/java/com/ghostreport/service/FileStorageService.java`, `ghostreport/src/test/java/com/ghostreport/service/FileStorageServiceTest.java` |
+| Backup and integrity | `ghostreport/src/main/java/com/ghostreport/service/BackupService.java`, `ghostreport/src/test/java/com/ghostreport/service/BackupServiceIntegrationTest.java` |
+| Error handling | `ghostreport/src/main/java/com/ghostreport/exception/GlobalExceptionHandler.java`, `ghostreport/src/test/java/com/ghostreport/security/ErrorHandlingSecurityTest.java` |
+| Runtime security events | `ghostreport/src/main/java/com/ghostreport/service/SecurityMonitoringService.java`, `ghostreport/src/test/java/com/ghostreport/security/RuntimeSecurityEventLoggingTest.java` |
+| Pipeline evidence | `.github/workflows/dev.yml`, GitHub Actions job summaries and downloaded artifacts |
+| Local evidence archive | `Deliverables/Phase 2/Evidence`, populated manually from downloaded GitHub Actions artifacts |
+
+## Tool Evidence Status
+
+| Tool | Current evidence | Artifact/location | Status wording |
+| --- | --- | --- | --- |
+| JUnit/MockMvc | Local run passed with 117 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
+| JaCoCo | Coverage report and coverage check run in `build-test`. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco` | Blocking coverage evidence. |
+| PIT | PIT runs in evidence review mode and uploads fallback summary/exit code when needed. | `pit-mutation-testing-report` | Evidence review, not a blocking mutation score gate. |
+| Gitleaks | Repository secret scan runs before dependent security jobs. Empty JSON means no leaks in scanned scope. | `secret-scan-gitleaks-json` | Blocking for confirmed leaks. |
+| SpotBugs | XML/static analysis output is uploaded with SAST evidence. | `sast-reports` | Evidence review. |
+| SonarCloud | Runs in SAST job when `SONAR_TOKEN` is configured. | `sast-reports`, SonarCloud UI | Evidence review; required secret must exist. |
+| CodeQL | CodeQL runs and uploads primary findings to GitHub Code Scanning. | GitHub Code Scanning, `sast-reports` summary | Evidence review; local full SARIF is not claimed. |
+| Dependency-Check | HTML/XML/JSON/SARIF reports are generated in evidence mode. | `dependency-check-sca-reports` | Evidence review with manual triage. |
+| CycloneDX | SBOM is generated in JSON/XML. | `sbom-cyclonedx` | Dependency inventory evidence. |
+| Runtime security / IAST readiness | Security-focused runtime tests run with JaCoCo skipped and upload Surefire plus readiness notes. | `iast-runtime-security-evidence` | Runtime evidence always; external IAST only if Contrast variables/secrets exist. |
+| ZAP | Baseline DAST runs against a live CI application instance. | `dast-zap-baseline-reports` | Evidence review baseline DAST. |
+| actionlint | Workflow syntax/semantics validated locally. | Local terminal output or pipeline notes | Supporting pipeline evidence. |
+
+## Not Applicable Scope
+
+`V10 OAuth and OIDC` is Not Applicable because GhostReport uses local
+username/password authentication and self-contained JWTs, not OAuth/OIDC, PKCE,
+authorization-code flow or token exchange with an external identity provider.
+
+`V17 WebRTC` is Not Applicable because GhostReport has no browser media capture,
+signaling, TURN/STUN, SRTP, DTLS media server or real-time communication
+feature.
+
+Mutual TLS/client-certificate requirements are Not Applicable where the current
+architecture does not use client certificates for authentication or
+authorization. Production TLS remains a deployment responsibility under V12.

@@ -3,6 +3,7 @@ package com.ghostreport.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Entity
@@ -68,7 +69,7 @@ public class Report {
     public ReportStatus getStatus() { return status; }
     public String getTrackingCodeHash() { return trackingCodeHash; }
     public LocalDateTime getCreatedAt() { return createdAt; }
-    public List<Attachment> getAttachments() { return attachments; }
+    public List<Attachment> getAttachments() { return Collections.unmodifiableList(attachments); }
     public CaseReview getCaseReview() { return caseReview; }
 
     // SETTERS
@@ -79,6 +80,11 @@ public class Report {
     public void setStatus(ReportStatus status) { this.status = status; }
     public void setTrackingCodeHash(String trackingCodeHash) { this.trackingCodeHash = trackingCodeHash; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-    public void setAttachments(List<Attachment> attachments) { this.attachments = attachments; }
+    public void setAttachments(List<Attachment> attachments) {
+        this.attachments.clear();
+        if (attachments != null) {
+            attachments.forEach(this::addAttachment);
+        }
+    }
     public void setCaseReview(CaseReview caseReview) { this.caseReview = caseReview; }
 }

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AnalystController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ghostreport</a> &gt; <a href="index.source.html" class="el_package">com.ghostreport.controller</a> &gt; <span class="el_source">AnalystController.java</span></div><h1>AnalystController.java</h1><pre class="source lang-java linenums">package com.ghostreport.controller;
+
+import com.ghostreport.dto.*;
+import com.ghostreport.service.CasePackageService;
+import com.ghostreport.service.CaseReviewService;
+import com.ghostreport.service.ReportService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/analyst&quot;)
+public class AnalystController {
+
+    private final ReportService reportService;
+    private final CaseReviewService caseReviewService;
+    private final CasePackageService casePackageService;
+
+<span class="fc" id="L22">    public AnalystController(ReportService reportService, CaseReviewService caseReviewService, CasePackageService casePackageService) {</span>
+<span class="fc" id="L23">        this.reportService = reportService;</span>
+<span class="fc" id="L24">        this.caseReviewService = caseReviewService;</span>
+<span class="fc" id="L25">        this.casePackageService = casePackageService;</span>
+<span class="fc" id="L26">    }</span>
+
+    @GetMapping(&quot;/panel&quot;)
+    public String analystPanel() {
+<span class="fc" id="L30">        return &quot;Access granted: ANALYST or ADMIN&quot;;</span>
+    }
+
+    @GetMapping(&quot;/reports&quot;)
+    public List&lt;ReportResponse&gt; getAllReports() {
+<span class="fc" id="L35">        return reportService.getAllReports();</span>
+    }
+
+    @PatchMapping(&quot;/reports/{id}/status&quot;)
+    public ReportResponse updateReportStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateReportStatusRequest request
+    ) {
+<span class="fc" id="L43">        return reportService.updateReportStatus(id, request);</span>
+    }
+
+    @PostMapping(&quot;/reports/{id}/assign&quot;)
+    public CaseReviewResponse assignAnalyst(@PathVariable Long id) {
+<span class="fc" id="L48">        return caseReviewService.assignAnalystToCurrentUser(id);</span>
+    }
+
+    @PatchMapping(&quot;/reports/{id}/priority&quot;)
+    public CaseReviewResponse updatePriority(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdatePriorityRequest request
+    ) {
+<span class="nc" id="L56">        return caseReviewService.updatePriority(id, request);</span>
+    }
+
+    @PatchMapping(&quot;/reports/{id}/notes&quot;)
+    public CaseReviewResponse updateNotes(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateNotesRequest request
+    ) {
+<span class="nc" id="L64">        return caseReviewService.updateNotes(id, request);</span>
+    }
+
+    @GetMapping(&quot;/reports/{id}/case-review&quot;)
+    public CaseReviewResponse getCaseReview(@PathVariable Long id) {
+<span class="nc" id="L69">        return caseReviewService.getCaseReview(id);</span>
+    }
+
+    @GetMapping(&quot;/my-cases&quot;)
+    public List&lt;CaseReviewResponse&gt; getMyAssignedCases() {
+<span class="nc" id="L74">        return caseReviewService.getMyAssignedCases();</span>
+    }
+
+    @GetMapping(&quot;/reports/{id}/attachments&quot;)
+    public List&lt;AttachmentListResponse&gt; listAttachments(@PathVariable Long id) {
+<span class="nc" id="L79">        return reportService.listAttachments(id);</span>
+    }
+
+    @GetMapping(&quot;/attachments/{attachmentId}/download&quot;)
+    public ResponseEntity&lt;Resource&gt; downloadAttachment(@PathVariable Long attachmentId) {
+<span class="nc" id="L84">        return reportService.downloadAttachment(attachmentId);</span>
+    }
+
+    @PostMapping(&quot;/reports/{id}/case-package&quot;)
+    public ResponseEntity&lt;CasePackageResponse&gt; generateCasePackage(@PathVariable Long id) {
+<span class="nc" id="L89">        return ResponseEntity.ok(casePackageService.generateCasePackage(id));</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -260,7 +260,14 @@ class AnalystCaseOwnershipTest {
         attachment.setOriginalName("owned-evidence.txt");
         attachment.setStoredName("owned-evidence.txt");
         attachment.setFileReference("owned-evidence");
-        attachment.setStoragePath(Path.of(uploadDir).toAbsolutePath().normalize().relativize(file).toString());
+        attachment.setStoragePath(
+                Path.of(uploadDir)
+                        .toAbsolutePath()
+                        .normalize()
+                        .relativize(file)
+                        .toString()
+                        .replace('\\', '/')
+        );
         attachment.setMimeType("text/plain");
         attachment.setSize(Files.size(file));
         attachment.setHash("test-hash");

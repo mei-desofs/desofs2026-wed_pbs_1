@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuditLog.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ghostreport</a> &gt; <a href="index.source.html" class="el_package">com.ghostreport.model</a> &gt; <span class="el_source">AuditLog.java</span></div><h1>AuditLog.java</h1><pre class="source lang-java linenums">package com.ghostreport.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = &quot;audit_logs&quot;)
+public class AuditLog {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private LocalDateTime timestamp;
+
+    @Column(nullable = false, length = 120)
+    private String actor;
+
+    @Column(nullable = false, length = 80)
+    private String action;
+
+    @Column(length = 80)
+    private String targetType;
+
+    private Long targetId;
+
+    @Column(length = 500)
+    private String details;
+
+<span class="fc" id="L31">    public AuditLog() {</span>
+<span class="fc" id="L32">    }</span>
+
+    @PrePersist
+    public void prePersist() {
+<span class="fc" id="L36">        this.timestamp = LocalDateTime.now();</span>
+<span class="fc" id="L37">    }</span>
+
+<span class="fc" id="L39">    public Long getId() { return id; }</span>
+<span class="fc" id="L40">    public LocalDateTime getTimestamp() { return timestamp; }</span>
+<span class="fc" id="L41">    public String getActor() { return actor; }</span>
+<span class="fc" id="L42">    public String getAction() { return action; }</span>
+<span class="fc" id="L43">    public String getTargetType() { return targetType; }</span>
+<span class="fc" id="L44">    public Long getTargetId() { return targetId; }</span>
+<span class="fc" id="L45">    public String getDetails() { return details; }</span>
+
+<span class="nc" id="L47">    public void setId(Long id) { this.id = id; }</span>
+<span class="nc" id="L48">    public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }</span>
+<span class="fc" id="L49">    public void setActor(String actor) { this.actor = actor; }</span>
+<span class="fc" id="L50">    public void setAction(String action) { this.action = action; }</span>
+<span class="fc" id="L51">    public void setTargetType(String targetType) { this.targetType = targetType; }</span>
+<span class="fc" id="L52">    public void setTargetId(Long targetId) { this.targetId = targetId; }</span>
+<span class="fc" id="L53">    public void setDetails(String details) { this.details = details; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

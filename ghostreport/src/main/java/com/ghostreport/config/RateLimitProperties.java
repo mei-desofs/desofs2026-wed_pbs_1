@@ -13,35 +13,35 @@ public class RateLimitProperties {
     private Limit login = new Limit(5, 600);
 
     public Limit getTracking() {
-        return tracking;
+        return new Limit(tracking);
     }
 
     public void setTracking(Limit tracking) {
-        this.tracking = tracking;
+        this.tracking = new Limit(tracking);
     }
 
     public Limit getUpload() {
-        return upload;
+        return new Limit(upload);
     }
 
     public void setUpload(Limit upload) {
-        this.upload = upload;
+        this.upload = new Limit(upload);
     }
 
     public Limit getDownload() {
-        return download;
+        return new Limit(download);
     }
 
     public void setDownload(Limit download) {
-        this.download = download;
+        this.download = new Limit(download);
     }
 
     public Limit getLogin() {
-        return login;
+        return new Limit(login);
     }
 
     public void setLogin(Limit login) {
-        this.login = login;
+        this.login = new Limit(login);
     }
 
     public static class Limit {
@@ -55,6 +55,13 @@ public class RateLimitProperties {
         public Limit(int maxAttempts, long windowSeconds) {
             this.maxAttempts = maxAttempts;
             this.windowSeconds = windowSeconds;
+        }
+
+        private Limit(Limit source) {
+            this(
+                    source == null ? 10 : source.maxAttempts,
+                    source == null ? 60 : source.windowSeconds
+            );
         }
 
         public int getMaxAttempts() {

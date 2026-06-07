@@ -25,6 +25,8 @@ server:
 
 app:
   upload-dir: target/test-uploads/default
+  upload:
+    max-files-per-request: 5
 
 ghostreport:
   jwt:

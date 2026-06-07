@@ -48,6 +48,13 @@ public class AuthService {
         );
 
         UserDetails user = (UserDetails) authentication.getPrincipal();
+        auditLogService.log(
+                "LOGIN_SUCCESS",
+                "USER",
+                storedUser != null ? storedUser.getId() : null,
+                "User logged in successfully"
+        );
+
         String token = jwtService.generateToken(user);
         String role = user.getAuthorities().stream()
                 .findFirst()

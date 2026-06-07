@@ -10,4 +10,7 @@ public record EvidencePackageVerificationResponse(
         List<EvidencePackageFileCheckResponse> files,
         String message
 ) {
+    public EvidencePackageVerificationResponse {
+        files = files == null ? List.of() : List.copyOf(files);
+    }
 }

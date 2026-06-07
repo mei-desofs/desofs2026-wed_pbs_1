@@ -1,12 +1,12 @@
 package com.ghostreport.controller;
 
 import com.ghostreport.dto.AuditClosedCaseResponse;
+import com.ghostreport.dto.AuditLogResponse;
 import com.ghostreport.dto.BackupFileResponse;
 import com.ghostreport.dto.BackupManifestSummaryResponse;
 import com.ghostreport.dto.BackupVerificationResponse;
 import com.ghostreport.dto.EvidencePackageVerificationResponse;
-import com.ghostreport.model.AuditLog;
-import com.ghostreport.model.SecurityAlert;
+import com.ghostreport.dto.SecurityAlertResponse;
 import com.ghostreport.repository.AuditLogRepository;
 import com.ghostreport.repository.SecurityAlertRepository;
 import com.ghostreport.service.AuditReadService;
@@ -44,13 +44,34 @@ public class AuditController {
     }
 
     @GetMapping("/logs")
-    public List<AuditLog> getAuditLogs() {
-        return auditLogRepository.findAll();
+    public List<AuditLogResponse> getAuditLogs() {
+        return auditLogRepository.findAll().stream()
+                .map(auditLog -> new AuditLogResponse(
+                        auditLog.getId(),
+                        auditLog.getTimestamp(),
+                        auditLog.getActor(),
+                        auditLog.getAction(),
+                        auditLog.getTargetType(),
+                        auditLog.getTargetId(),
+                        auditLog.getDetails()
+                ))
+                .toList();
     }
 
     @GetMapping("/security-alerts")
-    public List<SecurityAlert> getSecurityAlerts() {
-        return securityAlertRepository.findAll();
+    public List<SecurityAlertResponse> getSecurityAlerts() {
+        return securityAlertRepository.findAll().stream()
+                .map(alert -> new SecurityAlertResponse(
+                        alert.getId(),
+                        alert.getTimestamp(),
+                        alert.getAlertType(),
+                        alert.getSeverity(),
+                        alert.getActor(),
+                        alert.getTargetType(),
+                        alert.getTargetId(),
+                        alert.getDescription()
+                ))
+                .toList();
     }
 
     @GetMapping("/cases/closed")

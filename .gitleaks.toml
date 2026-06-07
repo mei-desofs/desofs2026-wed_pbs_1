@@ -13,5 +13,11 @@ paths = [
 ]
 regexes = [
   '''dev-only-change-this-secret-32-chars''',
-  '''test-only-change-this-secret-32-chars'''
+  '''test-only-change-this-secret-32-chars''',
+  '''dev-local-secret-with-at-least-32-chars''',
+  '''change-this-secret-with-at-least-32-chars''',
+  '''change-this-local-password''',
+  '''AdminPassword123!''',
+  '''AnalystPassword123!''',
+  '''AuditorPassword123!'''
 ]

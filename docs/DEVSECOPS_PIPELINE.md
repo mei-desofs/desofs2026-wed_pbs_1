@@ -1,115 +1,103 @@
-# DevSecOps Pipeline Evidence
+# DevSecOps Pipeline
 
-GhostReport uses separate GitHub Actions workflows so that build/test, SAST,
-SCA, secret scanning and DAST can run independently and produce clear evidence.
-The intended orchestration is documented in [PIPELINE_FLOW.md](PIPELINE_FLOW.md),
-and the artifact-to-evidence mapping is documented in
-[PIPELINE_ARTIFACTS.md](PIPELINE_ARTIFACTS.md).
+GhostReport uses one GitHub Actions workflow as the Sprint 2 evidence pipeline:
 
-## Workflow Overview
+```text
+.github/workflows/dev.yml
+```
 
-| Workflow | Purpose | Main artifact evidence |
+The workflow name is `dev`. It runs on `workflow_dispatch`, `push` and
+`pull_request` for `main` and `develop`. This single workflow is the preferred
+presentation view because GitHub Actions shows the jobs and their dependencies
+in one timeline.
+
+## Pipeline Timeline
+
+```text
+build-test / build-and-test
+security-secrets / secrets
+        |
+        +--> sast / SonarCloud SAST Scan
+        +--> dependency-scanning / Dependency Vulnerability Scanning
+        +--> dast-scan / dast-scan
+```
+
+`build-test` and `security-secrets` run first. The SAST, SCA/SBOM and
+DAST/runtime evidence jobs only start after those two jobs complete.
+
+## Job Map
+
+| Job | Purpose | Gate mode | Main artifacts/evidence |
+| --- | --- | --- | --- |
+| `build-test / build-and-test` | Maven compile, automated tests, JaCoCo coverage report and PIT mutation evidence review. | Blocking for compile, tests and coverage. PIT is evidence review. | `ci-surefire-test-reports`, `ci-jacoco-coverage-report`, `pit-mutation-testing-report` |
+| `security-secrets / secrets` | Gitleaks scan of repository content using `.gitleaks.toml`. | Blocking for confirmed secret leaks. | `secret-scan-gitleaks-json` |
+| `sast / SonarCloud SAST Scan` | CodeQL, SpotBugs and SonarCloud SAST. | Evidence review. SonarCloud fails if `SONAR_TOKEN` is missing or the analysis fails. | `sast-reports`, GitHub Code Scanning alerts |
+| `dependency-scanning / Dependency Vulnerability Scanning` | OWASP Dependency-Check and CycloneDX SBOM. | Evidence review. Dependency-Check does not block the pipeline by CVSS threshold in Sprint 2 evidence mode. | `dependency-check-sca-reports`, `sbom-cyclonedx`, Code Scanning SARIF when generated |
+| `dast-scan / dast-scan` | Runtime security tests, optional IAST readiness notes, live application startup and OWASP ZAP baseline. | Runtime tests and application startup are blocking. ZAP is evidence review. | `iast-runtime-security-evidence`, `dast-zap-baseline-reports` |
+
+## Blocking Policy
+
+The project treats build, tests, coverage and confirmed secret leaks as the main
+quality gates. These checks answer the basic question: can the application be
+built, tested and reviewed without introducing obvious repository secrets?
+
+SAST, SCA, SBOM, DAST, runtime security evidence and PIT produce evidence for
+manual review. This is intentional: security tools often need triage to decide
+whether a finding is exploitable, framework-managed, out of scope or already
+mitigated elsewhere.
+
+## Evidence Boundaries
+
+| Area | What exists | What is not claimed |
 | --- | --- | --- |
-| `secret-scan-gitleaks.yml` | Stage 00: detect hardcoded secrets in the repository. | Gitleaks JSON report. |
-| `ci-tests.yml` | Stage 01: compile, run automated tests and generate JaCoCo coverage. | Surefire reports and JaCoCo HTML/exec report. |
-| `sast-spotbugs.yml` | Stage 02A: run SpotBugs static analysis over Java code. | SpotBugs XML report. |
-| `sca-dependency-check.yml` | Stage 02B: run OWASP Dependency-Check over Maven dependencies. | HTML, JSON, XML and SARIF reports. |
-| `dast-zap.yml` | Stage 03: start GhostReport and run OWASP ZAP baseline DAST. | ZAP HTML, JSON, XML and application log. |
+| CodeQL | CodeQL runs in GitHub Actions and publishes findings to GitHub Code Scanning. The workflow also uploads SAST summary files through `sast-reports`. | A local full CodeQL SARIF archive is not promised unless exported separately from GitHub. |
+| IAST | Runtime security-focused tests always run and produce Surefire plus `iast-runtime-evidence.md`. The workflow records whether Contrast Java agent configuration variables are present. | Full external IAST telemetry is not claimed unless the Contrast agent variables/secrets are configured and the agent is actually active. |
+| PIT | PIT runs in evidence review mode and writes `target/pit-reports/pit-evidence-summary.md` and `pit-exit-code.txt` even when PIT exits non-zero. | PIT is not a blocking mutation score gate in Sprint 2. |
+| ZAP | ZAP baseline runs against a live local GhostReport instance in the CI runner and uploads HTML/XML/JSON reports plus the application log. | ZAP baseline is not authenticated deep DAST and is not equivalent to a full penetration test. |
+| Local evidence folder | `Deliverables/Phase 2/Evidence` is a curated local archive for downloaded artifacts. | GitHub Actions does not write directly into this repository folder. |
 
-All workflows run on `push` and `pull_request` for `main` and `develop`, and
-also support `workflow_dispatch` for manual evidence regeneration.
+## Artifact Collection
 
-## Orchestration Summary
+The primary evidence source is the GitHub Actions run page: job logs, job
+summaries and artifacts. For presentation and local archive, download the run
+artifacts and organize them with:
 
-The validation flow is:
-
-```text
-Secret scanning -> CI build/tests/coverage -> SAST/SCA -> DAST -> evidence collection
+```powershell
+.\scripts\collect-evidence.ps1
 ```
 
-The workflows are separate because this makes each validation activity easier
-to rerun and explain. CI is the main blocking baseline; SAST, SCA and DAST are
-currently evidence/manual triage workflows.
+The script expects artifacts under `downloaded-artifacts/` by default and copies
+them into:
 
-## CI Tests and Coverage
+- `Deliverables/Phase 2/Evidence/testing`
+- `Deliverables/Phase 2/Evidence/sast`
+- `Deliverables/Phase 2/Evidence/sca`
+- `Deliverables/Phase 2/Evidence/secret-scanning`
+- `Deliverables/Phase 2/Evidence/dast`
+- `Deliverables/Phase 2/Evidence/pipelines`
+- `Deliverables/Phase 2/Evidence/asvs`
 
-The CI workflow prepares Java 17, starts a PostgreSQL 16 service container and
-runs:
+## Current Local Validation
 
-```bash
-./mvnw clean compile
-./mvnw test jacoco:report
+The current workflow has been validated locally with `actionlint` 1.7.12.
+The Spring Boot module also runs locally with:
+
+```powershell
+cd ghostreport
+.\mvnw test
 ```
 
-This verifies compilation, automated tests and coverage evidence in one
-repeatable workflow.
+The latest local test run completed successfully with 117 tests passing and the
+JaCoCo coverage check passing. Final grading evidence should still come from a
+fresh GitHub Actions run after the branch is pushed.
 
-## SAST - SpotBugs
+## Demo Path
 
-SpotBugs is executed as SAST evidence:
+For the final presentation:
 
-```bash
-./mvnw -DskipTests compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true
-```
-
-Current use is evidence/manual triage. Findings should be reviewed and either
-fixed, documented as accepted risk, or justified as framework-managed behavior.
-
-## SCA - OWASP Dependency-Check
-
-Dependency-Check is executed in evidence mode:
-
-```bash
-./mvnw org.owasp:dependency-check-maven:12.1.0:check -Dformat=ALL -DossindexAnalyzerEnabled=false -DfailOnError=false -DfailBuildOnCVSS=11
-```
-
-Notes:
-
-- `NVD_API_KEY` is read from GitHub Actions secrets.
-- OSS Index is disabled to avoid unrelated 401 failures.
-- The build is not blocked automatically while the team triages CVEs.
-- Reports are generated in HTML, JSON, XML and SARIF.
-
-## Secret Scanning - Gitleaks
-
-Gitleaks scans the repository root and generates a JSON report. An empty JSON
-array means no hardcoded secrets were found in the scanned content.
-
-## DAST - OWASP ZAP Baseline
-
-The application runs directly on the GitHub runner:
-
-```text
-http://localhost:8081
-```
-
-ZAP runs inside a Docker container with host networking and scans that local
-application. This is not a Docker deployment of GhostReport; Docker is only
-used to run the ZAP scanner.
-
-The current DAST mode is:
-
-- baseline/passive;
-- unauthenticated;
-- non-intrusive;
-- evidence/manual triage.
-
-Authenticated scans and active/full scans are future hardening work.
-
-## Reporting Guidance
-
-When describing the pipeline in the report, use precise wording:
-
-> The project uses separate GitHub Actions workflows for build/test, SAST,
-> SCA, secret scanning and baseline DAST. The intended flow is secret scanning,
-> CI build/tests/coverage, SAST/SCA, DAST and evidence collection. SAST, SCA and
-> DAST currently operate as evidence-producing workflows with manual triage,
-> while CI tests validate compilation, automated tests and JaCoCo coverage.
-
-Avoid claiming:
-
-- malware scanning;
-- policy gates for all vulnerabilities;
-- authenticated DAST;
-- full active ZAP scans;
-- automatic remediation of dependency CVEs.
+1. Open the Pull Request checks page.
+2. Open the `dev` workflow run.
+3. Show `build-test` and `security-secrets` as the first gates.
+4. Show the dependent SAST, SCA/SBOM and DAST/runtime jobs.
+5. Open the artifacts list and connect each artifact to the ASVS evidence.
+6. Explain which checks are blocking and which are evidence review.

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SecurityConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ghostreport</a> &gt; <a href="index.source.html" class="el_package">com.ghostreport.security</a> &gt; <span class="el_source">SecurityConfig.java</span></div><h1>SecurityConfig.java</h1><pre class="source lang-java linenums">package com.ghostreport.security;
+
+import com.ghostreport.service.SecurityMonitoringService;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
+
+import java.io.IOException;
+import java.util.UUID;
+
+@Configuration
+<span class="fc" id="L23">public class SecurityConfig {</span>
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            SecurityMonitoringService securityMonitoringService,
+            JwtAuthenticationFilter jwtAuthenticationFilter
+    ) throws Exception {
+<span class="fc" id="L31">        http</span>
+<span class="fc" id="L32">                .csrf(csrf -&gt; csrf.disable())</span>
+<span class="fc" id="L33">                .headers(headers -&gt; headers</span>
+<span class="fc" id="L34">                        .contentTypeOptions(contentTypeOptions -&gt; {</span>
+<span class="fc" id="L35">                        })</span>
+<span class="fc" id="L36">                        .frameOptions(frameOptions -&gt; frameOptions.deny())</span>
+<span class="fc" id="L37">                        .httpStrictTransportSecurity(hsts -&gt; hsts</span>
+<span class="fc" id="L38">                                .includeSubDomains(true)</span>
+<span class="fc" id="L39">                                .maxAgeInSeconds(31_536_000)</span>
+                        )
+<span class="fc" id="L41">                        .contentSecurityPolicy(csp -&gt; csp</span>
+<span class="fc" id="L42">                                .policyDirectives(&quot;default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'; form-action 'self'&quot;)</span>
+                        )
+<span class="fc" id="L44">                        .referrerPolicy(referrer -&gt; referrer</span>
+<span class="fc" id="L45">                                .policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)</span>
+                        )
+<span class="fc" id="L47">                        .addHeaderWriter(new StaticHeadersWriter(&quot;Permissions-Policy&quot;, &quot;geolocation=(), microphone=(), camera=(), payment=()&quot;))</span>
+<span class="fc" id="L48">                        .addHeaderWriter(new StaticHeadersWriter(&quot;Cross-Origin-Opener-Policy&quot;, &quot;same-origin&quot;))</span>
+<span class="fc" id="L49">                        .addHeaderWriter(new StaticHeadersWriter(&quot;Cross-Origin-Resource-Policy&quot;, &quot;same-origin&quot;))</span>
+<span class="fc" id="L50">                        .addHeaderWriter(new StaticHeadersWriter(&quot;Cross-Origin-Embedder-Policy&quot;, &quot;require-corp&quot;))</span>
+                )
+<span class="fc" id="L52">                .sessionManagement(session -&gt; session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))</span>
+<span class="fc" id="L53">                .authorizeHttpRequests(auth -&gt; auth</span>
+<span class="fc" id="L54">                        .requestMatchers(&quot;/&quot;, &quot;/index.html&quot;, &quot;/submit.html&quot;, &quot;/track.html&quot;, &quot;/analyst.html&quot;, &quot;/admin.html&quot;, &quot;/auditor.html&quot;).permitAll()</span>
+<span class="fc" id="L55">                        .requestMatchers(&quot;/css/**&quot;, &quot;/js/**&quot;).permitAll()</span>
+<span class="fc" id="L56">                        .requestMatchers(HttpMethod.POST, &quot;/auth/login&quot;).permitAll()</span>
+
+<span class="fc" id="L58">                        .requestMatchers(HttpMethod.POST, &quot;/reports&quot;).permitAll()</span>
+<span class="fc" id="L59">                        .requestMatchers(HttpMethod.POST, &quot;/reports/verify&quot;).permitAll()</span>
+<span class="fc" id="L60">                        .requestMatchers(HttpMethod.POST, &quot;/reports/{id}/attachments&quot;).permitAll()</span>
+<span class="fc" id="L61">                        .requestMatchers(HttpMethod.POST, &quot;/reports/{id}/attachments/list&quot;).permitAll()</span>
+
+<span class="fc" id="L63">                        .requestMatchers(&quot;/admin/**&quot;).hasRole(&quot;ADMIN&quot;)</span>
+<span class="fc" id="L64">                        .requestMatchers(&quot;/analyst/**&quot;).hasAnyRole(&quot;ANALYST&quot;, &quot;ADMIN&quot;)</span>
+<span class="fc" id="L65">                        .requestMatchers(&quot;/audit/**&quot;).hasAnyRole(&quot;AUDITOR&quot;, &quot;ADMIN&quot;)</span>
+
+<span class="fc" id="L67">                        .anyRequest().authenticated()</span>
+                )
+<span class="fc" id="L69">                .exceptionHandling(exception -&gt; exception</span>
+<span class="fc" id="L70">                        .authenticationEntryPoint((request, response, authException) -&gt; {</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">                            if (request.getRequestURI().startsWith(&quot;/admin/backups&quot;)) {</span>
+<span class="fc" id="L72">                                securityMonitoringService.recordUnauthorizedBackupAccess(request.getRequestURI());</span>
+                            }
+<span class="fc" id="L74">                            response.setHeader(HttpHeaders.WWW_AUTHENTICATE, &quot;Bearer realm=\&quot;GhostReport\&quot;&quot;);</span>
+<span class="fc" id="L75">                            writeSecurityError(response, 401, &quot;Unauthorized&quot;);</span>
+<span class="fc" id="L76">                        })</span>
+<span class="fc" id="L77">                        .accessDeniedHandler((request, response, accessDeniedException) -&gt; {</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">                            if (request.getRequestURI().startsWith(&quot;/admin/backups&quot;)) {</span>
+<span class="fc" id="L79">                                securityMonitoringService.recordUnauthorizedBackupAccess(request.getRequestURI());</span>
+                            }
+<span class="fc" id="L81">                            writeSecurityError(response, 403, &quot;Access denied&quot;);</span>
+<span class="fc" id="L82">                        })</span>
+                )
+<span class="fc" id="L84">                .httpBasic(httpBasic -&gt; httpBasic.disable())</span>
+<span class="fc" id="L85">                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);</span>
+
+<span class="fc" id="L87">        return http.build();</span>
+    }
+
+    private void writeSecurityError(
+            jakarta.servlet.http.HttpServletResponse response,
+            int status,
+            String error
+    ) throws IOException {
+<span class="fc" id="L95">        response.setStatus(status);</span>
+<span class="fc" id="L96">        response.setContentType(MediaType.APPLICATION_JSON_VALUE);</span>
+<span class="fc" id="L97">        response.getWriter().write(</span>
+                &quot;{\&quot;status\&quot;:%d,\&quot;error\&quot;:\&quot;%s\&quot;,\&quot;correlationId\&quot;:\&quot;%s\&quot;}%n&quot;
+<span class="fc" id="L99">                        .formatted(status, error, UUID.randomUUID())</span>
+        );
+<span class="fc" id="L101">    }</span>
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+<span class="fc" id="L105">        return new BCryptPasswordEncoder();</span>
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+<span class="fc" id="L110">        return configuration.getAuthenticationManager();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

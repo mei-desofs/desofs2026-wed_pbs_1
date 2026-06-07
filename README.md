@@ -26,9 +26,8 @@ DESOFS secure software development coursework.
 | Auditor | View audit/security evidence and verify evidence packages and backups. |
 | Admin | Create/list/activate/deactivate users, view audit/security information and manage backup operations. |
 
-Admin user management is intentionally described as basic lifecycle management
-in the current implementation. Editing user details, deleting users, changing
-roles and password resets are planned future hardening work.
+Admin user management currently supports the lifecycle operations needed by the
+implemented role model.
 
 ## Security Controls
 
@@ -45,9 +44,8 @@ roles and password resets are planned future hardening work.
 - Security headers configured in Spring Security.
 - Audit logs for critical operations.
 
-Known limitations are documented in the report and ASVS evidence: malware
-scanning, storage quotas, tamper-proof audit logs and distributed rate limiting
-are not implemented yet.
+Scope boundaries and operational hardening notes are documented in the security
+assessment and ASVS evidence.
 
 ## Running Locally
 
@@ -55,11 +53,21 @@ From the Spring Boot module:
 
 ```powershell
 cd ghostreport
+$env:SPRING_PROFILES_ACTIVE="dev"
 $env:DB_PASSWORD="user"
-.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
+$env:JWT_SECRET="dev-local-secret-with-at-least-32-chars"
+.\mvnw.cmd spring-boot:run
 ```
 
 The application uses port `8081` by default.
+
+For local Docker execution with PostgreSQL:
+
+```powershell
+$env:DB_PASSWORD="<local-database-password>"
+$env:JWT_SECRET="<random-secret-at-least-32-characters>"
+docker compose up --build
+```
 
 ## Test and Evidence Commands
 
@@ -74,10 +82,19 @@ cd ghostreport
 ## Documentation
 
 - [Coding standards](docs/CODING_STANDARDS.md)
+- [Code review guidelines](docs/CODE_REVIEW_GUIDELINES.md)
+- [Branch protection rules](docs/BRANCH_PROTECTION_RULES.md)
 - [Contribution guide](CONTRIBUTING.md)
-- [DevSecOps pipeline evidence](docs/DEVSECOPS_PIPELINE.md)
+- [Secure installation](docs/SECURE_INSTALLATION.md)
+- [Security configuration assessment](docs/SECURITY_CONFIGURATION_ASSESSMENT.md)
+- [Security assessment](docs/SECURITY_ASSESSMENT.md)
+- [IAST runtime security](docs/IAST_RUNTIME_SECURITY.md)
+- [IAST implementation](docs/IAST_IMPLEMENTATION.md)
+- [DevSecOps pipeline](docs/DEVSECOPS_PIPELINE.md)
 - [ASVS evidence mapping](docs/ASVS_EVIDENCE.md)
-- [Security controls mapping](docs/SECURITY_CONTROLS.md)
+- [ASVS Level 2 evidence](docs/ASVS_LEVEL2_EVIDENCE.md)
+- [Technology stack security review](docs/TECH_STACK_SECURITY_REVIEW.md)
+- [Final demo guide](docs/FINAL_DEMO_GUIDE.md)
 - [Phase 2 evidence folder](Deliverables/Phase%202/Evidence/README.md)
 
 ## Authors

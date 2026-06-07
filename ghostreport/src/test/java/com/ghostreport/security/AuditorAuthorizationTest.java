@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -123,12 +124,14 @@ class AuditorAuthorizationTest {
                 """;
 
         mockMvc.perform(post("/admin/users")
+                        .with(csrf())
                         .header("Authorization", bearerToken(auditorUsername, "password"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createUserJson))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/admin/backups/ghostreport-backup-20260507-165524.zip/restore")
+                        .with(csrf())
                         .header("Authorization", bearerToken(auditorUsername, "password")))
                 .andExpect(status().isForbidden());
     }
@@ -136,24 +139,28 @@ class AuditorAuthorizationTest {
     @Test
     void auditorCannotUseAnalystWriteEndpoints() throws Exception {
         mockMvc.perform(patch("/analyst/reports/1/status")
+                        .with(csrf())
                         .header("Authorization", bearerToken(auditorUsername, "password"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"RESOLVED\"}"))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(patch("/analyst/reports/1/priority")
+                        .with(csrf())
                         .header("Authorization", bearerToken(auditorUsername, "password"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"priority\":\"HIGH\"}"))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(patch("/analyst/reports/1/notes")
+                        .with(csrf())
                         .header("Authorization", bearerToken(auditorUsername, "password"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"notes\":\"changed\"}"))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/analyst/reports/1/assign")
+                        .with(csrf())
                         .header("Authorization", bearerToken(auditorUsername, "password"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
@@ -222,7 +229,9 @@ class AuditorAuthorizationTest {
 
     @Test
     void auditorCanVerifyBackupButCannotCreateOrRestoreBackup() throws Exception {
-        String body = mockMvc.perform(post("/admin/backups").header("Authorization", bearerToken("admin", "AdminPassword123!")))
+        String body = mockMvc.perform(post("/admin/backups")
+                        .with(csrf())
+                        .header("Authorization", bearerToken("admin", "AdminPassword123!")))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -238,10 +247,13 @@ class AuditorAuthorizationTest {
                         .header("Authorization", bearerToken(auditorUsername, "password")))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(post("/admin/backups").header("Authorization", bearerToken(auditorUsername, "password")))
+        mockMvc.perform(post("/admin/backups")
+                        .with(csrf())
+                        .header("Authorization", bearerToken(auditorUsername, "password")))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/admin/backups/{filename}/restore", filename)
+                        .with(csrf())
                         .header("Authorization", bearerToken(auditorUsername, "password")))
                 .andExpect(status().isForbidden());
     }
@@ -291,6 +303,7 @@ class AuditorAuthorizationTest {
 
         String response = mockMvc.perform(
                         post("/auth/login")
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(body)
                 )
