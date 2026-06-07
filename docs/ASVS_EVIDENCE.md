@@ -28,7 +28,7 @@ evidence.
 | V2 Validation and Business Logic | Partially Compliant | DTO validation, service checks, domain invariants, rate limiting and ownership tests. | Business limits and workflow abuse cases need more explicit documentation/tests. |
 | V3 Web Frontend Security | Partially Compliant | Security headers, CSP, externalized frontend scripts/styles, safe DOM rendering and `SecurityHeadersTest`. | Fresh ZAP evidence should confirm the latest CSP behaviour. |
 | V4 API and Web Service | Partially Compliant | Controllers use DTOs, generic JSON errors and role-protected endpoints. | Cache behaviour, method restrictions and API abuse cases need more complete tests. |
-| V5 File Handling | Partially Compliant | Upload validation, safe path handling, MIME/extension checks and file service tests. | No antivirus scanning, quarantine workflow or per-user storage quotas. |
+| V5 File Handling | Partially Compliant | Upload validation, safe path handling, MIME/extension checks, magic-byte checks, mockable malware scanner, quarantine and secure download headers. | Local scanner is coursework evidence only; production should integrate a real AV service and define retention for quarantined files. |
 | V6 Authentication | Partially Compliant | BCrypt, inactive-user checks, login rate limiting, compromised-password denylist, password history/reuse prevention, authenticated password change and one-time expiring password reset tokens. | MFA is not implemented; reset delivery is represented by a generated token because no email/SMS provider is in scope. |
 | V7 Session Management | Partially Compliant | Stateless JWT expiry, validation and logout-driven revocation evidence. | No refresh-token rotation, distributed revocation store or concurrent-session controls. |
 | V8 Authorization | Partially Compliant | `ADMIN`, `ANALYST`, `AUDITOR` rules, RBAC tests and analyst ownership tests. | Field-level authorization and service-level negative paths can be expanded. |
@@ -50,7 +50,7 @@ evidence.
 | Password policy and reset | `ghostreport/src/main/java/com/ghostreport/service/PasswordPolicyService.java`, `ghostreport/src/main/java/com/ghostreport/service/PasswordResetService.java`, `ghostreport/src/main/java/com/ghostreport/model/PasswordHistory.java`, `ghostreport/src/main/java/com/ghostreport/model/PasswordResetToken.java`, `ghostreport/src/test/java/com/ghostreport/security/PasswordPolicyAndResetSecurityTest.java` |
 | Authorization | `ghostreport/src/main/java/com/ghostreport/security/SecurityConfig.java`, `ghostreport/src/test/java/com/ghostreport/security/RbacAuthorizationMatrixTest.java` |
 | Input validation | `ghostreport/src/main/java/com/ghostreport/dto`, `ghostreport/src/main/java/com/ghostreport/domain`, `ghostreport/src/test/java/com/ghostreport/domain` |
-| File handling | `ghostreport/src/main/java/com/ghostreport/service/FileStorageService.java`, `ghostreport/src/test/java/com/ghostreport/service/FileStorageServiceTest.java` |
+| File handling | `ghostreport/src/main/java/com/ghostreport/service/FileStorageService.java`, `ghostreport/src/main/java/com/ghostreport/service/MalwareScanner.java`, `ghostreport/src/main/java/com/ghostreport/service/LocalMalwareScanner.java`, `ghostreport/src/main/java/com/ghostreport/service/ReportService.java`, `ghostreport/src/test/java/com/ghostreport/service/FileStorageServiceTest.java`, `ghostreport/src/test/java/com/ghostreport/controller/ReportControllerAttachmentUploadTest.java` |
 | Backup and integrity | `ghostreport/src/main/java/com/ghostreport/service/BackupService.java`, `ghostreport/src/test/java/com/ghostreport/service/BackupServiceIntegrationTest.java` |
 | Error handling | `ghostreport/src/main/java/com/ghostreport/exception/GlobalExceptionHandler.java`, `ghostreport/src/test/java/com/ghostreport/security/ErrorHandlingSecurityTest.java` |
 | Runtime security events | `ghostreport/src/main/java/com/ghostreport/service/SecurityMonitoringService.java`, `ghostreport/src/test/java/com/ghostreport/security/RuntimeSecurityEventLoggingTest.java` |
@@ -67,6 +67,19 @@ evidence.
 | V6.2.4 | Compliant | `PasswordResetService`, `PasswordResetToken`, `PasswordPolicyAndResetSecurityTest` | Reset tokens are random, stored as SHA-256 hashes, single-use and expiring. |
 | V6.2.5 | Compliant | `UserService.changePassword`, `AuthController`, `PasswordPolicyAndResetSecurityTest` | Authenticated password change requires the current password. |
 | V6.3.1 | Not Applicable / Out of Scope | Documentation in this file and `docs/SECURITY_ASSESSMENT.md` | MFA is not implemented because the coursework app has no authenticator app, email/SMS provider or external IdP integration. |
+
+## File Upload, Malware Scanning and Download Evidence
+
+Scope covered in this sprint update: `V5.1.1`, `V5.2.4`, `V5.4.3` and
+`V3.2.1` for download response headers.
+
+| ASVS ID | Evidence | Status rationale |
+| --- | --- | --- |
+| V5.1.1 | `FileStorageService.validateFile`, `FileStorageServiceTest`, `ReportControllerAttachmentUploadTest` | Uploads are constrained by size, safe filename validation, allowlisted MIME types, extension-to-MIME mapping and magic-byte checks before storage. |
+| V5.2.4 | `MalwareScanner`, `LocalMalwareScanner`, `FileStorageService.scanFileOrReject`, `ReportControllerAttachmentUploadTest.eicarUploadIsRejectedQuarantinedAndAudited` | Uploads pass through a mockable scanner. The local implementation detects EICAR for deterministic test evidence. Production deployments should replace it with a real AV adapter. |
+| V5.4.3 | `FileStorageService.quarantineRejectedFile`, `SecurityMonitoringService.recordMalwareUploadRejected`, `ReportService.recordUploadRejected` | Scanner-rejected files are not persisted as attachments, are copied into `quarantine/reports/{id}`, and generate security/audit evidence without exposing raw filenames or paths. |
+| V3.2.1 | `ReportService.secureDownloadResponse`, `ReportControllerAttachmentUploadTest.publicDownloadReturnsSecureHeaders` | File downloads include `Content-Disposition: attachment`, `X-Content-Type-Options: nosniff` and no-store/no-cache headers. |
+
 ## Frontend XSS and Data Exposure Evidence
 
 Scope covered in this sprint update: `V1.2.1`, `V1.2.2`, `V1.2.3`,
@@ -85,8 +98,7 @@ Scope covered in this sprint update: `V1.2.1`, `V1.2.2`, `V1.2.3`,
 
 | Tool | Current evidence | Artifact/location | Status wording |
 | --- | --- | --- | --- |
-| JUnit/MockMvc | Local run passed with 123 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
-| JUnit/MockMvc | Local run passed with 121 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
+| JUnit/MockMvc | Local run passed with 131 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
 | JaCoCo | Coverage report and coverage check run in `build-test`. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco` | Blocking coverage evidence. |
 | PIT | PIT runs in evidence review mode and uploads fallback summary/exit code when needed. | `pit-mutation-testing-report` | Evidence review, not a blocking mutation score gate. |
 | Gitleaks | Repository secret scan runs before dependent security jobs. Empty JSON means no leaks in scanned scope. | `secret-scan-gitleaks-json` | Blocking for confirmed leaks. |

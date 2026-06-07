@@ -17,6 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -31,6 +33,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -39,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -210,6 +214,44 @@ class ReportControllerAttachmentUploadTest {
     }
 
     @Test
+    void publicDownloadReturnsSecureHeaders() throws Exception {
+        Report report = createReport();
+        byte[] content = "approved evidence".getBytes();
+        MockMultipartFile file = new MockMultipartFile(
+                "files",
+                "invoice.txt",
+                "text/plain",
+                content
+        );
+
+        mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
+                        .file(file)
+                        .param("trackingCode", TRACKING_CODE)
+                        .with(csrf()))
+                .andExpect(status().isOk());
+
+        Attachment attachment = attachmentRepository.findByReportId(report.getId()).get(0);
+
+        mockMvc.perform(post("/reports/download")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "trackingCode": "%s",
+                                  "attachmentId": %d
+                                }
+                                """.formatted(TRACKING_CODE, attachment.getId())))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, containsString("attachment")))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, containsString("invoice.txt")))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-store")))
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-cache")))
+                .andExpect(header().string(HttpHeaders.PRAGMA, "no-cache"))
+                .andExpect(header().string(HttpHeaders.EXPIRES, "0"));
+    }
+
+    @Test
     void forbiddenMimeTypeIsRejectedWithoutPersistingOrLeakingInternalData() throws Exception {
         Report report = createReport();
         MockMultipartFile file = new MockMultipartFile(
@@ -231,6 +273,50 @@ class ReportControllerAttachmentUploadTest {
         assertTrue(attachmentRepository.findByReportId(report.getId()).isEmpty());
         assertEquals(0, countRegularFiles(uploadBase));
         assertDoesNotExposeInternalData(response);
+    }
+
+    @Test
+    void eicarUploadIsRejectedQuarantinedAndAudited() throws Exception {
+        Report report = createReport();
+        MockMultipartFile file = new MockMultipartFile(
+                "files",
+                "eicar.txt",
+                "text/plain",
+                "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
+                        .getBytes()
+        );
+
+        String response = mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
+                        .file(file)
+                        .param("trackingCode", TRACKING_CODE)
+                        .with(csrf()))
+                .andExpect(status().isBadRequest())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertTrue(attachmentRepository.findByReportId(report.getId()).isEmpty());
+        assertEquals(0, countRegularFiles(uploadBase.resolve("reports/%d/attachments".formatted(report.getId()))));
+        assertEquals(1, countRegularFiles(uploadBase.resolve("quarantine/reports/%d".formatted(report.getId()))));
+        assertDoesNotExposeInternalData(response);
+
+        assertTrue(
+                auditLogRepository.findAll()
+                        .stream()
+                        .anyMatch(log ->
+                                "UPLOAD_REJECTED".equals(log.getAction()) &&
+                                        log.getDetails() != null &&
+                                        log.getDetails().contains("File rejected by malware scanner")
+                        )
+        );
+        assertTrue(
+                securityAlertRepository.findAll()
+                        .stream()
+                        .anyMatch(alert ->
+                                "MALWARE_UPLOAD_REJECTED".equals(alert.getAlertType()) &&
+                                        report.getId().equals(alert.getTargetId())
+                        )
+        );
     }
 
     @ParameterizedTest
