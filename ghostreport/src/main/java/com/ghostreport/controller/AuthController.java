@@ -1,12 +1,18 @@
 package com.ghostreport.controller;
 
 import com.ghostreport.dto.AuthResponse;
+import com.ghostreport.dto.ChangePasswordRequest;
 import com.ghostreport.dto.LoginRequest;
+import com.ghostreport.dto.PasswordResetConfirmRequest;
+import com.ghostreport.dto.PasswordResetRequest;
+import com.ghostreport.dto.PasswordResetRequestResponse;
 import com.ghostreport.service.AuditLogService;
 import com.ghostreport.service.AuthService;
 import com.ghostreport.service.JwtService;
+import com.ghostreport.service.PasswordResetService;
 import com.ghostreport.service.RateLimiterService;
 import com.ghostreport.service.SecurityMonitoringService;
+import com.ghostreport.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -29,19 +35,25 @@ public class AuthController {
     private final SecurityMonitoringService securityMonitoringService;
     private final AuditLogService auditLogService;
     private final JwtService jwtService;
+    private final UserService userService;
+    private final PasswordResetService passwordResetService;
 
     public AuthController(
             AuthService authService,
             RateLimiterService rateLimiterService,
             SecurityMonitoringService securityMonitoringService,
             AuditLogService auditLogService,
-            JwtService jwtService
+            JwtService jwtService,
+            UserService userService,
+            PasswordResetService passwordResetService
     ) {
         this.authService = authService;
         this.rateLimiterService = rateLimiterService;
         this.securityMonitoringService = securityMonitoringService;
         this.auditLogService = auditLogService;
         this.jwtService = jwtService;
+        this.userService = userService;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/login")
@@ -67,6 +79,30 @@ public class AuthController {
         jwtService.revokeToken(token);
         String username = authentication != null ? authentication.getName() : "unknown";
         auditLogService.log("LOGOUT", "AUTHENTICATION", null, "User logged out: " + username);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/password/change")
+    public ResponseEntity<Void> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            Authentication authentication
+    ) {
+        userService.changePassword(authentication.getName(), request.getCurrentPassword(), request.getNewPassword());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/password-reset/request")
+    public ResponseEntity<PasswordResetRequestResponse> requestPasswordReset(
+            @Valid @RequestBody PasswordResetRequest request
+    ) {
+        return ResponseEntity.accepted().body(passwordResetService.requestReset(request.getUsernameOrEmail()));
+    }
+
+    @PostMapping("/password-reset/confirm")
+    public ResponseEntity<Void> confirmPasswordReset(
+            @Valid @RequestBody PasswordResetConfirmRequest request
+    ) {
+        passwordResetService.resetPassword(request.getToken(), request.getNewPassword());
         return ResponseEntity.noContent().build();
     }
 

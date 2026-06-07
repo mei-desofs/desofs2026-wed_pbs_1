@@ -8,7 +8,7 @@ evidence used to verify them. It should be read together with
 
 | Area | Scope |
 | --- | --- |
-| Authentication | JWT login/logout flow, BCrypt password hashing, inactive-user checks and login rate limiting. |
+| Authentication | JWT login/logout flow, BCrypt password hashing, inactive-user checks, login rate limiting, password policy, password history, authenticated password change and password reset tokens. |
 | Authorization | RBAC for `ADMIN`, `ANALYST` and `AUDITOR`, plus analyst ownership controls. |
 | Input validation | DTO validation, domain primitives and upload validation. |
 | File handling | Safe upload storage, attachment access, evidence packages and backup verification. |
@@ -21,6 +21,9 @@ evidence used to verify them. It should be read together with
 | Control | Evidence | Result | Status |
 | --- | --- | --- | --- |
 | Password hashing | `SecurityConfig.passwordEncoder()`, user creation tests | Passwords are stored with BCrypt. | Implemented |
+| Password policy | `PasswordPolicyService`, `PasswordPolicyAndResetSecurityTest` | Compromised-password examples are rejected and password reuse is checked against current/history hashes. | Implemented |
+| Authenticated password change | `AuthController`, `UserService`, `ChangePasswordRequest` | Current password is required and new password is stored only as a hash. | Implemented |
+| Password reset | `PasswordResetService`, `PasswordResetToken`, reset tests | Reset tokens are random, single-use, expiring and stored only as SHA-256 hashes. | Implemented |
 | JWT signing, validation and revocation | `JwtService`, `AuthController`, `JwtServiceSecurityTest`, `RuntimeSecurityEventLoggingTest` | Signature, expiry, issuer, audience, role validation and logout-driven revocation are tested. | Implemented with residual risk |
 | JWT secret validation | `SecurityConfigurationValidator`, `.env.example`, validator tests | Unsafe production-like JWT configuration fails fast. | Implemented |
 | Login abuse protection | `RateLimiterService`, `LoginRateLimitSecurityTest` | Repeated failures trigger rate limiting and alerts. | Implemented |
@@ -61,7 +64,7 @@ evidence used to verify them. It should be read together with
 
 | Tool | Result | Evidence | Residual risk |
 | --- | --- | --- | --- |
-| JUnit/MockMvc | Latest local run passed with 117 tests. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Add more negative-path tests for admin, report and backup workflows over time. |
+| JUnit/MockMvc | Latest local run passed with 123 tests. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Add more negative-path tests for admin, report and backup workflows over time. |
 | JaCoCo | Coverage gate passes locally and runs in CI. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco` | Some controllers/services can still be improved, but the current gate is passing. |
 | Gitleaks | Generates JSON evidence and blocks confirmed leaks. | `secret-scan-gitleaks-json` | Workspace-wide local scans can include ignored diagnostic files; use repository-scope CI evidence for assessment. |
 | SpotBugs | Runs in the SAST job and uploads XML evidence. | `sast-reports` | Findings require triage before suppression or acceptance. |
@@ -79,7 +82,9 @@ evidence used to verify them. It should be read together with
 The current assessment covers the implemented coursework application and its
 automated security evidence. External SIEM, privileged-user MFA, distributed
 token revocation, authenticated deep DAST, production TLS operations and
-advanced monitoring are documented as future operational hardening.
+advanced monitoring are documented as future operational hardening. MFA remains
+out of scope for Sprint 2 because the application does not integrate an
+authenticator app, email/SMS provider or external identity provider.
 
 The local folder `Deliverables/Phase 2/Evidence` is not automatically written by
 GitHub Actions. It is a curated archive populated from downloaded workflow

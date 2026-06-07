@@ -23,6 +23,8 @@ The default `application.yaml` is production-like. If no profile is active, the 
 | `JWT_ACTIVE_KEY_ID` | No | Identifier written to the JWT `kid` header for newly issued tokens. Defaults to `primary`. |
 | `JWT_PREVIOUS_SECRETS` | No | Comma-separated validation-only rotation keys in `kid:secret` format. |
 | `JWT_EXPIRATION_SECONDS` | No | Token lifetime. Defaults to `3600`. |
+| `PASSWORD_RESET_TOKEN_TTL_MINUTES` | No | Password reset token lifetime. Defaults to `30`. |
+| `PASSWORD_RESET_EXPOSE_TOKEN` | No | Development/test-only helper to expose reset tokens in API responses. Defaults to `false`; keep disabled outside controlled demos/tests. |
 | `APP_UPLOAD_MAX_FILES_PER_REQUEST` | No | Maximum number of files accepted in a single public upload request. Defaults to `5`. |
 
 Use `.env.example` as a template, but never commit real values.
@@ -101,6 +103,17 @@ JWT_PREVIOUS_SECRETS=prod-2026-06:<previous-june-secret-at-least-32-characters>
 
 Remove previous keys after the maximum JWT lifetime has elapsed. Previous keys are never used to issue new tokens.
 
+## Password Reset Configuration
+
+Password reset tokens are generated with `SecureRandom`, stored only as SHA-256
+hashes, expire after `PASSWORD_RESET_TOKEN_TTL_MINUTES` and are invalidated
+after first use. The public reset request endpoint returns a generic response
+to avoid account enumeration.
+
+`PASSWORD_RESET_EXPOSE_TOKEN` exists only to support local academic testing or
+controlled demonstrations where no email/SMS delivery provider is configured.
+It must remain disabled in production-like environments.
+
 ## Database Configuration
 
 The production-like profile uses PostgreSQL and `ddl-auto=validate`. Schema changes must therefore be handled deliberately rather than generated implicitly at runtime. The development profile uses `ddl-auto=update` for easier local iteration.
@@ -166,6 +179,7 @@ Stack traces are disabled in application configuration. Runtime audit and securi
 | `JWT_SECRET` | External, unique, at least 32 chars |
 | `JWT_ACTIVE_KEY_ID` | Stable key identifier for the active secret |
 | `JWT_PREVIOUS_SECRETS` | Only during rotation, removed after max token lifetime |
+| `PASSWORD_RESET_EXPOSE_TOKEN` | `false` |
 | Seed users | Disabled |
 | `ddl-auto` | `validate` |
 | Stack traces | Disabled |
