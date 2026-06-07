@@ -126,6 +126,13 @@ class BusinessLogicWorkflowSecurityTest {
 
         assertThat(reportRepository.findById(reportId).orElseThrow().getStatus())
                 .isEqualTo(ReportStatus.UNDER_REVIEW);
+        assertThat(auditLogRepository.findAll())
+                .anySatisfy(log -> {
+                    assertThat(log.getAction()).isEqualTo("REPORT_STATUS_CHANGED");
+                    assertThat(log.getTargetId()).isEqualTo(reportId);
+                    assertThat(log.getDetails()).contains("SUBMITTED").contains("UNDER_REVIEW");
+                    assertThat(log.getIntegrityHash()).hasSize(64);
+                });
     }
 
     @Test

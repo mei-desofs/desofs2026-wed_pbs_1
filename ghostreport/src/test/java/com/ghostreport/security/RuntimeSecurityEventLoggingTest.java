@@ -21,6 +21,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.UUID;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -87,14 +89,21 @@ class RuntimeSecurityEventLoggingTest {
 
     @Test
     void successfulLoginCreatesAuditLogWithoutTokenOrPassword() throws Exception {
+        LocalDateTime before = LocalDateTime.now(ZoneOffset.UTC).minusSeconds(1);
+        String correlationId = "runtime-login-success";
+
         String response = mockMvc.perform(post("/auth/login")
                         .with(csrf())
+                        .header("X-Correlation-ID", correlationId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginBody(PASSWORD)))
                 .andExpect(status().isOk())
+                .andExpect(result -> assertThat(result.getResponse().getHeader("X-Correlation-ID"))
+                        .isEqualTo(correlationId))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
+        LocalDateTime after = LocalDateTime.now(ZoneOffset.UTC).plusSeconds(1);
 
         List<AuditLog> logs = auditLogRepository.findAll();
 
@@ -105,6 +114,13 @@ class RuntimeSecurityEventLoggingTest {
                         response,
                         PASSWORD
                 ));
+        assertThat(logs)
+                .filteredOn(log -> "LOGIN_SUCCESS".equals(log.getAction()))
+                .allSatisfy(log -> {
+                    assertThat(log.getCorrelationId()).isEqualTo(correlationId);
+                    assertThat(log.getIntegrityHash()).hasSize(64);
+                    assertThat(log.getTimestamp()).isBetween(before, after);
+                });
     }
 
     @Test
@@ -128,9 +144,14 @@ class RuntimeSecurityEventLoggingTest {
 
     @Test
     void invalidJwtCreatesSecurityAlertWithoutStoringToken() throws Exception {
+        String correlationId = "runtime-invalid-jwt";
+
         mockMvc.perform(get("/analyst/panel")
+                        .header("X-Correlation-ID", correlationId)
                         .header("Authorization", "Bearer " + INVALID_TOKEN))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(result -> assertThat(result.getResponse().getHeader("X-Correlation-ID"))
+                        .isEqualTo(correlationId));
 
         List<SecurityAlert> alerts = securityAlertRepository.findAll();
 
@@ -142,6 +163,31 @@ class RuntimeSecurityEventLoggingTest {
                         alert.getDescription(),
                         INVALID_TOKEN
                 ));
+        assertThat(alerts)
+                .filteredOn(alert -> "INVALID_JWT_TOKEN".equals(alert.getAlertType()))
+                .allSatisfy(alert -> {
+                    assertThat(alert.getCorrelationId()).isEqualTo(correlationId);
+                    assertThat(alert.getIntegrityHash()).hasSize(64);
+                });
+    }
+
+    @Test
+    void forbiddenAccessCreatesSecurityAlertWithCorrelationId() throws Exception {
+        String token = bearerToken();
+        String correlationId = "runtime-forbidden-access";
+
+        mockMvc.perform(get("/admin/panel")
+                        .header("X-Correlation-ID", correlationId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+
+        assertThat(securityAlertRepository.findAll())
+                .anySatisfy(alert -> {
+                    assertThat(alert.getAlertType()).isEqualTo("FORBIDDEN_ACCESS_ATTEMPT");
+                    assertThat(alert.getCorrelationId()).isEqualTo(correlationId);
+                    assertThat(alert.getIntegrityHash()).hasSize(64);
+                    assertThat(alert.getDescription()).doesNotContain(token);
+                });
     }
 
     @Test
@@ -179,6 +225,38 @@ class RuntimeSecurityEventLoggingTest {
                 ));
     }
 
+    @Test
+    void auditLogRedactsPasswordsTokensAuthorizationHeadersAndTrackingCodes() {
+        String trackingCode = "GR-abcdefghijklmnopqrst";
+        auditLogService().log(
+                "SYNTHETIC_REDACTION_TEST",
+                "AUTHENTICATION",
+                null,
+                """
+                        password=Password123! Authorization: Bearer %s {"token":"%s","trackingCode":"%s"}
+                        """.formatted(INVALID_TOKEN, INVALID_TOKEN, trackingCode)
+        );
+
+        AuditLog log = auditLogRepository.findAll()
+                .stream()
+                .filter(candidate -> "SYNTHETIC_REDACTION_TEST".equals(candidate.getAction()))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(log.getDetails())
+                .doesNotContain("Password123!")
+                .doesNotContain(INVALID_TOKEN)
+                .doesNotContain(trackingCode)
+                .contains("[REDACTED]");
+    }
+
+    @Autowired
+    private com.ghostreport.service.AuditLogService auditLogService;
+
+    private com.ghostreport.service.AuditLogService auditLogService() {
+        return auditLogService;
+    }
+
     private String loginBody(String password) {
         return """
                 {
@@ -186,6 +264,21 @@ class RuntimeSecurityEventLoggingTest {
                   "password": "%s"
                 }
                 """.formatted(username, password);
+    }
+
+    private String bearerToken() throws Exception {
+        String response = mockMvc.perform(post("/auth/login")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody(PASSWORD)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return objectMapper.readTree(response)
+                .path("token")
+                .asText();
     }
 
     private boolean doesNotContainSensitiveValues(String value, String... sensitiveValues) {
