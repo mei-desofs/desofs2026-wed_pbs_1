@@ -39,7 +39,7 @@ public class SecurityConfig {
     ) throws Exception {
         http
                 .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRepository(csrfTokenRepository())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
                 )
                 .headers(headers -> headers
@@ -98,6 +98,13 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @SuppressWarnings("java:S3330")
+    private CookieCsrfTokenRepository csrfTokenRepository() {
+        // The frontend reads XSRF-TOKEN and returns it in X-XSRF-TOKEN.
+        // The token is not an authentication secret; JWTs remain in Authorization headers.
+        return CookieCsrfTokenRepository.withHttpOnlyFalse();
     }
 
     private static final class CsrfCookieFilter extends OncePerRequestFilter {

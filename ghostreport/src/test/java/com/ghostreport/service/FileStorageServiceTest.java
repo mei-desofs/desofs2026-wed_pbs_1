@@ -148,18 +148,16 @@ class FileStorageServiceTest {
     @Test
     void storeAttachmentRejectsFakePdfMagicBytes() {
         FileStorageService service = new FileStorageService(tempDir.resolve("uploads").toString());
+        MockMultipartFile fakePdf = new MockMultipartFile(
+                "files",
+                "evidence.pdf",
+                "application/pdf",
+                "MZ executable".getBytes(StandardCharsets.UTF_8)
+        );
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.storeAttachment(
-                        1L,
-                        new MockMultipartFile(
-                                "files",
-                                "evidence.pdf",
-                                "application/pdf",
-                                "MZ executable".getBytes(StandardCharsets.UTF_8)
-                        )
-                )
+                () -> service.storeAttachment(1L, fakePdf)
         );
 
         assertEquals(400, exception.getStatusCode().value());
@@ -169,18 +167,16 @@ class FileStorageServiceTest {
     @Test
     void storeAttachmentRejectsExecutableRenamedToPdf() {
         FileStorageService service = new FileStorageService(tempDir.resolve("uploads").toString());
+        MockMultipartFile executable = new MockMultipartFile(
+                "files",
+                "payload.pdf",
+                "application/pdf",
+                new byte[]{0x4D, 0x5A, 0x00, 0x00}
+        );
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.storeAttachment(
-                        1L,
-                        new MockMultipartFile(
-                                "files",
-                                "payload.pdf",
-                                "application/pdf",
-                                new byte[]{0x4D, 0x5A, 0x00, 0x00}
-                        )
-                )
+                () -> service.storeAttachment(1L, executable)
         );
 
         assertEquals(400, exception.getStatusCode().value());
@@ -190,18 +186,16 @@ class FileStorageServiceTest {
     @Test
     void storeAttachmentRejectsMissingFilename() {
         FileStorageService service = new FileStorageService(tempDir.resolve("uploads").toString());
+        MockMultipartFile missingFilename = new MockMultipartFile(
+                "files",
+                "",
+                "text/plain",
+                "text".getBytes(StandardCharsets.UTF_8)
+        );
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.storeAttachment(
-                        1L,
-                        new MockMultipartFile(
-                                "files",
-                                "",
-                                "text/plain",
-                                "text".getBytes(StandardCharsets.UTF_8)
-                        )
-                )
+                () -> service.storeAttachment(1L, missingFilename)
         );
 
         assertEquals(400, exception.getStatusCode().value());
@@ -211,18 +205,16 @@ class FileStorageServiceTest {
     @Test
     void storeAttachmentRejectsPathTraversalFilename() {
         FileStorageService service = new FileStorageService(tempDir.resolve("uploads").toString());
+        MockMultipartFile traversalFilename = new MockMultipartFile(
+                "files",
+                "../evidence.txt",
+                "text/plain",
+                "text".getBytes(StandardCharsets.UTF_8)
+        );
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.storeAttachment(
-                        1L,
-                        new MockMultipartFile(
-                                "files",
-                                "../evidence.txt",
-                                "text/plain",
-                                "text".getBytes(StandardCharsets.UTF_8)
-                        )
-                )
+                () -> service.storeAttachment(1L, traversalFilename)
         );
 
         assertEquals(400, exception.getStatusCode().value());
@@ -233,18 +225,16 @@ class FileStorageServiceTest {
     void storeAttachmentRejectsOversizedFileUsingProductionLimit() {
         FileStorageService service = new FileStorageService(tempDir.resolve("uploads").toString());
         byte[] content = new byte[(10 * 1024 * 1024) + 1];
+        MockMultipartFile oversized = new MockMultipartFile(
+                "files",
+                "large.pdf",
+                "application/pdf",
+                content
+        );
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.storeAttachment(
-                        1L,
-                        new MockMultipartFile(
-                                "files",
-                                "large.pdf",
-                                "application/pdf",
-                                content
-                        )
-                )
+                () -> service.storeAttachment(1L, oversized)
         );
 
         assertEquals(400, exception.getStatusCode().value());
