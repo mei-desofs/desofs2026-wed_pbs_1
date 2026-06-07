@@ -1,98 +1,87 @@
-const params = new URLSearchParams(window.location.search);
-    document.getElementById("trackingCode").value = params.get("code") || "";
+window.GhostReportDom.clearQueryString();
 
-    document.getElementById("verifyForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
+document.getElementById("verifyForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-        const trackingCode = document.getElementById("trackingCode").value;
-        const resultDiv = document.getElementById("result");
+    const { element, message, metaLine, setChildren } = window.GhostReportDom;
+    const trackingCode = document.getElementById("trackingCode").value;
+    const resultDiv = document.getElementById("result");
 
-        try {
-            const response = await fetch(`${API_BASE}/reports/verify`, csrfFetchOptions({
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ trackingCode })
-            }));
+    try {
+        const response = await fetch(`${API_BASE}/reports/verify`, csrfFetchOptions({
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ trackingCode })
+        }));
 
-            const data = await handleJsonResponse(response);
+        const data = await handleJsonResponse(response);
+        const attachmentsList = element("div", { attrs: { id: "attachmentsList" } }, "A carregar...");
 
-            resultDiv.innerHTML = `
-                <div class="result">
-                    <strong>Denuncia encontrada</strong><br><br>
+        setChildren(resultDiv,
+            element("div", { className: "result" },
+                element("strong", { text: "Denúncia encontrada" }),
+                element("br"),
+                element("br"),
+                metaLine("Categoria", data.category),
+                metaLine("Estado", data.status),
+                element("hr"),
+                element("h3", { text: "Anexos" }),
+                attachmentsList
+            )
+        );
 
-                    <b>Categoria:</b> ${escapeHtml(data.category)}<br>
-                    <b>Estado:</b> ${escapeHtml(data.status)}<br>
+        loadAttachments(data.id, trackingCode);
+    } catch (error) {
+        setChildren(resultDiv, message("error", error.message));
+    }
+});
 
-                    <hr>
+async function loadAttachments(reportId, trackingCode) {
+    const { element, message, metaLine, setChildren } = window.GhostReportDom;
+    const listDiv = document.getElementById("attachmentsList");
 
-                    <h3>Anexos</h3>
-                    <div id="attachmentsList">A carregar...</div>
-                </div>
-            `;
+    try {
+        const response = await fetch(`${API_BASE}/reports/${encodeURIComponent(reportId)}/attachments/list`, csrfFetchOptions({
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ trackingCode })
+        }));
 
-            loadAttachments(data.id, trackingCode);
+        const data = await handleJsonResponse(response);
+        const attachments = Array.isArray(data) ? data : [];
 
-        } catch (error) {
-            resultDiv.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+        if (!attachments.length) {
+            setChildren(listDiv, "Sem anexos.");
+            return;
         }
-    });
 
-    async function loadAttachments(reportId, trackingCode) {
-        const listDiv = document.getElementById("attachmentsList");
+        setChildren(listDiv, attachments.map(attachment => element("div", { className: "card" },
+            element("strong", { text: attachment.originalName || `Anexo #${attachment.id}` }),
+            metaLine("Tipo", attachment.mimeType || "desconhecido"),
+            metaLine("Tamanho", formatBytes(attachment.size))
+        )));
+    } catch {
+        setChildren(listDiv, message("error", "Erro ao carregar anexos"));
+    }
+}
 
-        try {
-            const response = await fetch(`${API_BASE}/reports/${reportId}/attachments/list`, csrfFetchOptions({
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ trackingCode })
-            }));
-
-            const data = await handleJsonResponse(response);
-
-            if (!data.length) {
-                listDiv.innerHTML = "Sem anexos.";
-                return;
-            }
-
-            listDiv.innerHTML = data.map(a => `
-                <div class="card">
-                    <strong>${escapeHtml(a.originalName || `Anexo #${a.id}`)}</strong><br>
-                    Tipo: ${escapeHtml(a.mimeType || "desconhecido")}<br>
-                    Tamanho: ${formatBytes(a.size)}
-                </div>
-            `).join("");
-
-        } catch (err) {
-            listDiv.innerHTML = "Erro ao carregar anexos";
-        }
+function formatBytes(bytes) {
+    if (!bytes) {
+        return "0 B";
     }
 
-    function escapeHtml(value) {
-        return String(value)
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#039;");
+    const units = ["B", "KB", "MB"];
+    let size = Number(bytes);
+    let unit = 0;
+
+    while (size >= 1024 && unit < units.length - 1) {
+        size = size / 1024;
+        unit++;
     }
 
-    function formatBytes(bytes) {
-        if (!bytes) {
-            return "0 B";
-        }
-
-        const units = ["B", "KB", "MB"];
-        let size = Number(bytes);
-        let unit = 0;
-
-        while (size >= 1024 && unit < units.length - 1) {
-            size = size / 1024;
-            unit++;
-        }
-
-        return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
-    }
+    return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+}
