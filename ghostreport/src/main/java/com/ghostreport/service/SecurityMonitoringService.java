@@ -2,10 +2,16 @@ package com.ghostreport.service;
 
 import com.ghostreport.model.SecurityAlert;
 import com.ghostreport.repository.SecurityAlertRepository;
+import com.ghostreport.security.CorrelationId;
 import com.ghostreport.security.SecurityUtils;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -13,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SecurityMonitoringService {
 
     private final SecurityAlertRepository securityAlertRepository;
+    private final SecurityLogSanitizer sanitizer;
 
     private final Map<String, AttemptCounter> counters = new ConcurrentHashMap<>();
 
@@ -20,8 +27,12 @@ public class SecurityMonitoringService {
     private static final int MAX_UPLOAD_FAILURES = 3;
     private static final long WINDOW_MILLIS = 60_000;
 
-    public SecurityMonitoringService(SecurityAlertRepository securityAlertRepository) {
+    public SecurityMonitoringService(
+            SecurityAlertRepository securityAlertRepository,
+            SecurityLogSanitizer sanitizer
+    ) {
         this.securityAlertRepository = securityAlertRepository;
+        this.sanitizer = sanitizer;
     }
 
     public void recordFailedTrackingCode(Long reportId) {
@@ -138,14 +149,37 @@ public class SecurityMonitoringService {
         );
     }
 
+    public void recordForbiddenAccess(String path) {
+        createAlert(
+                "FORBIDDEN_ACCESS_ATTEMPT",
+                "MEDIUM",
+                "HTTP_ENDPOINT",
+                null,
+                "Forbidden access attempt to endpoint: " + sanitizePath(path)
+        );
+    }
+
+    public void recordUnexpectedError(String errorType) {
+        createAlert(
+                "UNEXPECTED_ERROR",
+                "HIGH",
+                "APPLICATION",
+                null,
+                "Unexpected application error: " + sanitizer.sanitize(errorType)
+        );
+    }
+
     public void createAlert(String alertType, String severity, String targetType, Long targetId, String description) {
         SecurityAlert alert = new SecurityAlert();
-        alert.setAlertType(alertType);
-        alert.setSeverity(severity);
+        alert.setTimestamp(LocalDateTime.ofInstant(Instant.now(), ZoneOffset.UTC));
+        alert.setCorrelationId(CorrelationId.current());
+        alert.setAlertType(sanitizer.sanitize(alertType));
+        alert.setSeverity(sanitizer.sanitize(severity));
         alert.setActor(getActor());
-        alert.setTargetType(targetType);
+        alert.setTargetType(sanitizer.sanitize(targetType));
         alert.setTargetId(targetId);
-        alert.setDescription(sanitize(description));
+        alert.setDescription(sanitizer.sanitize(description));
+        alert.setIntegrityHash(integrityHash(alert));
 
         securityAlertRepository.save(alert);
     }
@@ -177,28 +211,44 @@ public class SecurityMonitoringService {
         }
     }
 
-    private String sanitize(String value) {
-        if (value == null) {
-            return null;
-        }
-
-        return value
-                .replaceAll("[\\r\\n]", " ")
-                .replaceAll("[\\x00-\\x1F\\x7F]", "")
-                .trim();
-    }
-
     private String sanitizePath(String path) {
         if (path == null || path.isBlank()) {
             return "unknown";
         }
 
-        String sanitizedPath = sanitize(path);
+        String sanitizedPath = sanitizer.sanitize(path);
         if (sanitizedPath.length() > 160) {
             return sanitizedPath.substring(0, 160);
         }
 
         return sanitizedPath;
+    }
+
+    private String integrityHash(SecurityAlert alert) {
+        String payload = String.join("|",
+                nullToEmpty(alert.getTimestamp()),
+                nullToEmpty(alert.getCorrelationId()),
+                nullToEmpty(alert.getAlertType()),
+                nullToEmpty(alert.getSeverity()),
+                nullToEmpty(alert.getActor()),
+                nullToEmpty(alert.getTargetType()),
+                nullToEmpty(alert.getTargetId()),
+                nullToEmpty(alert.getDescription())
+        );
+        return sha256(payload);
+    }
+
+    private String sha256(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            throw new IllegalStateException("Could not calculate security alert integrity hash", e);
+        }
+    }
+
+    private String nullToEmpty(Object value) {
+        return value == null ? "" : value.toString();
     }
 
     private static class AttemptCounter {
