@@ -25,7 +25,7 @@ evidence.
 | ASVS chapter | Current status | Evidence | Main gaps |
 | --- | --- | --- | --- |
 | V1 Encoding and Sanitization | Partially Compliant | DTO validation, domain value objects, safe filenames, CSP tests and ZAP baseline. | More output-encoding evidence and negative-path tests would strengthen this. |
-| V2 Validation and Business Logic | Partially Compliant | DTO validation, service checks, domain invariants, rate limiting and ownership tests. | Business limits and workflow abuse cases need more explicit documentation/tests. |
+| V2 Validation and Business Logic | Partially Compliant | DTO validation, domain invariants, explicit report workflow transition policy, transactional state changes, optimistic locking, rollback/abuse tests, rate limiting and ownership tests. | Business limits outside report/case workflows can still be expanded. |
 | V3 Web Frontend Security | Partially Compliant | Security headers, CSP, externalized frontend scripts/styles and `SecurityHeadersTest`. | Fresh ZAP evidence should confirm the latest CSP behaviour. |
 | V4 API and Web Service | Partially Compliant | Controllers use DTOs, generic JSON errors and role-protected endpoints. | Cache behaviour, method restrictions and API abuse cases need more complete tests. |
 | V5 File Handling | Partially Compliant | Upload validation, safe path handling, MIME/extension checks and file service tests. | No antivirus scanning, quarantine workflow or per-user storage quotas. |
@@ -49,6 +49,7 @@ evidence.
 | Authentication | `ghostreport/src/main/java/com/ghostreport/controller/AuthController.java`, `ghostreport/src/main/java/com/ghostreport/service/AuthService.java`, `ghostreport/src/main/java/com/ghostreport/service/JwtService.java` |
 | Password policy and reset | `ghostreport/src/main/java/com/ghostreport/service/PasswordPolicyService.java`, `ghostreport/src/main/java/com/ghostreport/service/PasswordResetService.java`, `ghostreport/src/main/java/com/ghostreport/model/PasswordHistory.java`, `ghostreport/src/main/java/com/ghostreport/model/PasswordResetToken.java`, `ghostreport/src/test/java/com/ghostreport/security/PasswordPolicyAndResetSecurityTest.java` |
 | Authorization | `ghostreport/src/main/java/com/ghostreport/security/SecurityConfig.java`, `ghostreport/src/test/java/com/ghostreport/security/RbacAuthorizationMatrixTest.java` |
+| Business workflow | `ghostreport/src/main/java/com/ghostreport/service/ReportWorkflowPolicy.java`, `ghostreport/src/main/java/com/ghostreport/service/ReportService.java`, `ghostreport/src/main/java/com/ghostreport/service/CaseReviewService.java`, `ghostreport/src/main/java/com/ghostreport/model/Report.java`, `ghostreport/src/main/java/com/ghostreport/model/CaseReview.java`, `ghostreport/src/test/java/com/ghostreport/security/BusinessLogicWorkflowSecurityTest.java` |
 | Input validation | `ghostreport/src/main/java/com/ghostreport/dto`, `ghostreport/src/main/java/com/ghostreport/domain`, `ghostreport/src/test/java/com/ghostreport/domain` |
 | File handling | `ghostreport/src/main/java/com/ghostreport/service/FileStorageService.java`, `ghostreport/src/test/java/com/ghostreport/service/FileStorageServiceTest.java` |
 | Backup and integrity | `ghostreport/src/main/java/com/ghostreport/service/BackupService.java`, `ghostreport/src/test/java/com/ghostreport/service/BackupServiceIntegrationTest.java` |
@@ -56,6 +57,27 @@ evidence.
 | Runtime security events | `ghostreport/src/main/java/com/ghostreport/service/SecurityMonitoringService.java`, `ghostreport/src/test/java/com/ghostreport/security/RuntimeSecurityEventLoggingTest.java` |
 | Pipeline evidence | `.github/workflows/dev.yml`, GitHub Actions job summaries and downloaded artifacts |
 | Local evidence archive | `Deliverables/Phase 2/Evidence`, populated manually from downloaded GitHub Actions artifacts |
+
+## Requested Business Logic ASVS Items
+
+| ASVS ID | Status | Evidence | Notes |
+| --- | --- | --- | --- |
+| V2.3.1 | Compliant | `ReportWorkflowPolicy`, `ReportService.updateReportStatus`, `BusinessLogicWorkflowSecurityTest.permittedStatusTransitionSucceedsForOwningAnalyst` | Report states are changed through an explicit transition matrix instead of free-form `setStatus` from API input. |
+| V2.3.2 | Compliant | `ReportWorkflowPolicy`, `BusinessLogicWorkflowSecurityTest.forbiddenStatusTransitionFailsAndKeepsPreviousState` | Invalid workflow jumps, such as `SUBMITTED` directly to `RESOLVED`, are rejected and the previous state is preserved. |
+| V2.3.3 | Compliant | `ReportService.validateWorkflowActorRole`, `CaseReviewService.validateCaseEditorRole`, `BusinessLogicWorkflowSecurityTest.userWithoutWorkflowRoleCannotChangeReportStatus` | Workflow state changes require `ANALYST` or `ADMIN`; read-only auditor access cannot mutate report state. |
+| V2.3.4 | Compliant | `ReportService.checkInternalAccessToReport`, `CaseReviewService.getAccessibleCaseReview`, `BusinessLogicWorkflowSecurityTest.analystWhoDoesNotOwnCaseCannotChangeReportStatus` | Analyst actions are constrained by case ownership; analysts cannot mutate another analyst's assigned case. |
+| V2.4.1 | Compliant | `@Transactional` on report/case workflow operations, `BusinessLogicWorkflowSecurityTest.closedCaseWorkflowDataCannotBePartiallyModified` | Critical state mutations run in transactions and invalid operations leave no partial update. |
+| V2.4.2 | Compliant | `@Version` on `Report` and `CaseReview`, `GlobalExceptionHandler.handleOptimisticLockingFailure`, `BusinessLogicWorkflowSecurityTest.concurrentReportUpdatesAreRejectedByOptimisticLocking` | Concurrent stale writes are rejected using optimistic locking and translated to `409 Conflict` at the API boundary. |
+
+### Report Workflow Matrix
+
+| Current status | Allowed next statuses |
+| --- | --- |
+| `SUBMITTED` | `UNDER_REVIEW`, `REJECTED` |
+| `UNDER_REVIEW` | `MORE_INFO_REQUIRED`, `RESOLVED`, `REJECTED` |
+| `MORE_INFO_REQUIRED` | `UNDER_REVIEW`, `RESOLVED`, `REJECTED` |
+| `RESOLVED` | Terminal state, no further transitions |
+| `REJECTED` | Terminal state, no further transitions |
 
 ## Requested Authentication ASVS Items
 
@@ -72,7 +94,7 @@ evidence.
 
 | Tool | Current evidence | Artifact/location | Status wording |
 | --- | --- | --- | --- |
-| JUnit/MockMvc | Local run passed with 123 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
+| JUnit/MockMvc | Local run passed with 129 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
 | JaCoCo | Coverage report and coverage check run in `build-test`. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco` | Blocking coverage evidence. |
 | PIT | PIT runs in evidence review mode and uploads fallback summary/exit code when needed. | `pit-mutation-testing-report` | Evidence review, not a blocking mutation score gate. |
 | Gitleaks | Repository secret scan runs before dependent security jobs. Empty JSON means no leaks in scanned scope. | `secret-scan-gitleaks-json` | Blocking for confirmed leaks. |
