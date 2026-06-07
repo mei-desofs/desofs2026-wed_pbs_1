@@ -56,10 +56,11 @@ class FileStorageServiceTest {
         Files.writeString(outsideFile, "outside");
 
         FileStorageService service = new FileStorageService(uploadDir.toString());
+        String outsideStoragePath = outsideFile.toString();
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.loadFileAsResource(outsideFile.toString())
+                () -> service.loadFileAsResource(outsideStoragePath)
         );
 
         assertEquals(400, exception.getStatusCode().value());
@@ -74,10 +75,11 @@ class FileStorageServiceTest {
         Files.writeString(attachment, "inside");
 
         FileStorageService service = new FileStorageService(uploadDir.toString());
+        String absoluteAttachmentPath = attachment.toString();
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.loadFileAsResource(attachment.toString())
+                () -> service.loadFileAsResource(absoluteAttachmentPath)
         );
 
         assertEquals(400, exception.getStatusCode().value());
@@ -269,10 +271,11 @@ class FileStorageServiceTest {
         Files.writeString(outsideFile, "outside");
 
         FileStorageService service = new FileStorageService(uploadDir.toString());
+        String outsideStoragePath = outsideFile.toString();
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.loadFileAsResource(outsideFile.toString())
+                () -> service.loadFileAsResource(outsideStoragePath)
         );
 
         assertEquals("Invalid file path", exception.getReason());
