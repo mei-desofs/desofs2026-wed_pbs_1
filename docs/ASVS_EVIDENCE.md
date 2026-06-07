@@ -34,7 +34,7 @@ evidence.
 | V8 Authorization | Partially Compliant | `ADMIN`, `ANALYST`, `AUDITOR` rules, RBAC tests and analyst ownership tests. | Field-level authorization and service-level negative paths can be expanded. |
 | V9 Self-contained Tokens | Partially Compliant | JWT signature, expiry, issuer/audience and revocation tests. | No key rotation or distributed revocation strategy. |
 | V10 OAuth and OIDC | Not Applicable | GhostReport does not use OAuth/OIDC or an external IdP. | Becomes applicable if an IdP is added. |
-| V11 Cryptography | Partially Compliant | BCrypt, JWT HMAC and SHA-256 integrity hashes. | No formal key lifecycle/rotation plan. |
+| V11 Cryptography | Partially Compliant | BCrypt, JWT HMAC, backup manifest HMAC, SHA-256 integrity hashes, fail-fast key validation and key lifecycle documentation. | Backup ZIP encryption is not implemented; key rotation is documented but manual. |
 | V12 Secure Communication | Partially Compliant | Security headers and installation guidance for TLS deployment. | CI DAST runs on local HTTP and does not prove production TLS/cipher configuration. |
 | V13 Configuration | Partially Compliant | Profiles, environment variables, fail-fast validation, Gitleaks and SCA evidence. | Residual dependency findings require documented triage. |
 | V14 Data Protection | Partially Compliant | DTO responses avoid passwords/tokens and file/package integrity checks exist. | Retention, deletion and encryption-at-rest policies are incomplete. |
@@ -52,11 +52,32 @@ evidence.
 | Business workflow | `ghostreport/src/main/java/com/ghostreport/service/ReportWorkflowPolicy.java`, `ghostreport/src/main/java/com/ghostreport/service/ReportService.java`, `ghostreport/src/main/java/com/ghostreport/service/CaseReviewService.java`, `ghostreport/src/main/java/com/ghostreport/model/Report.java`, `ghostreport/src/main/java/com/ghostreport/model/CaseReview.java`, `ghostreport/src/test/java/com/ghostreport/security/BusinessLogicWorkflowSecurityTest.java` |
 | Input validation | `ghostreport/src/main/java/com/ghostreport/dto`, `ghostreport/src/main/java/com/ghostreport/domain`, `ghostreport/src/test/java/com/ghostreport/domain` |
 | File handling | `ghostreport/src/main/java/com/ghostreport/service/FileStorageService.java`, `ghostreport/src/test/java/com/ghostreport/service/FileStorageServiceTest.java` |
-| Backup and integrity | `ghostreport/src/main/java/com/ghostreport/service/BackupService.java`, `ghostreport/src/test/java/com/ghostreport/service/BackupServiceIntegrationTest.java` |
+| Backup and integrity | `ghostreport/src/main/java/com/ghostreport/service/BackupService.java`, `ghostreport/src/test/java/com/ghostreport/service/BackupServiceIntegrationTest.java`, `docs/SECURE_INSTALLATION.md` |
 | Error handling | `ghostreport/src/main/java/com/ghostreport/exception/GlobalExceptionHandler.java`, `ghostreport/src/test/java/com/ghostreport/security/ErrorHandlingSecurityTest.java` |
 | Runtime security events | `ghostreport/src/main/java/com/ghostreport/service/SecurityMonitoringService.java`, `ghostreport/src/test/java/com/ghostreport/security/RuntimeSecurityEventLoggingTest.java` |
 | Pipeline evidence | `.github/workflows/dev.yml`, GitHub Actions job summaries and downloaded artifacts |
 | Local evidence archive | `Deliverables/Phase 2/Evidence`, populated manually from downloaded GitHub Actions artifacts |
+
+## Requested Cryptography and Backup Protection ASVS Items
+
+| ASVS ID | Status | Evidence | Notes |
+| --- | --- | --- | --- |
+| V11.1.1 | Compliant | `JwtService`, `BackupService`, `PasswordResetService`, `SecurityConfigurationValidatorTest` | Cryptographic controls use platform cryptography APIs: HMAC-SHA256, SHA-256, BCrypt and `SecureRandom`; no custom algorithms are implemented. |
+| V11.1.2 | Compliant | `SecurityConfigurationValidator`, `application.yaml`, `.env.example`, `docs/SECURE_INSTALLATION.md` | Secrets are externalized and production-like startup fails for missing/weak values. |
+| V11.1.3 | Compliant | `SecurityConfigurationValidatorTest.rejectsBackupHmacSecretReusedFromJwtSecret` | JWT and backup HMAC keys are logically separated and cannot reuse the same configured value. |
+| V11.1.4 | Partially Compliant | `docs/SECURE_INSTALLATION.md` | Key lifecycle and rotation guidance is documented; automated rotation and secret-manager integration are future operational work. |
+| V11.2.1 | Compliant | `JwtService`, `BackupService`, `PasswordResetService` | Approved primitives are used for implemented needs: HMAC-SHA256 for tokens/manifests, SHA-256 for integrity hashes, BCrypt for passwords and random reset tokens. |
+| V11.2.2 | Compliant | `SecurityConfigurationValidator`, `JwtService`, `BackupService` | Weak symmetric secrets under 32 bytes are rejected. |
+| V11.2.3 | Partially Compliant | `docs/SECURE_INSTALLATION.md`, `.env.example` | Secrets are configured through environment/deployment secrets; external KMS/HSM storage is documented as an operational improvement. |
+| V11.2.4 | Compliant | `BackupServiceIntegrationTest.rejectsManifestTamperingEvenWhenZipSidecarHashIsUpdated` | Authenticated HMAC protects backup manifest integrity beyond unauthenticated ZIP hash sidecars. |
+| V11.2.5 | Partially Compliant | `docs/SECURE_INSTALLATION.md` | Rotation is supported manually with `BACKUP_HMAC_KEY_ID`; automatic multi-key validation is not implemented. |
+| V11.3.1 | Compliant | `BackupService`, `BackupServiceIntegrationTest.createsBackupWithManifestDatabaseExportsFileHashesAndFinalZipHash` | Backup manifests include SHA-256 hashes for exported files. |
+| V11.3.2 | Compliant | `BackupService.verifyBackupFile`, `BackupServiceIntegrationTest.rejectsTamperedBackup` | Modified backup ZIP/content is rejected during validation. |
+| V11.3.3 | Compliant | `BackupService.restoreBackup`, `BackupServiceIntegrationTest.restoreRejectsUnsignedBackupEntryEvenWhenZipSidecarHashIsUpdated` | Restore validates backup integrity and rejects unsigned ZIP entries before staging. |
+| V11.3.4 | Partially Compliant | `BackupService`, `docs/SECURE_INSTALLATION.md` | Integrity and authenticity are implemented; confidentiality of backup ZIP contents depends on storage controls because application-level backup encryption is not implemented. |
+| V11.3.5 | Compliant | `SecurityMonitoringService.recordBackupIntegrityFailure`, `BackupServiceIntegrationTest.rejectsTamperedBackup` | Backup integrity failures create security alerts. |
+| V11.7.1 | Partially Compliant | `docs/SECURE_INSTALLATION.md`, `.env.example`, `.gitleaks.toml` | Secrets must not be committed and are supplied by environment/secrets; no external secrets manager is wired in this academic scope. |
+| V11.7.2 | Partially Compliant | `BACKUP_HMAC_KEY_ID`, `docs/SECURE_INSTALLATION.md` | Key identifiers and manual rotation guidance exist; automated rotation and audit of key custody are future production hardening. |
 
 ## Requested Business Logic ASVS Items
 
@@ -94,7 +115,7 @@ evidence.
 
 | Tool | Current evidence | Artifact/location | Status wording |
 | --- | --- | --- | --- |
-| JUnit/MockMvc | Local run passed with 129 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
+| JUnit/MockMvc | Local run passed with 134 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
 | JaCoCo | Coverage report and coverage check run in `build-test`. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco` | Blocking coverage evidence. |
 | PIT | PIT runs in evidence review mode and uploads fallback summary/exit code when needed. | `pit-mutation-testing-report` | Evidence review, not a blocking mutation score gate. |
 | Gitleaks | Repository secret scan runs before dependent security jobs. Empty JSON means no leaks in scanned scope. | `secret-scan-gitleaks-json` | Blocking for confirmed leaks. |
