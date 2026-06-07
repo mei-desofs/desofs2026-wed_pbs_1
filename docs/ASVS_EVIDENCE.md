@@ -31,7 +31,7 @@ evidence.
 | V5 File Handling | Partially Compliant | Upload validation, safe path handling, MIME/extension checks and file service tests. | No antivirus scanning, quarantine workflow or per-user storage quotas. |
 | V6 Authentication | Partially Compliant | BCrypt, inactive-user checks, login rate limiting and login/logout audit events. | No MFA, secure password reset or password history/reuse policy. |
 | V7 Session Management | Partially Compliant | Stateless JWT expiry, validation and logout-driven revocation evidence. | No refresh-token rotation, distributed revocation store or concurrent-session controls. |
-| V8 Authorization | Partially Compliant | `ADMIN`, `ANALYST`, `AUDITOR` rules, RBAC tests and analyst ownership tests. | Field-level authorization and service-level negative paths can be expanded. |
+| V8 Authorization | Compliant for current scope | `ADMIN`, `ANALYST`, `AUDITOR` rules, object ownership checks, field-level filtering, authorization matrix and negative-path tests. | Future roles or workflow changes must update the matrix and tests before tracker changes. |
 | V9 Self-contained Tokens | Partially Compliant | JWT signature, expiry, issuer/audience and revocation tests. | No key rotation or distributed revocation strategy. |
 | V10 OAuth and OIDC | Not Applicable | GhostReport does not use OAuth/OIDC or an external IdP. | Becomes applicable if an IdP is added. |
 | V11 Cryptography | Partially Compliant | BCrypt, JWT HMAC and SHA-256 integrity hashes. | No formal key lifecycle/rotation plan. |
@@ -47,7 +47,7 @@ evidence.
 | Evidence type | Repository references |
 | --- | --- |
 | Authentication | `ghostreport/src/main/java/com/ghostreport/controller/AuthController.java`, `ghostreport/src/main/java/com/ghostreport/service/AuthService.java`, `ghostreport/src/main/java/com/ghostreport/service/JwtService.java` |
-| Authorization | `ghostreport/src/main/java/com/ghostreport/security/SecurityConfig.java`, `ghostreport/src/test/java/com/ghostreport/security/RbacAuthorizationMatrixTest.java` |
+| Authorization | `docs/AUTHORIZATION_MATRIX.md`, `ghostreport/src/main/java/com/ghostreport/security/SecurityConfig.java`, `ghostreport/src/main/java/com/ghostreport/service/ReportService.java`, `ghostreport/src/main/java/com/ghostreport/service/CaseReviewService.java`, `ghostreport/src/test/java/com/ghostreport/security/RbacAuthorizationMatrixTest.java`, `ghostreport/src/test/java/com/ghostreport/security/AnalystCaseOwnershipTest.java` |
 | Input validation | `ghostreport/src/main/java/com/ghostreport/dto`, `ghostreport/src/main/java/com/ghostreport/domain`, `ghostreport/src/test/java/com/ghostreport/domain` |
 | File handling | `ghostreport/src/main/java/com/ghostreport/service/FileStorageService.java`, `ghostreport/src/test/java/com/ghostreport/service/FileStorageServiceTest.java` |
 | Backup and integrity | `ghostreport/src/main/java/com/ghostreport/service/BackupService.java`, `ghostreport/src/test/java/com/ghostreport/service/BackupServiceIntegrationTest.java` |
