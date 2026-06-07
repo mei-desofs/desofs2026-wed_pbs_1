@@ -2,6 +2,7 @@ package com.ghostreport.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ghostreport.dto.BackupOperationResponse;
 import com.ghostreport.model.Report;
 import com.ghostreport.model.ReportStatus;
@@ -20,9 +21,16 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
 import java.util.Comparator;
+import java.util.Enumeration;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -90,6 +98,7 @@ class BackupServiceIntegrationTest {
             assertThat(zip.getEntry("db/audit-logs.json")).isNotNull();
             assertThat(zip.getEntry("db/security-alerts.json")).isNotNull();
             assertThat(zip.getEntry("files/reports/1/attachments/evidence.txt")).isNotNull();
+            assertThat(zip.getEntry("manifest.hmac.json")).isNotNull();
 
             JsonNode manifest = readManifest(zip);
             assertThat(manifest.path("formatVersion").asText()).isEqualTo("1");
@@ -99,6 +108,11 @@ class BackupServiceIntegrationTest {
                 assertThat(file.path("path").asText()).isNotBlank();
                 assertThat(file.path("sha256").asText()).hasSize(64);
             });
+
+            JsonNode manifestHmac = readJson(zip, "manifest.hmac.json");
+            assertThat(manifestHmac.path("algorithm").asText()).isEqualTo("HmacSHA256");
+            assertThat(manifestHmac.path("keyId").asText()).isEqualTo("test-backup-hmac-v1");
+            assertThat(manifestHmac.path("hmacSha256").asText()).hasSize(64);
         }
     }
 
@@ -124,6 +138,36 @@ class BackupServiceIntegrationTest {
 
         assertThat(securityAlertRepository.findAll())
                 .anyMatch(alert -> alert.getAlertType().equals("BACKUP_INTEGRITY_FAILURE"));
+    }
+
+    @Test
+    void rejectsManifestTamperingEvenWhenZipSidecarHashIsUpdated() throws Exception {
+        createReport();
+        BackupOperationResponse response = backupService.createBackup();
+        Path zipPath = BACKUP_DIR.resolve(response.filename());
+
+        rewriteZip(zipPath, Map.of("manifest.json", tamperedManifest(zipPath)));
+        writeCurrentSidecarHash(zipPath);
+
+        assertThatThrownBy(() -> backupService.verifyBackup(response.filename()))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void restoreRejectsUnsignedBackupEntryEvenWhenZipSidecarHashIsUpdated() throws Exception {
+        createReport();
+        BackupOperationResponse response = backupService.createBackup();
+        Path zipPath = BACKUP_DIR.resolve(response.filename());
+
+        rewriteZip(zipPath, Map.of("files/unsigned-extra.txt", "unsigned".getBytes()));
+        writeCurrentSidecarHash(zipPath);
+
+        assertThatThrownBy(() -> backupService.restoreBackup(response.filename()))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
@@ -167,9 +211,53 @@ class BackupServiceIntegrationTest {
     }
 
     private JsonNode readManifest(ZipFile zip) throws Exception {
-        try (InputStream input = zip.getInputStream(zip.getEntry("manifest.json"))) {
+        return readJson(zip, "manifest.json");
+    }
+
+    private JsonNode readJson(ZipFile zip, String entryName) throws Exception {
+        try (InputStream input = zip.getInputStream(zip.getEntry(entryName))) {
             return objectMapper.readTree(input);
         }
+    }
+
+    private byte[] tamperedManifest(Path zipPath) throws Exception {
+        try (ZipFile zip = new ZipFile(zipPath.toFile())) {
+            ObjectNode manifest = (ObjectNode) readManifest(zip);
+            manifest.put("totalFiles", manifest.path("totalFiles").asInt() + 1);
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(manifest);
+        }
+    }
+
+    private void rewriteZip(Path zipPath, Map<String, byte[]> replacementsAndAdditions) throws Exception {
+        Map<String, byte[]> entries = new LinkedHashMap<>();
+        try (ZipFile zip = new ZipFile(zipPath.toFile())) {
+            Enumeration<? extends ZipEntry> zipEntries = zip.entries();
+            while (zipEntries.hasMoreElements()) {
+                ZipEntry entry = zipEntries.nextElement();
+                if (entry.isDirectory()) {
+                    continue;
+                }
+                try (InputStream input = zip.getInputStream(entry)) {
+                    entries.put(entry.getName(), input.readAllBytes());
+                }
+            }
+        }
+
+        entries.putAll(replacementsAndAdditions);
+
+        try (ZipOutputStream output = new ZipOutputStream(Files.newOutputStream(zipPath))) {
+            for (Map.Entry<String, byte[]> entry : entries.entrySet()) {
+                output.putNextEntry(new ZipEntry(entry.getKey()));
+                output.write(entry.getValue());
+                output.closeEntry();
+            }
+        }
+    }
+
+    private void writeCurrentSidecarHash(Path zipPath) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        String hash = HexFormat.of().formatHex(digest.digest(Files.readAllBytes(zipPath)));
+        Files.writeString(Path.of(zipPath + ".sha256"), hash);
     }
 
     private void cleanDirectory(Path dir) throws Exception {
