@@ -14,9 +14,13 @@ public class SecurityConfigurationValidator implements ApplicationRunner {
 
     private static final String DEV_ONLY_SECRET = "dev-only-change-this-secret-32-chars";
     private static final String TEST_ONLY_SECRET = "test-only-change-this-secret-32-chars";
+    private static final String DEV_ONLY_BACKUP_SECRET = "dev-only-backup-hmac-secret-32-chars";
+    private static final String TEST_ONLY_BACKUP_SECRET = "test-only-backup-hmac-secret-32-chars";
 
     private final Environment environment;
     private final String jwtSecret;
+    private final String backupHmacSecret;
+    private final String backupHmacKeyId;
     private final long jwtExpirationSeconds;
     private final boolean seedUsersEnabled;
     private final String uploadDir;
@@ -25,6 +29,8 @@ public class SecurityConfigurationValidator implements ApplicationRunner {
     public SecurityConfigurationValidator(
             Environment environment,
             @Value("${ghostreport.jwt.secret}") String jwtSecret,
+            @Value("${ghostreport.backup.hmac-secret}") String backupHmacSecret,
+            @Value("${ghostreport.backup.hmac-key-id:backup-hmac-v1}") String backupHmacKeyId,
             @Value("${ghostreport.jwt.expiration-seconds:3600}") long jwtExpirationSeconds,
             @Value("${ghostreport.seed-users.enabled:false}") boolean seedUsersEnabled,
             @Value("${app.upload-dir:uploads}") String uploadDir,
@@ -32,6 +38,8 @@ public class SecurityConfigurationValidator implements ApplicationRunner {
     ) {
         this.environment = environment;
         this.jwtSecret = jwtSecret;
+        this.backupHmacSecret = backupHmacSecret;
+        this.backupHmacKeyId = backupHmacKeyId;
         this.jwtExpirationSeconds = jwtExpirationSeconds;
         this.seedUsersEnabled = seedUsersEnabled;
         this.uploadDir = uploadDir;
@@ -46,6 +54,18 @@ public class SecurityConfigurationValidator implements ApplicationRunner {
     void validate() {
         if (jwtSecret == null || jwtSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 32) {
             throw new IllegalStateException("JWT_SECRET must be configured with at least 32 characters");
+        }
+
+        if (backupHmacSecret == null || backupHmacSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("BACKUP_HMAC_SECRET must be configured with at least 32 characters");
+        }
+
+        if (jwtSecret.equals(backupHmacSecret)) {
+            throw new IllegalStateException("BACKUP_HMAC_SECRET must be separate from JWT_SECRET");
+        }
+
+        if (isBlank(backupHmacKeyId)) {
+            throw new IllegalStateException("BACKUP_HMAC_KEY_ID must not be blank");
         }
 
         if (jwtExpirationSeconds < 1) {
@@ -74,6 +94,10 @@ public class SecurityConfigurationValidator implements ApplicationRunner {
     private void validateProductionLikeConfiguration() {
         if (DEV_ONLY_SECRET.equals(jwtSecret) || TEST_ONLY_SECRET.equals(jwtSecret)) {
             throw new IllegalStateException("Production-like profiles must not use development or test JWT secrets");
+        }
+
+        if (DEV_ONLY_BACKUP_SECRET.equals(backupHmacSecret) || TEST_ONLY_BACKUP_SECRET.equals(backupHmacSecret)) {
+            throw new IllegalStateException("Production-like profiles must not use development or test backup HMAC secrets");
         }
 
         if (seedUsersEnabled) {

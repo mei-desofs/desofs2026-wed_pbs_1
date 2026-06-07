@@ -49,6 +49,9 @@ ghostreport:
   backup-dir: backups
   backup-enabled: true
   backup-schedule-cron: "0 0 2 * * *"
+  backup:
+    hmac-secret: ${BACKUP_HMAC_SECRET}
+    hmac-key-id: ${BACKUP_HMAC_KEY_ID:backup-hmac-v1}
 
 security:
   rate-limit:

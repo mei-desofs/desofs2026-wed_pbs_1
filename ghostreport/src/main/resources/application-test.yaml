@@ -36,6 +36,9 @@ ghostreport:
     enabled: true
   backup-dir: target/test-backups/default
   backup-enabled: true
+  backup:
+    hmac-secret: test-only-backup-hmac-secret-32-chars
+    hmac-key-id: test-backup-hmac-v1
 
 security:
   rate-limit:
