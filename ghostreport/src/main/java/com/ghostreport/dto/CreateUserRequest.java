@@ -5,13 +5,19 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+import static com.ghostreport.validation.ValidationConstants.USERNAME_PATTERN;
+import static com.ghostreport.validation.ValidationConstants.USER_ROLE_ALLOWLIST;
+
 public class CreateUserRequest {
 
     @NotBlank
+    @Size(min = 3, max = 120)
+    @Pattern(regexp = USERNAME_PATTERN)
     private String username;
 
     @Email
     @NotBlank
+    @Size(max = 160)
     private String email;
 
     @NotBlank
@@ -23,6 +29,7 @@ public class CreateUserRequest {
     private String password;
 
     @NotBlank
+    @Pattern(regexp = USER_ROLE_ALLOWLIST, flags = Pattern.Flag.CASE_INSENSITIVE)
     private String role;
 
     public CreateUserRequest() {

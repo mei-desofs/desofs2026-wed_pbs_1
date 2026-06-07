@@ -22,6 +22,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
+import static com.ghostreport.validation.ValidationConstants.upper;
+
 @Service
 public class CaseReviewService {
 
@@ -167,7 +169,7 @@ public class CaseReviewService {
         try {
 
             CasePriority priority =
-                    CasePriority.valueOf(request.getPriority().toUpperCase());
+                    CasePriority.valueOf(upper(request.getPriority()));
 
             caseReview.setPriority(priority);
 
@@ -175,7 +177,7 @@ public class CaseReviewService {
 
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Invalid priority"
+                    "Invalid request"
             );
         }
 

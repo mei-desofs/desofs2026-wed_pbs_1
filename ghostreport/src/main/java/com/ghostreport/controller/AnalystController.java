@@ -5,6 +5,7 @@ import com.ghostreport.service.CasePackageService;
 import com.ghostreport.service.CaseReviewService;
 import com.ghostreport.service.ReportService;
 import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -35,7 +36,11 @@ public class AnalystController {
         return reportService.getAllReports();
     }
 
-    @PatchMapping("/reports/{id}/status")
+    @PatchMapping(
+            value = "/reports/{id}/status",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
     public ReportResponse updateReportStatus(
             @PathVariable Long id,
             @Valid @RequestBody UpdateReportStatusRequest request
@@ -43,12 +48,19 @@ public class AnalystController {
         return reportService.updateReportStatus(id, request);
     }
 
-    @PostMapping("/reports/{id}/assign")
+    @PostMapping(
+            value = "/reports/{id}/assign",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
     public CaseReviewResponse assignAnalyst(@PathVariable Long id) {
         return caseReviewService.assignAnalystToCurrentUser(id);
     }
 
-    @PatchMapping("/reports/{id}/priority")
+    @PatchMapping(
+            value = "/reports/{id}/priority",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
     public CaseReviewResponse updatePriority(
             @PathVariable Long id,
             @Valid @RequestBody UpdatePriorityRequest request
@@ -56,7 +68,11 @@ public class AnalystController {
         return caseReviewService.updatePriority(id, request);
     }
 
-    @PatchMapping("/reports/{id}/notes")
+    @PatchMapping(
+            value = "/reports/{id}/notes",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
     public CaseReviewResponse updateNotes(
             @PathVariable Long id,
             @Valid @RequestBody UpdateNotesRequest request

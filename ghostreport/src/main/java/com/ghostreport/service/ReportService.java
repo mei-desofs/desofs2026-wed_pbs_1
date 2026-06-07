@@ -24,6 +24,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.ghostreport.validation.ValidationConstants.trim;
+import static com.ghostreport.validation.ValidationConstants.upper;
+
 @Service
 public class ReportService {
 
@@ -82,7 +85,7 @@ public class ReportService {
         );
 
         report.setCategory(
-                request.getCategory()
+                trim(request.getCategory())
         );
 
         report.setStatus(
@@ -187,11 +190,14 @@ public class ReportService {
 
         checkInternalAccessToReport(id);
 
-        report.setStatus(
-                ReportStatus.valueOf(
-                        request.getStatus().toUpperCase()
-                )
-        );
+        ReportStatus newStatus;
+        try {
+            newStatus = ReportStatus.valueOf(upper(request.getStatus()));
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
+        }
+
+        report.setStatus(newStatus);
 
         Report saved = reportRepository.save(report);
 
