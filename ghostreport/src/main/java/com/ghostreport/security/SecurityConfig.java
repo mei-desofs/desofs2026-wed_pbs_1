@@ -41,6 +41,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                        .ignoringRequestMatchers("/auth/login")
                 )
                 .headers(headers -> headers
                         .contentTypeOptions(contentTypeOptions -> {

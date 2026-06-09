@@ -123,7 +123,7 @@ class AdminUserManagementSecurityTest {
                         .with(csrf())
                         .header("Authorization", bearerToken(adminUsername, PASSWORD)))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").value("At least one active administrator is required"));
+                .andExpect(jsonPath("$.error").value("Request conflict"));
 
         assertThat(userRepository.findById(adminId).orElseThrow().isActive()).isTrue();
     }

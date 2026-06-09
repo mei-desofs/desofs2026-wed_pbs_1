@@ -24,17 +24,25 @@ evidence.
 
 | ASVS chapter | Current status | Evidence | Main gaps |
 | --- | --- | --- | --- |
+| V1 Encoding and Sanitization | Partially Compliant | DTO validation, domain value objects, safe filenames, CSP tests and ZAP baseline. | More output-encoding evidence and negative-path tests would strengthen this. |
+| V2 Validation and Business Logic | Partially Compliant | DTO validation, domain invariants, explicit report workflow transition policy, transactional state changes, optimistic locking, rollback/abuse tests, rate limiting and ownership tests. | Business limits outside report/case workflows can still be expanded. |
+| V3 Web Frontend Security | Partially Compliant | Security headers, CSP, externalized frontend scripts/styles and `SecurityHeadersTest`. | Fresh ZAP evidence should confirm the latest CSP behaviour. |
 | V1 Encoding and Sanitization | Partially Compliant | DTO validation, domain value objects, safe filenames, safe frontend DOM rendering, CSP tests and ZAP baseline. | Continue expanding negative-path tests beyond the reviewed frontend XSS/data-exposure scope. |
 | V2 Validation and Business Logic | Partially Compliant | DTO validation, service checks, domain invariants, rate limiting and ownership tests. | Business limits and workflow abuse cases need more explicit documentation/tests. |
 | V3 Web Frontend Security | Partially Compliant | Security headers, CSP, externalized frontend scripts/styles, safe DOM rendering and `SecurityHeadersTest`. | Fresh ZAP evidence should confirm the latest CSP behaviour. |
 | V4 API and Web Service | Partially Compliant | Controllers use DTOs, generic JSON errors and role-protected endpoints. | Cache behaviour, method restrictions and API abuse cases need more complete tests. |
 | V5 File Handling | Partially Compliant | Upload validation, safe path handling, MIME/extension checks, magic-byte checks, mockable malware scanner, quarantine and secure download headers. | Local scanner is coursework evidence only; production should integrate a real AV service and define retention for quarantined files. |
 | V6 Authentication | Partially Compliant | BCrypt, inactive-user checks, login rate limiting, compromised-password denylist, password history/reuse prevention, authenticated password change and one-time expiring password reset tokens. | MFA is not implemented; reset delivery is represented by a generated token because no email/SMS provider is in scope. |
+| V5 File Handling | Partially Compliant | Upload validation, safe path handling, MIME/extension checks and file service tests. | No antivirus scanning, quarantine workflow or per-user storage quotas. |
+| V6 Authentication | Partially Compliant | BCrypt, inactive-user checks, login rate limiting and login/logout audit events. | No MFA, secure password reset or password history/reuse policy. |
 | V7 Session Management | Partially Compliant | Stateless JWT expiry, validation and logout-driven revocation evidence. | No refresh-token rotation, distributed revocation store or concurrent-session controls. |
-| V8 Authorization | Partially Compliant | `ADMIN`, `ANALYST`, `AUDITOR` rules, RBAC tests and analyst ownership tests. | Field-level authorization and service-level negative paths can be expanded. |
+| V8 Authorization | Compliant for current scope | `ADMIN`, `ANALYST`, `AUDITOR` rules, object ownership checks, field-level filtering, authorization matrix and negative-path tests. | Future roles or workflow changes must update the matrix and tests before tracker changes. |
 | V9 Self-contained Tokens | Partially Compliant | JWT signature, expiry, issuer/audience and revocation tests. | No key rotation or distributed revocation strategy. |
+| V7 Session Management | Partially Compliant | Stateless JWT expiry, validation and database-backed logout revocation evidence. | No refresh-token rotation or concurrent-session inventory controls. |
+| V8 Authorization | Partially Compliant | `ADMIN`, `ANALYST`, `AUDITOR` rules, RBAC tests and analyst ownership tests. | Field-level authorization and service-level negative paths can be expanded. |
+| V9 Self-contained Tokens | Partially Compliant | JWT signature, expiry, issuer/audience, `jti`, `kid`, key rotation and persistent revocation tests. | Rotation is configuration-driven; there is no JWKS endpoint or automated rollover scheduler. |
 | V10 OAuth and OIDC | Not Applicable | GhostReport does not use OAuth/OIDC or an external IdP. | Becomes applicable if an IdP is added. |
-| V11 Cryptography | Partially Compliant | BCrypt, JWT HMAC and SHA-256 integrity hashes. | No formal key lifecycle/rotation plan. |
+| V11 Cryptography | Partially Compliant | BCrypt, JWT HMAC with key identifiers and SHA-256 integrity hashes. | JWT rotation is implemented, but broader key custody and backup key lifecycle remain operational controls. |
 | V12 Secure Communication | Partially Compliant | Security headers and installation guidance for TLS deployment. | CI DAST runs on local HTTP and does not prove production TLS/cipher configuration. |
 | V13 Configuration | Partially Compliant | Profiles, environment variables, fail-fast validation, Gitleaks and SCA evidence. | Residual dependency findings require documented triage. |
 | V14 Data Protection | Partially Compliant | DTO responses avoid passwords/tokens, tracking codes are not placed in frontend URLs and file/package integrity checks exist. | Retention, deletion and encryption-at-rest policies are incomplete. |
@@ -47,8 +55,10 @@ evidence.
 | Evidence type | Repository references |
 | --- | --- |
 | Authentication | `ghostreport/src/main/java/com/ghostreport/controller/AuthController.java`, `ghostreport/src/main/java/com/ghostreport/service/AuthService.java`, `ghostreport/src/main/java/com/ghostreport/service/JwtService.java` |
+| Authorization | `docs/AUTHORIZATION_MATRIX.md`, `ghostreport/src/main/java/com/ghostreport/security/SecurityConfig.java`, `ghostreport/src/main/java/com/ghostreport/service/ReportService.java`, `ghostreport/src/main/java/com/ghostreport/service/CaseReviewService.java`, `ghostreport/src/test/java/com/ghostreport/security/RbacAuthorizationMatrixTest.java`, `ghostreport/src/test/java/com/ghostreport/security/AnalystCaseOwnershipTest.java` |
 | Password policy and reset | `ghostreport/src/main/java/com/ghostreport/service/PasswordPolicyService.java`, `ghostreport/src/main/java/com/ghostreport/service/PasswordResetService.java`, `ghostreport/src/main/java/com/ghostreport/model/PasswordHistory.java`, `ghostreport/src/main/java/com/ghostreport/model/PasswordResetToken.java`, `ghostreport/src/test/java/com/ghostreport/security/PasswordPolicyAndResetSecurityTest.java` |
 | Authorization | `ghostreport/src/main/java/com/ghostreport/security/SecurityConfig.java`, `ghostreport/src/test/java/com/ghostreport/security/RbacAuthorizationMatrixTest.java` |
+| Business workflow | `ghostreport/src/main/java/com/ghostreport/service/ReportWorkflowPolicy.java`, `ghostreport/src/main/java/com/ghostreport/service/ReportService.java`, `ghostreport/src/main/java/com/ghostreport/service/CaseReviewService.java`, `ghostreport/src/main/java/com/ghostreport/model/Report.java`, `ghostreport/src/main/java/com/ghostreport/model/CaseReview.java`, `ghostreport/src/test/java/com/ghostreport/security/BusinessLogicWorkflowSecurityTest.java` |
 | Input validation | `ghostreport/src/main/java/com/ghostreport/dto`, `ghostreport/src/main/java/com/ghostreport/domain`, `ghostreport/src/test/java/com/ghostreport/domain` |
 | File handling | `ghostreport/src/main/java/com/ghostreport/service/FileStorageService.java`, `ghostreport/src/main/java/com/ghostreport/service/MalwareScanner.java`, `ghostreport/src/main/java/com/ghostreport/service/LocalMalwareScanner.java`, `ghostreport/src/main/java/com/ghostreport/service/ReportService.java`, `ghostreport/src/test/java/com/ghostreport/service/FileStorageServiceTest.java`, `ghostreport/src/test/java/com/ghostreport/controller/ReportControllerAttachmentUploadTest.java` |
 | Backup and integrity | `ghostreport/src/main/java/com/ghostreport/service/BackupService.java`, `ghostreport/src/test/java/com/ghostreport/service/BackupServiceIntegrationTest.java` |
@@ -57,6 +67,45 @@ evidence.
 | Pipeline evidence | `.github/workflows/dev.yml`, GitHub Actions job summaries and downloaded artifacts |
 | Local evidence archive | `Deliverables/Phase 2/Evidence`, populated manually from downloaded GitHub Actions artifacts |
 
+## Requested Business Logic ASVS Items
+
+| ASVS ID | Status | Evidence | Notes |
+| --- | --- | --- | --- |
+| V2.3.1 | Compliant | `ReportWorkflowPolicy`, `ReportService.updateReportStatus`, `BusinessLogicWorkflowSecurityTest.permittedStatusTransitionSucceedsForOwningAnalyst` | Report states are changed through an explicit transition matrix instead of free-form `setStatus` from API input. |
+| V2.3.2 | Compliant | `ReportWorkflowPolicy`, `BusinessLogicWorkflowSecurityTest.forbiddenStatusTransitionFailsAndKeepsPreviousState` | Invalid workflow jumps, such as `SUBMITTED` directly to `RESOLVED`, are rejected and the previous state is preserved. |
+| V2.3.3 | Compliant | `ReportService.validateWorkflowActorRole`, `CaseReviewService.validateCaseEditorRole`, `BusinessLogicWorkflowSecurityTest.userWithoutWorkflowRoleCannotChangeReportStatus` | Workflow state changes require `ANALYST` or `ADMIN`; read-only auditor access cannot mutate report state. |
+| V2.3.4 | Compliant | `ReportService.checkInternalAccessToReport`, `CaseReviewService.getAccessibleCaseReview`, `BusinessLogicWorkflowSecurityTest.analystWhoDoesNotOwnCaseCannotChangeReportStatus` | Analyst actions are constrained by case ownership; analysts cannot mutate another analyst's assigned case. |
+| V2.4.1 | Compliant | `@Transactional` on report/case workflow operations, `BusinessLogicWorkflowSecurityTest.closedCaseWorkflowDataCannotBePartiallyModified` | Critical state mutations run in transactions and invalid operations leave no partial update. |
+| V2.4.2 | Compliant | `@Version` on `Report` and `CaseReview`, `GlobalExceptionHandler.handleOptimisticLockingFailure`, `BusinessLogicWorkflowSecurityTest.concurrentReportUpdatesAreRejectedByOptimisticLocking` | Concurrent stale writes are rejected using optimistic locking and translated to `409 Conflict` at the API boundary. |
+
+### Report Workflow Matrix
+
+| Current status | Allowed next statuses |
+| --- | --- |
+| `SUBMITTED` | `UNDER_REVIEW`, `REJECTED` |
+| `UNDER_REVIEW` | `MORE_INFO_REQUIRED`, `RESOLVED`, `REJECTED` |
+| `MORE_INFO_REQUIRED` | `UNDER_REVIEW`, `RESOLVED`, `REJECTED` |
+| `RESOLVED` | Terminal state, no further transitions |
+| `REJECTED` | Terminal state, no further transitions |
+
+## Stateless Session and JWT Evidence
+
+Scope covered in this sprint update: `V7.2.1`, `V7.2.4`, `V7.4.2`,
+`V7.5.3`, `V9.2.1`, `V9.2.2`, `V9.2.3`, `V9.2.4`, `V11.3.1` and
+`V11.3.2`.
+
+| ASVS ID | Evidence | Status rationale |
+| --- | --- | --- |
+| V7.2.1 | `ghostreport/src/main/java/com/ghostreport/service/JwtService.java`; `ghostreport/src/main/java/com/ghostreport/security/JwtAuthenticationFilter.java`; `ghostreport/src/test/java/com/ghostreport/security/JwtServiceSecurityTest.java` | JWTs remain stateless, include `exp`, `iat`, `jti`, `iss`, `aud`, `role` and `kid`, and are rejected when expired, malformed, signed with an unknown key or issued for the wrong user/role. |
+| V7.2.4 | `ghostreport/src/main/java/com/ghostreport/controller/AuthController.java`; `ghostreport/src/main/java/com/ghostreport/model/RevokedToken.java`; `ghostreport/src/main/java/com/ghostreport/service/PersistentRevokedTokenStore.java`; `RuntimeSecurityEventLoggingTest` | Logout extracts the Bearer token, persists its `jti` until token expiry and subsequent use of the same token is rejected. |
+| V7.4.2 | `ghostreport/src/main/java/com/ghostreport/security/SecurityConfig.java`; `JwtService` | GhostReport uses `SessionCreationPolicy.STATELESS` and Bearer JWTs rather than server HTTP sessions or authentication cookies. CSRF cookie is not an auth secret. |
+| V7.5.3 | `JwtRevocationPersistenceIntegrationTest` | Replay of a logged-out token is blocked by the persisted `jti` revocation record, including after replacing the `JwtService` instance. Concurrent-session inventory is not implemented. |
+| V9.2.1 | `JwtService`; `JwtRevocationPersistenceIntegrationTest` | Revocation is keyed by `jti`, stored in the database and considered valid until `expires_at`. Expired revocation rows are purged opportunistically during revoke operations. |
+| V9.2.2 | `JwtService`; `application.yaml`; `SECURE_INSTALLATION.md` | Issued JWT headers include `kid`; validation requires a known `kid` and rejects missing/unknown key identifiers. |
+| V9.2.3 | `JwtServiceSecurityTest` | Tokens signed by configured previous keys are accepted during rotation, while newly issued tokens use the active key identifier. |
+| V9.2.4 | `JwtServiceSecurityTest` | Tokens with invalid `issuer`, invalid `audience`, invalid signature, expiry or unknown key id are rejected even when structurally valid. |
+| V11.3.1 | `application.yaml`; `JwtService`; `SECURE_INSTALLATION.md` | JWT signing secrets are externalized, length-validated and identified by `JWT_ACTIVE_KEY_ID`; previous keys are configured separately for validation-only rotation windows. |
+| V11.3.2 | `JwtService`; `JwtServiceSecurityTest` | Key rotation is supported through active and previous key sets. Old keys validate existing tokens but are not used to issue new tokens. |
 ## Requested Authentication ASVS Items
 
 | ASVS ID | Status | Evidence | Notes |
@@ -99,6 +148,9 @@ Scope covered in this sprint update: `V1.2.1`, `V1.2.2`, `V1.2.3`,
 | Tool | Current evidence | Artifact/location | Status wording |
 | --- | --- | --- | --- |
 | JUnit/MockMvc | Local run passed with 131 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
+| JUnit/MockMvc | Local run passed with 129 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
+| JUnit/MockMvc | Local run passed with 123 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
+| JUnit/MockMvc | Local run passed with 121 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
 | JaCoCo | Coverage report and coverage check run in `build-test`. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco` | Blocking coverage evidence. |
 | PIT | PIT runs in evidence review mode and uploads fallback summary/exit code when needed. | `pit-mutation-testing-report` | Evidence review, not a blocking mutation score gate. |
 | Gitleaks | Repository secret scan runs before dependent security jobs. Empty JSON means no leaks in scanned scope. | `secret-scan-gitleaks-json` | Blocking for confirmed leaks. |

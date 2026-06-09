@@ -10,6 +10,7 @@ evidence used to verify them. It should be read together with
 | --- | --- |
 | Authentication | JWT login/logout flow, BCrypt password hashing, inactive-user checks, login rate limiting, password policy, password history, authenticated password change and password reset tokens. |
 | Authorization | RBAC for `ADMIN`, `ANALYST` and `AUDITOR`, plus analyst ownership controls. |
+| Business workflow | Explicit report state transitions, terminal case protection, transactional workflow updates and optimistic locking for report/case review state. |
 | Input validation | DTO validation, domain primitives and upload validation. |
 | File handling | Safe upload storage, attachment access, evidence packages and backup verification. |
 | Audit and monitoring | Audit logs and security alerts for security-relevant events. |
@@ -30,6 +31,8 @@ evidence used to verify them. It should be read together with
 | Runtime auth monitoring | `RuntimeSecurityEventLoggingTest`, `AuditLogService`, `SecurityMonitoringService` | Auth events are recorded without passwords or tokens. | Implemented |
 | RBAC | `SecurityConfig`, `RbacAuthorizationMatrixTest` | Role-specific access is verified. | Implemented |
 | Analyst ownership | `AnalystCaseOwnershipTest`, service ownership checks | Analysts are restricted to owned/eligible cases. | Implemented |
+| Report state workflow | `ReportWorkflowPolicy`, `BusinessLogicWorkflowSecurityTest` | Only allowed status transitions are accepted and invalid jumps preserve the previous state. | Implemented |
+| Workflow transactions and concurrency | `@Transactional`, `@Version`, `GlobalExceptionHandler`, `BusinessLogicWorkflowSecurityTest` | Critical report/case mutations run transactionally; stale concurrent writes are rejected with `409 Conflict`. | Implemented |
 | Public report confidentiality | `TrackingCode`, tracking code tests | Public tracking and attachment listing require valid tracking codes. | Implemented |
 | Upload validation | `FileStorageService`, upload tests | Size, MIME, extension, magic bytes and safe paths are verified. | Implemented |
 | Path traversal protection | `SafeFilename`, storage boundary checks | Malicious names and paths are rejected. | Implemented |
@@ -64,7 +67,7 @@ evidence used to verify them. It should be read together with
 
 | Tool | Result | Evidence | Residual risk |
 | --- | --- | --- | --- |
-| JUnit/MockMvc | Latest local run passed with 123 tests. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Add more negative-path tests for admin, report and backup workflows over time. |
+| JUnit/MockMvc | Latest local run passed with 129 tests. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Keep expanding negative-path tests for admin, report and backup workflows over time. |
 | JaCoCo | Coverage gate passes locally and runs in CI. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco` | Some controllers/services can still be improved, but the current gate is passing. |
 | Gitleaks | Generates JSON evidence and blocks confirmed leaks. | `secret-scan-gitleaks-json` | Workspace-wide local scans can include ignored diagnostic files; use repository-scope CI evidence for assessment. |
 | SpotBugs | Runs in the SAST job and uploads XML evidence. | `sast-reports` | Findings require triage before suppression or acceptance. |

@@ -25,6 +25,8 @@ server:
 ghostreport:
   jwt:
     secret: ${JWT_SECRET:dev-only-change-this-secret-32-chars}
+    active-key-id: ${JWT_ACTIVE_KEY_ID:dev-key}
+    previous-secrets: ${JWT_PREVIOUS_SECRETS:}
     expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
   password-reset:
     token-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:30}

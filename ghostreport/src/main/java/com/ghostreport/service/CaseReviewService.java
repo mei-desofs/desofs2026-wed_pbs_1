@@ -18,9 +18,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+
+import static com.ghostreport.validation.ValidationConstants.upper;
 
 @Service
 public class CaseReviewService {
@@ -44,6 +47,7 @@ public class CaseReviewService {
         this.auditLogService = auditLogService;
     }
 
+    @Transactional
     public CaseReviewResponse assignAnalyst(Long reportId, AssignAnalystRequest request) {
 
         Report report = reportRepository.findById(reportId)
@@ -78,6 +82,7 @@ public class CaseReviewService {
                     return newCaseReview;
                 });
 
+        validateCaseIsEditable(caseReview);
         validateCaseCanBeAssignedTo(caseReview, analyst);
 
         caseReview.setAssignedAnalyst(analyst);
@@ -104,6 +109,7 @@ public class CaseReviewService {
         return toResponse(saved);
     }
 
+    @Transactional
     public CaseReviewResponse assignAnalystToCurrentUser(Long reportId) {
 
         Report report = reportRepository.findById(reportId)
@@ -138,6 +144,7 @@ public class CaseReviewService {
                     return newCaseReview;
                 });
 
+        validateCaseIsEditable(caseReview);
         validateCaseCanBeAssignedTo(caseReview, analyst);
 
         caseReview.setAssignedAnalyst(analyst);
@@ -158,8 +165,10 @@ public class CaseReviewService {
         return toResponse(saved);
     }
 
+    @Transactional
     public CaseReviewResponse updatePriority(Long reportId, UpdatePriorityRequest request) {
 
+        validateCaseEditorRole();
         CaseReview caseReview = getAccessibleCaseReview(reportId);
 
         validateCaseIsEditable(caseReview);
@@ -167,7 +176,7 @@ public class CaseReviewService {
         try {
 
             CasePriority priority =
-                    CasePriority.valueOf(request.getPriority().toUpperCase());
+                    CasePriority.valueOf(upper(request.getPriority()));
 
             caseReview.setPriority(priority);
 
@@ -175,7 +184,7 @@ public class CaseReviewService {
 
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Invalid priority"
+                    "Invalid request"
             );
         }
 
@@ -197,8 +206,10 @@ public class CaseReviewService {
         return toResponse(saved);
     }
 
+    @Transactional
     public CaseReviewResponse updateNotes(Long reportId, UpdateNotesRequest request) {
 
+        validateCaseEditorRole();
         CaseReview caseReview = getAccessibleCaseReview(reportId);
 
         validateCaseIsEditable(caseReview);
@@ -219,6 +230,7 @@ public class CaseReviewService {
         return toResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     public CaseReviewResponse getCaseReview(Long reportId) {
 
         CaseReview caseReview = getAccessibleCaseReview(reportId);
@@ -226,6 +238,7 @@ public class CaseReviewService {
         return toResponse(caseReview);
     }
 
+    @Transactional(readOnly = true)
     public List<CaseReviewResponse> getMyAssignedCases() {
 
         String username = SecurityUtils.getCurrentUsername();
@@ -278,6 +291,17 @@ public class CaseReviewService {
                     "Closed cases cannot be modified"
             );
         }
+    }
+
+    private void validateCaseEditorRole() {
+        if (SecurityUtils.hasRole("ADMIN") || SecurityUtils.hasRole("ANALYST")) {
+            return;
+        }
+
+        throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "Only analysts or administrators can edit case workflow data"
+        );
     }
 
     private void validateCaseCanBeAssignedTo(CaseReview caseReview, User analyst) {

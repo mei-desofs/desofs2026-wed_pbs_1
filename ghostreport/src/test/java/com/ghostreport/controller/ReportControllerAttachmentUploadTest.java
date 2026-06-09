@@ -418,8 +418,8 @@ class ReportControllerAttachmentUploadTest {
                 .getResponse()
                 .getContentAsString();
 
-        assertTrue(wrongCodeResponse.contains("Upload not authorized"));
-        assertTrue(wrongReportResponse.contains("Upload not authorized"));
+        assertTrue(wrongCodeResponse.contains("Access denied"));
+        assertTrue(wrongReportResponse.contains("Access denied"));
         assertFalse(wrongCodeResponse.contains("tracking"));
         assertFalse(wrongReportResponse.contains("not found"));
     }

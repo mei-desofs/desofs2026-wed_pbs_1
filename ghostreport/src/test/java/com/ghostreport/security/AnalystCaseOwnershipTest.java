@@ -1,6 +1,7 @@
 package com.ghostreport.security;
 
 import com.ghostreport.dto.ReportResponse;
+import com.ghostreport.dto.UpdateReportStatusRequest;
 import com.ghostreport.model.Attachment;
 import com.ghostreport.model.CasePriority;
 import com.ghostreport.model.CaseReview;
@@ -101,14 +102,20 @@ class AnalystCaseOwnershipTest {
     @Test
     @WithMockUser(username = "owner_analyst", roles = "ANALYST")
     void analystOnlySeesUnassignedCasesAndOwnCases() {
-        List<Long> visibleReportIds = reportService.getAllReports()
-                .stream()
+        List<ReportResponse> visibleReports = reportService.getAllReports();
+
+        List<Long> visibleReportIds = visibleReports.stream()
                 .map(ReportResponse::getId)
                 .toList();
 
         assertThat(visibleReportIds)
                 .contains(unassignedReport.getId(), ownerReport.getId())
                 .doesNotContain(otherReport.getId());
+
+        assertThat(reportById(visibleReports, unassignedReport.getId()).getDescription())
+                .isNull();
+        assertThat(reportById(visibleReports, ownerReport.getId()).getDescription())
+                .contains("Owner case");
     }
 
     @Test
@@ -146,10 +153,23 @@ class AnalystCaseOwnershipTest {
 
     @Test
     @WithMockUser(username = "owner_analyst", roles = "ANALYST")
-    void analystCanReadAttachmentMetadataFromUnassignedCase() throws Exception {
+    void analystCannotReadAttachmentMetadataFromUnassignedCaseUntilAssigned() throws Exception {
         createAttachment(unassignedReport);
 
-        assertThat(reportService.listAttachments(unassignedReport.getId()))
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> reportService.listAttachments(unassignedReport.getId())
+        );
+
+        assertThat(exception.getStatusCode().value()).isEqualTo(403);
+    }
+
+    @Test
+    @WithMockUser(username = "owner_analyst", roles = "ANALYST")
+    void analystCanReadAttachmentMetadataFromOwnAssignedCase() throws Exception {
+        createAttachment(ownerReport);
+
+        assertThat(reportService.listAttachments(ownerReport.getId()))
                 .hasSize(1)
                 .first()
                 .extracting("originalName")
@@ -176,6 +196,31 @@ class AnalystCaseOwnershipTest {
 
         assertThat(reportService.downloadAttachment(attachment.getId()).getStatusCode().value())
                 .isEqualTo(200);
+    }
+
+    @Test
+    @WithMockUser(username = "other_analyst", roles = "ANALYST")
+    void analystCannotReadCaseReviewAssignedToAnotherAnalyst() {
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> caseReviewService.getCaseReview(ownerReport.getId())
+        );
+
+        assertThat(exception.getStatusCode().value()).isEqualTo(403);
+    }
+
+    @Test
+    @WithMockUser(username = "other_analyst", roles = "ANALYST")
+    void analystCannotChangeStatusOfCaseAssignedToAnotherAnalyst() {
+        UpdateReportStatusRequest request = new UpdateReportStatusRequest();
+        request.setStatus("UNDER_REVIEW");
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> reportService.updateReportStatus(ownerReport.getId(), request)
+        );
+
+        assertThat(exception.getStatusCode().value()).isEqualTo(403);
     }
 
     @Test
@@ -229,11 +274,18 @@ class AnalystCaseOwnershipTest {
     private Report createReport(String title) {
         Report report = new Report();
         report.setTitle(title);
-        report.setDescription("Descricao de teste para ownership de casos.");
+        report.setDescription("Descricao sensivel de teste para " + title + ".");
         report.setCategory("Security");
         report.setStatus(ReportStatus.SUBMITTED);
         report.setTrackingCodeHash("hash-" + title + "-" + System.nanoTime());
         return reportRepository.save(report);
+    }
+
+    private ReportResponse reportById(List<ReportResponse> reports, Long reportId) {
+        return reports.stream()
+                .filter(report -> report.getId().equals(reportId))
+                .findFirst()
+                .orElseThrow();
     }
 
     private void createCaseReview(Report report, User analyst) {
