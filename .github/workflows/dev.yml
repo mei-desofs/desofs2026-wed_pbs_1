@@ -197,6 +197,7 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: java
+          build-mode: manual
 
       - name: Build GhostReport for SAST analysis
         run: ./mvnw -DskipTests clean compile
