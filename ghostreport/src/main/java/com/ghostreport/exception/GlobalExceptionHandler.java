@@ -4,18 +4,23 @@ import com.ghostreport.security.CorrelationId;
 import com.ghostreport.service.AuditLogService;
 import com.ghostreport.service.SecurityMonitoringService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.server.ResponseStatusException;
 
+import jakarta.validation.ConstraintViolationException;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,13 +42,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<Map<String, Object>> handleAuthenticationException(AuthenticationException ex) {
         Map<String, Object> body = errorBody(HttpStatus.UNAUTHORIZED.value(), "Invalid credentials");
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+        return json(HttpStatus.UNAUTHORIZED).body(body);
     }
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, Object>> handleResponseStatusException(ResponseStatusException ex) {
-        Map<String, Object> body = errorBody(ex.getStatusCode().value(), ex.getReason());
-        return ResponseEntity.status(ex.getStatusCode()).body(body);
+        HttpStatusCode status = ex.getStatusCode();
+        Map<String, Object> body = errorBody(status.value(), safeError(status));
+        return json(status).body(body);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -52,35 +58,53 @@ public class GlobalExceptionHandler {
         Map<String, String> fieldErrors = new HashMap<>();
 
         for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-            fieldErrors.put(error.getField(), error.getDefaultMessage());
+            fieldErrors.put(error.getField(), "Invalid value");
         }
 
         body.put("timestamp", Instant.now().toString());
         body.put("correlationId", CorrelationId.current());
         body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Validation failed");
+        body.put("error", "Invalid request");
         body.put("fields", fieldErrors);
 
-        return ResponseEntity.badRequest().body(body);
+        return json(HttpStatus.BAD_REQUEST).body(body);
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<Map<String, Object>> handleMissingRequestParameter(MissingServletRequestParameterException ex) {
-        Map<String, Object> body = errorBody(HttpStatus.BAD_REQUEST.value(), "Missing required request parameter");
-        return ResponseEntity.badRequest().body(body);
+        Map<String, Object> body = errorBody(HttpStatus.BAD_REQUEST.value(), "Invalid request");
+        return json(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingRequestPart(MissingServletRequestPartException ex) {
+        Map<String, Object> body = errorBody(HttpStatus.BAD_REQUEST.value(), "Invalid request");
+        return json(HttpStatus.BAD_REQUEST).body(body);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, Object>> handleUnreadableMessage(HttpMessageNotReadableException ex) {
         Map<String, Object> body = errorBody(HttpStatus.BAD_REQUEST.value(), "Malformed request");
-        return ResponseEntity.badRequest().body(body);
+        return json(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException ex) {
+        Map<String, Object> body = errorBody(HttpStatus.BAD_REQUEST.value(), "Invalid request");
+        return json(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex) {
+        Map<String, Object> body = errorBody(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(), "Unsupported media type");
+        return json(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(body);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDeniedException(AccessDeniedException ex) {
         securityMonitoringService.recordForbiddenAccess("method-security");
         Map<String, Object> body = errorBody(HttpStatus.FORBIDDEN.value(), "Access denied");
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+        return json(HttpStatus.FORBIDDEN).body(body);
     }
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
@@ -104,7 +128,7 @@ public class GlobalExceptionHandler {
         );
         securityMonitoringService.recordUnexpectedError(ex.getClass().getSimpleName());
         Map<String, Object> body = errorBody(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Unexpected internal error");
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+        return json(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 
     private Map<String, Object> errorBody(int status, String error) {
@@ -114,5 +138,23 @@ public class GlobalExceptionHandler {
         body.put("status", status);
         body.put("error", error);
         return body;
+    }
+
+    private ResponseEntity.BodyBuilder json(HttpStatusCode status) {
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON);
+    }
+
+    private String safeError(HttpStatusCode status) {
+        int value = status.value();
+        return switch (value) {
+            case 400 -> "Invalid request";
+            case 401 -> "Unauthorized";
+            case 403 -> "Access denied";
+            case 404 -> "Resource not found";
+            case 409 -> "Request conflict";
+            case 415 -> "Unsupported media type";
+            case 429 -> "Too many requests";
+            default -> value >= 500 ? "Unexpected internal error" : "Request failed";
+        };
     }
 }

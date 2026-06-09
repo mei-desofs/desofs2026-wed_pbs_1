@@ -6,6 +6,7 @@ import com.ghostreport.model.SecurityAlert;
 import com.ghostreport.model.User;
 import com.ghostreport.model.UserRole;
 import com.ghostreport.repository.AuditLogRepository;
+import com.ghostreport.repository.RevokedTokenRepository;
 import com.ghostreport.repository.SecurityAlertRepository;
 import com.ghostreport.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,6 +64,9 @@ class RuntimeSecurityEventLoggingTest {
     private SecurityAlertRepository securityAlertRepository;
 
     @Autowired
+    private RevokedTokenRepository revokedTokenRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -74,6 +78,7 @@ class RuntimeSecurityEventLoggingTest {
     void setUp() {
         securityAlertRepository.deleteAll();
         auditLogRepository.deleteAll();
+        revokedTokenRepository.deleteAll();
         userRepository.deleteAll();
 
         username = "runtime_events_" + UUID.randomUUID();
@@ -209,6 +214,8 @@ class RuntimeSecurityEventLoggingTest {
                         .with(csrf())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
+
+        assertThat(revokedTokenRepository.count()).isEqualTo(1);
 
         mockMvc.perform(get("/analyst/panel")
                         .header("Authorization", "Bearer " + token))

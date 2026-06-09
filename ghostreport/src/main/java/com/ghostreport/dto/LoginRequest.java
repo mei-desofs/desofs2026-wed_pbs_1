@@ -1,13 +1,16 @@
 package com.ghostreport.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 public class LoginRequest {
 
     @NotBlank
+    @Size(max = 120)
     private String username;
 
     @NotBlank
+    @Size(max = 128)
     private String password;
 
     public String getUsername() {

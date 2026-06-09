@@ -69,6 +69,16 @@ public class SecurityMonitoringService {
         }
     }
 
+    public void recordMalwareUploadRejected(Long reportId) {
+        createAlert(
+                "MALWARE_UPLOAD_REJECTED",
+                "CRITICAL",
+                "REPORT",
+                reportId,
+                "Uploaded file rejected by malware scanner and quarantined"
+        );
+    }
+
     public void recordPathTraversalAttempt(String input) {
         createAlert(
                 "PATH_TRAVERSAL_ATTEMPT",
