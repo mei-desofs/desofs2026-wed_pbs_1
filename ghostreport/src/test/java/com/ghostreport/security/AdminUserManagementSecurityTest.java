@@ -159,6 +159,8 @@ class AdminUserManagementSecurityTest {
         auditLog.setTargetType("AUTHENTICATION");
         auditLog.setTargetId(42L);
         auditLog.setDetails("Synthetic audit event for admin evidence endpoint");
+        auditLog.setCorrelationId("admin-dto-test");
+        auditLog.setIntegrityHash("0".repeat(64));
         auditLogRepository.save(auditLog);
 
         SecurityAlert alert = new SecurityAlert();
@@ -168,6 +170,8 @@ class AdminUserManagementSecurityTest {
         alert.setTargetType("AUTHENTICATION");
         alert.setTargetId(43L);
         alert.setDescription("Synthetic security alert for admin evidence endpoint");
+        alert.setCorrelationId("admin-dto-test");
+        alert.setIntegrityHash("1".repeat(64));
         securityAlertRepository.save(alert);
 
         mockMvc.perform(get("/admin/audit-logs")

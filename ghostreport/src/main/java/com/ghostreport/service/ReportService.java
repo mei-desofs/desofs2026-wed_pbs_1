@@ -199,11 +199,18 @@ public class ReportService {
         checkInternalAccessToReport(id);
 
         ReportStatus requestedStatus = parseRequestedStatus(request.getStatus());
+        ReportStatus previousStatus = report.getStatus();
         reportWorkflowPolicy.validateTransition(report.getStatus(), requestedStatus);
 
         report.setStatus(requestedStatus);
 
         Report saved = reportRepository.save(report);
+        auditLogService.log(
+                "REPORT_STATUS_CHANGED",
+                "REPORT",
+                saved.getId(),
+                "Report status changed from %s to %s".formatted(previousStatus, requestedStatus)
+        );
 
         return toReportResponse(saved);
     }

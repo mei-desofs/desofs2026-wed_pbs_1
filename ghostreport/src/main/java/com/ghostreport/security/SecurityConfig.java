@@ -26,7 +26,6 @@ import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.UUID;
 
 @Configuration
 public class SecurityConfig {
@@ -35,7 +34,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             SecurityMonitoringService securityMonitoringService,
-            JwtAuthenticationFilter jwtAuthenticationFilter
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            CorrelationIdFilter correlationIdFilter
     ) throws Exception {
         http
                 .csrf(csrf -> csrf
@@ -91,6 +91,7 @@ public class SecurityConfig {
                             writeSecurityError(response, 401, "Unauthorized");
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            securityMonitoringService.recordForbiddenAccess(request.getRequestURI());
                             if (request.getRequestURI().startsWith("/admin/backups")) {
                                 securityMonitoringService.recordUnauthorizedBackupAccess(request.getRequestURI());
                             }
@@ -99,7 +100,8 @@ public class SecurityConfig {
                 )
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(jwtAuthenticationFilter, CorrelationIdFilter.class);
 
         return http.build();
     }
@@ -136,7 +138,7 @@ public class SecurityConfig {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.getWriter().write(
                 "{\"status\":%d,\"error\":\"%s\",\"correlationId\":\"%s\"}%s"
-                        .formatted(status, error, UUID.randomUUID(), System.lineSeparator())
+                        .formatted(status, error, CorrelationId.current(), System.lineSeparator())
         );
     }
 

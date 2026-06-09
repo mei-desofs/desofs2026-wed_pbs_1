@@ -14,7 +14,7 @@ evidence used to verify them. It should be read together with
 | Input validation | DTO validation, domain primitives and upload validation. |
 | File handling | Safe upload storage, attachment access, evidence packages and backup verification. |
 | Cryptography | JWT HMAC signing, backup manifest HMAC signing, SHA-256 integrity checks, BCrypt password hashing and key validation. |
-| Audit and monitoring | Audit logs and security alerts for security-relevant events. |
+| Audit and monitoring | Audit logs and security alerts for security-relevant events, correlation IDs, UTC timestamps, redaction and event integrity hashes. |
 | Configuration | Runtime profiles, environment variables, JWT/backup HMAC secret validation and seed-user controls. |
 | DevSecOps | The single `dev` GitHub Actions workflow: build, tests, coverage, secret scanning, SAST, SCA, SBOM, DAST, runtime security/IAST readiness and PIT evidence review. |
 
@@ -30,6 +30,10 @@ evidence used to verify them. It should be read together with
 | JWT and backup key validation | `SecurityConfigurationValidator`, `.env.example`, validator tests | Unsafe production-like JWT/backup HMAC configuration fails fast; backup HMAC key must be separate from JWT key. | Implemented |
 | Login abuse protection | `RateLimiterService`, `LoginRateLimitSecurityTest` | Repeated failures trigger rate limiting and alerts. | Implemented |
 | Runtime auth monitoring | `RuntimeSecurityEventLoggingTest`, `AuditLogService`, `SecurityMonitoringService` | Auth events are recorded without passwords or tokens. | Implemented |
+| Correlation IDs | `CorrelationIdFilter`, `GlobalExceptionHandler`, runtime logging tests | `X-Correlation-ID` is propagated to responses and stored in audit/security events. | Implemented |
+| UTC audit timestamps | `AuditLog`, `SecurityAlert`, runtime logging tests | Audit/security event timestamps are generated in UTC. | Implemented |
+| Log redaction | `SecurityLogSanitizer`, runtime logging tests | Passwords, tokens, authorization values and tracking codes are redacted from event details. | Implemented |
+| Tamper-evident event fields | `AuditLogService`, `SecurityMonitoringService`, DTOs | Audit logs and security alerts include SHA-256 integrity hashes over the stored event fields. | Implemented baseline |
 | RBAC | `SecurityConfig`, `RbacAuthorizationMatrixTest` | Role-specific access is verified. | Implemented |
 | Analyst ownership | `AnalystCaseOwnershipTest`, service ownership checks | Analysts are restricted to owned/eligible cases. | Implemented |
 | Report state workflow | `ReportWorkflowPolicy`, `BusinessLogicWorkflowSecurityTest` | Only allowed status transitions are accepted and invalid jumps preserve the previous state. | Implemented |
@@ -40,7 +44,7 @@ evidence used to verify them. It should be read together with
 | Error handling | `GlobalExceptionHandler`, `ErrorHandlingSecurityTest` | Responses avoid stack traces and include correlation IDs. | Implemented |
 | Security headers | `SecurityConfig`, `SecurityHeadersTest` | Browser-facing headers are configured and tested, including CSP `form-action 'self'`. | Implemented baseline |
 | Audit logs | `AuditLogService`, audit tests | Critical state changes are logged with sanitized details. | Implemented |
-| Security alerts | `SecurityMonitoringService`, alert tests | Suspicious activity creates security alerts. | Implemented |
+| Security alerts | `SecurityMonitoringService`, alert tests | Suspicious activity and forbidden access attempts create security alerts. | Implemented |
 | Backup integrity and authenticity | `BackupService`, backup tests | Manifests include SHA-256 file hashes and an HMAC-SHA256 manifest signature; verify/restore rejects tampering and unsigned extra entries. | Implemented |
 | Evidence packages | `CasePackageService`, package tests | Closed-case packages can be generated and verified. | Implemented |
 | DevSecOps pipeline | `.github/workflows/dev.yml` | One visible workflow timeline with dependent jobs and downloadable artifacts. | Implemented |
@@ -68,7 +72,7 @@ evidence used to verify them. It should be read together with
 
 | Tool | Result | Evidence | Residual risk |
 | --- | --- | --- | --- |
-| JUnit/MockMvc | Latest local run passed with 134 tests. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Keep expanding negative-path tests for admin, report and backup workflows over time. |
+| JUnit/MockMvc | Local run passed with 136 tests after the logging and monitoring hardening changes. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Keep expanding negative-path tests for admin, report and backup workflows over time. |
 | JaCoCo | Coverage gate passes locally and runs in CI. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco` | Some controllers/services can still be improved, but the current gate is passing. |
 | Gitleaks | Generates JSON evidence and blocks confirmed leaks. | `secret-scan-gitleaks-json` | Workspace-wide local scans can include ignored diagnostic files; use repository-scope CI evidence for assessment. |
 | SpotBugs | Runs in the SAST job and uploads XML evidence. | `sast-reports` | Findings require triage before suppression or acceptance. |
@@ -86,7 +90,8 @@ evidence used to verify them. It should be read together with
 The current assessment covers the implemented coursework application and its
 automated security evidence. External SIEM, privileged-user MFA, distributed
 token revocation, authenticated deep DAST, production TLS operations and
-advanced monitoring are documented as future operational hardening. MFA remains
+advanced monitoring, external SIEM, WORM/append-only log storage and automated
+retention are documented as future operational hardening. MFA remains
 out of scope for Sprint 2 because the application does not integrate an
 authenticator app, email/SMS provider or external identity provider.
 

@@ -43,11 +43,13 @@ public class AdminController {
                 .map(auditLog -> new AuditLogResponse(
                         auditLog.getId(),
                         auditLog.getTimestamp(),
+                        auditLog.getCorrelationId(),
                         auditLog.getActor(),
                         auditLog.getAction(),
                         auditLog.getTargetType(),
                         auditLog.getTargetId(),
-                        auditLog.getDetails()
+                        auditLog.getDetails(),
+                        auditLog.getIntegrityHash()
                 ))
                 .toList();
     }
@@ -58,12 +60,14 @@ public class AdminController {
                 .map(alert -> new SecurityAlertResponse(
                         alert.getId(),
                         alert.getTimestamp(),
+                        alert.getCorrelationId(),
                         alert.getAlertType(),
                         alert.getSeverity(),
                         alert.getActor(),
                         alert.getTargetType(),
                         alert.getTargetId(),
-                        alert.getDescription()
+                        alert.getDescription(),
+                        alert.getIntegrityHash()
                 ))
                 .toList();
     }

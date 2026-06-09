@@ -1,5 +1,8 @@
 package com.ghostreport.exception;
 
+import com.ghostreport.security.CorrelationId;
+import com.ghostreport.service.AuditLogService;
+import com.ghostreport.service.SecurityMonitoringService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -18,13 +21,23 @@ import org.springframework.web.multipart.support.MissingServletRequestPartExcept
 import org.springframework.web.server.ResponseStatusException;
 
 import jakarta.validation.ConstraintViolationException;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private final AuditLogService auditLogService;
+    private final SecurityMonitoringService securityMonitoringService;
+
+    public GlobalExceptionHandler(
+            AuditLogService auditLogService,
+            SecurityMonitoringService securityMonitoringService
+    ) {
+        this.auditLogService = auditLogService;
+        this.securityMonitoringService = securityMonitoringService;
+    }
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<Map<String, Object>> handleAuthenticationException(AuthenticationException ex) {
@@ -48,8 +61,8 @@ public class GlobalExceptionHandler {
             fieldErrors.put(error.getField(), "Invalid value");
         }
 
-        body.put("timestamp", OffsetDateTime.now());
-        body.put("correlationId", UUID.randomUUID().toString());
+        body.put("timestamp", Instant.now().toString());
+        body.put("correlationId", CorrelationId.current());
         body.put("status", HttpStatus.BAD_REQUEST.value());
         body.put("error", "Invalid request");
         body.put("fields", fieldErrors);
@@ -89,6 +102,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDeniedException(AccessDeniedException ex) {
+        securityMonitoringService.recordForbiddenAccess("method-security");
         Map<String, Object> body = errorBody(HttpStatus.FORBIDDEN.value(), "Access denied");
         return json(HttpStatus.FORBIDDEN).body(body);
     }
@@ -106,14 +120,21 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
+        auditLogService.log(
+                "UNEXPECTED_ERROR",
+                "APPLICATION",
+                null,
+                "Unexpected error type=" + ex.getClass().getSimpleName()
+        );
+        securityMonitoringService.recordUnexpectedError(ex.getClass().getSimpleName());
         Map<String, Object> body = errorBody(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Unexpected internal error");
         return json(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 
     private Map<String, Object> errorBody(int status, String error) {
         Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", OffsetDateTime.now());
-        body.put("correlationId", UUID.randomUUID().toString());
+        body.put("timestamp", Instant.now().toString());
+        body.put("correlationId", CorrelationId.current());
         body.put("status", status);
         body.put("error", error);
         return body;
