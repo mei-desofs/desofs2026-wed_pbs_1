@@ -210,7 +210,7 @@ public class ReportService {
 
     private ReportStatus parseRequestedStatus(String requestedStatus) {
         try {
-            return ReportStatus.valueOf(requestedStatus.toUpperCase());
+            return ReportStatus.valueOf(upper(requestedStatus));
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
