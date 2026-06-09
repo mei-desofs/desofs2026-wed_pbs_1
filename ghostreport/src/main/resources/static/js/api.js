@@ -1,8 +1,10 @@
-const API_BASE = "http://localhost:8081";
+const API_BASE = window.location.origin && window.location.origin !== "null"
+    ? window.location.origin
+    : "http://localhost:8081";
 const CSRF_COOKIE_NAME = "XSRF-TOKEN";
 const CSRF_HEADER_NAME = "X-XSRF-TOKEN";
 
-let adminAuth = localStorage.getItem("adminAuth");
+let adminAuth = null;
 
 function readCookie(name) {
     return document.cookie
@@ -68,7 +70,7 @@ async function revokeCurrentToken(authHeader) {
             }
         }));
     } catch {
-        // Local logout still removes the browser-side token if the network is unavailable.
+        // Local logout still clears the in-memory token if the network is unavailable.
     }
 }
 
@@ -89,22 +91,17 @@ async function login() {
         const loginData = await handleJsonResponse(loginResponse);
         adminAuth = `${loginData.tokenType} ${loginData.token}`;
 
-        localStorage.setItem("adminAuth", adminAuth);
-
         document.getElementById("loginSection").style.display = "none";
         document.getElementById("adminPanel").style.display = "block";
 
         loadUsers();
-
     } catch (err) {
-        errorDiv.innerText = err.message;
+        errorDiv.textContent = err.message;
     }
 }
 
 async function logout() {
     await revokeCurrentToken(adminAuth);
-
-    localStorage.removeItem("adminAuth");
     adminAuth = null;
 
     document.getElementById("adminPanel").style.display = "none";
@@ -114,6 +111,9 @@ async function logout() {
 async function loadUsers() {
     if (!adminAuth) return;
 
+    const { element, setChildren, message } = window.GhostReportDom;
+    const usersContainer = document.getElementById("users");
+
     try {
         const response = await fetch(`${API_BASE}/admin/users`, {
             headers: {
@@ -122,18 +122,22 @@ async function loadUsers() {
         });
 
         const data = await handleJsonResponse(response);
+        const users = Array.isArray(data) ? data : [];
 
-        document.getElementById("users").innerHTML =
-            data.map(u => `
-                <div class="card">
-                    <strong>${u.username}</strong><br>
-                    Email: ${u.email}<br>
-                    Role: ${u.role}
-                </div>
-            `).join("");
+        if (!users.length) {
+            setChildren(usersContainer, message("result", "Sem utilizadores para apresentar."));
+            return;
+        }
 
+        setChildren(usersContainer, users.map(user => element("div", { className: "card" },
+            element("strong", { text: user.username || "Utilizador" }),
+            element("br"),
+            `Email: ${user.email || "-"}`,
+            element("br"),
+            `Role: ${user.role || "-"}`
+        )));
     } catch (err) {
-        document.getElementById("users").innerText = err.message;
+        setChildren(usersContainer, message("error", err.message));
     }
 }
 
@@ -159,18 +163,9 @@ async function createUser() {
 
         await handleJsonResponse(response);
 
-        resultDiv.innerText = "Utilizador criado com sucesso!";
+        resultDiv.textContent = "Utilizador criado com sucesso!";
         loadUsers();
-
     } catch (err) {
-        resultDiv.innerText = err.message;
+        resultDiv.textContent = err.message;
     }
 }
-
-window.onload = () => {
-    if (adminAuth) {
-        document.getElementById("loginSection").style.display = "none";
-        document.getElementById("adminPanel").style.display = "block";
-        loadUsers();
-    }
-};
