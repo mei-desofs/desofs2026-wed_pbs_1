@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+    <suppress until="2026-09-30Z">
+        <notes><![CDATA[
+        CVE-2025-15104 is for The Nu Html Checker (vnu), not Hibernate Validator.
+        Hibernate Validator 8.0.3.Final is the Spring Boot 3.5.14-managed
+        Jakarta Bean Validation implementation used by GhostReport.
+        ]]></notes>
+        <packageUrl regex="true">^pkg:maven/org\.hibernate\.validator/hibernate-validator@8\.0\.3\.Final$</packageUrl>
+        <cve>CVE-2025-15104</cve>
+    </suppress>
+    <suppress until="2026-09-30Z">
+        <notes><![CDATA[
+        CVE-2025-7962 describes SMTP injection in Jakarta Mail / Angus SMTP.
+        GhostReport does not depend on org.eclipse.angus:smtp or send email.
+        org.eclipse.angus:angus-activation is present transitively through
+        JAXB/Hibernate and is not the SMTP component identified by the CVE.
+        ]]></notes>
+        <packageUrl regex="true">^pkg:maven/org\.eclipse\.angus/angus-activation@2\.0\.3$</packageUrl>
+        <cve>CVE-2025-7962</cve>
+    </suppress>
+</suppressions>

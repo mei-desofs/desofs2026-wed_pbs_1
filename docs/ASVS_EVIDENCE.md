@@ -38,7 +38,7 @@ evidence.
 | V12 Secure Communication | Partially Compliant | Security headers and installation guidance for TLS deployment. | CI DAST runs on local HTTP and does not prove production TLS/cipher configuration. |
 | V13 Configuration | Partially Compliant | Profiles, environment variables, fail-fast validation, Gitleaks and SCA evidence. | Residual dependency findings require documented triage. |
 | V14 Data Protection | Partially Compliant | DTO responses avoid passwords/tokens, tracking codes are not placed in frontend URLs and file/package integrity checks exist. | Retention, deletion and encryption-at-rest policies are incomplete. |
-| V15 Secure Coding and Architecture | Partially Compliant | Single `dev` pipeline, tests, JaCoCo, SpotBugs, SonarCloud, CodeQL, Dependency-Check, CycloneDX, Gitleaks, ZAP and PIT evidence review. | Security findings remain triage-driven; PIT is not a blocking quality gate. |
+| V15 Secure Coding and Architecture | Partially Compliant | `dev` pipeline plus dedicated PIT workflow, tests, JaCoCo, SpotBugs, SonarCloud, CodeQL, Dependency-Check, CycloneDX, Gitleaks, ZAP and PIT evidence review. | Security findings remain triage-driven; PIT is not a blocking quality gate. |
 | V16 Security Logging and Error Handling | Partially Compliant | Audit/security event services, correlation IDs, UTC timestamps, redaction, integrity hashes, sanitized error handling and runtime security tests. | No external SIEM, WORM storage or automated retention policy. |
 | V17 WebRTC | Not Applicable | No WebRTC, TURN/STUN, media capture or real-time browser communication exists. | None in current scope. |
 
@@ -179,14 +179,14 @@ Scope covered in this sprint update: `V1.2.1`, `V1.2.2`, `V1.2.3`,
 | --- | --- | --- | --- |
 | JUnit/MockMvc | Maven `verify` runs the automated tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
 | JaCoCo | Coverage report and coverage check run during Maven `verify` in `build-test`. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco`, `ghostreport/target/jacoco.exec` | Blocking coverage evidence. |
-| PIT | PIT runs in evidence review mode and uploads fallback summary/exit code when needed. | `pit-mutation-testing-report` | Evidence review, not a blocking mutation score gate. |
+| PIT | PIT runs in the dedicated `pit-mutation-testing` workflow and uploads the complete HTML/XML report with `target/pit-reports/index.html`. | `pit-mutation-testing-report` | Evidence review, not a blocking mutation score gate. |
 | Gitleaks | Repository secret scan runs before dependent security jobs. Empty JSON means no leaks in scanned scope. | `secret-scan-gitleaks-json` | Blocking for confirmed leaks. |
 | SpotBugs | XML/static analysis output is uploaded with SAST evidence. | `sast-reports` | Evidence review. |
 | SonarCloud | Runs in SAST job when `SONAR_TOKEN` is configured. | `sast-reports`, SonarCloud UI | Evidence review; required secret must exist. |
 | CodeQL | CodeQL runs and uploads primary findings to GitHub Code Scanning. | GitHub Code Scanning, `sast-reports` summary | Evidence review; local full SARIF is not claimed. |
 | Dependency-Check | HTML/XML/JSON/SARIF reports are generated in evidence mode. | `dependency-check-sca-reports` | Evidence review with manual triage. |
 | CycloneDX | SBOM is generated in JSON/XML. | `sbom-cyclonedx` | Dependency inventory evidence. |
-| Runtime security / IAST readiness | Security-focused runtime tests run with JaCoCo skipped and upload Surefire plus readiness notes. | `iast-runtime-security-evidence` | Runtime evidence always; external IAST only if Contrast variables/secrets exist. |
+| Runtime security / IAST-like evidence | Security-focused runtime tests run with JaCoCo skipped and upload Surefire, endpoint checks and runtime notes. | `iast-runtime-security-evidence` | Runtime evidence always; full agent-based IAST is not claimed. |
 | ZAP | Baseline DAST runs against a live CI application instance. | `dast-zap-baseline-reports` | Evidence review baseline DAST. |
 | actionlint | Workflow syntax/semantics validated locally. | Local terminal output or pipeline notes | Supporting pipeline evidence. |
 

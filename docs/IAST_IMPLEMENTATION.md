@@ -1,19 +1,21 @@
-# Runtime Security Evidence and IAST Readiness
+# Runtime Security Evidence and IAST-like Implementation
 
-This document describes how GhostReport produces runtime security evidence and
-keeps the project ready for an optional external IAST agent integration.
+This document describes how GhostReport covers the DESOFS IAST requirement in a
+reproducible academic environment without claiming full agent-based IAST.
 
 ## Adopted Approach
 
-GhostReport uses a practical two-part approach:
+GhostReport uses layered runtime security testing:
 
 | Layer | Purpose | Evidence |
 | --- | --- | --- |
-| Runtime security tests | Exercise authentication, authorization, CSRF, error handling and monitoring paths while the application context is running. | Surefire reports and runtime security events. |
-| Optional Contrast Java Agent | Provide JVM agent-based IAST telemetry when project/team credentials are configured. | Contrast platform findings plus workflow readiness notes. |
+| Spring Boot runtime tests | Exercise authentication, authorization, CSRF, error handling and monitoring paths while the application context is running. | Surefire reports and runtime security events. |
+| Live application smoke traffic | Confirm the packaged application starts and selected public/protected endpoints respond as expected. | `runtime-endpoints.md` and application log. |
+| OWASP ZAP baseline | Passively scan the running HTTP surface for browser-facing and HTTP security issues. | ZAP HTML/XML/JSON reports. |
 
-This avoids storing commercial IAST credentials in the repository and keeps the
-pipeline executable in local and academic CI environments.
+This is IAST-like because controls are exercised while the application is
+running and evidence is collected from runtime behaviour. It is not full IAST
+because no in-process sensor performs taint tracking or source-to-sink analysis.
 
 ## GitHub Actions Integration
 
@@ -45,7 +47,9 @@ start for DAST, or when there is a real execution error.
 | Evidence | Location |
 | --- | --- |
 | Runtime security test results | `ghostreport/target/surefire-reports/**` |
-| Runtime/IAST readiness evidence notes | `ghostreport/target/iast-evidence/iast-runtime-evidence.md` |
+| Runtime/IAST-like evidence notes | `ghostreport/target/iast-evidence/iast-runtime-evidence.md` |
+| Endpoint smoke evidence | `ghostreport/target/iast-evidence/runtime-endpoints.md` |
+| Runtime log leakage check | `ghostreport/target/iast-evidence/runtime-log-sanitization.md` |
 | GitHub artifact | `iast-runtime-security-evidence` |
 | Related DAST artifact | `dast-zap-baseline-reports` |
 
@@ -57,16 +61,18 @@ start for DAST, or when there is a real execution error.
 | Token misuse | Invalid/expired JWT alert tests |
 | CSRF | CSRF security tests |
 | Information disclosure | Generic error handling tests |
-| Browser-facing hardening | Security header tests |
+| Browser-facing hardening | Security header tests and ZAP baseline |
 | Security monitoring | Audit and security alert persistence tests |
+| Access control surface | Protected endpoint smoke check without token |
+| Invalid token handling | Protected endpoint smoke check with invalid bearer token |
+| Runtime abuse controls | Failed login and repeated failed-login endpoint probes |
 
 ## Assumptions
 
-- Local CI evidence is generated without external IAST credentials.
-- External IAST telemetry is enabled only when Contrast variables/secrets are
-  present in GitHub Actions.
-- Without Contrast credentials, the project does not claim complete IAST
-  telemetry. It claims runtime security evidence plus readiness for optional
-  agent-based IAST.
-- IAST findings, when available, are reviewed together with SAST, DAST and SCA
-  findings because exploitability and application context matter.
+- The project does not claim full agent-based IAST.
+- The academic claim is limited to runtime security testing and IAST-like
+  evidence.
+- ZAP baseline is unauthenticated and should be read as first-line DAST, not as
+  a complete penetration test.
+- Runtime findings are reviewed together with SAST, SCA, SBOM and DAST because
+  exploitability and application context matter.

@@ -37,7 +37,7 @@ artifacts.
 | V9 Communication Security | Browser-facing secure headers | HSTS, CSP with `form-action 'self'`, frame protection, referrer policy and permissions policy | `SecurityConfig`, `SecurityHeadersTest` | Implemented baseline |
 | V10 Malicious Code Prevention | Static/security analysis | SpotBugs, SonarCloud, CodeQL Code Scanning and archiveable SAST summary artifacts | `.github/workflows/dev.yml`, `sast / SonarCloud SAST Scan`, `sast-reports` | Evidence review |
 | V10 Malicious Code Prevention | Dependency risk | Dependency-Check and CycloneDX SBOM evidence | `.github/workflows/dev.yml`, `dependency-scanning / Dependency Vulnerability Scanning`, `dependency-check-sca-reports`, `sbom-cyclonedx` | Evidence review |
-| V10 Malicious Code Prevention | Runtime security evidence | Runtime security/IAST readiness evidence and OWASP ZAP baseline | `.github/workflows/dev.yml`, `dast-scan / dast-scan`, `iast-runtime-security-evidence`, `dast-zap-baseline-reports` | Evidence review |
+| V10 Malicious Code Prevention | Runtime security evidence | Runtime security/IAST-like evidence and OWASP ZAP baseline | `.github/workflows/dev.yml`, `dast-scan / dast-scan`, `iast-runtime-security-evidence`, `dast-zap-baseline-reports` | Evidence review |
 | V11 Business Logic | Controlled case state changes | Closed-case modification protection, assignment conflict checks and explicit report workflow transitions | `CaseReviewService`, `ReportWorkflowPolicy`, `ClosedCaseSecurityTest`, `AnalystCaseOwnershipTest`, `BusinessLogicWorkflowSecurityTest` | Implemented |
 | V13 API Security | DTO API contracts | Controllers return DTOs/records, including audit and security alert responses | `dto` package, controllers | Implemented |
 | V13 API Security | Abuse controls | Rate limits for login, tracking, upload and download flows | `RateLimiterService`, security tests | Implemented |
@@ -47,8 +47,7 @@ artifacts.
 The Level 2 evidence is scoped to implemented application features and automated
 pipeline evidence. CodeQL findings are primarily stored in GitHub Code Scanning,
 with an archiveable run summary artifact. Runtime security evidence is always
-generated through tests; complete external IAST telemetry requires optional
-Contrast agent configuration. Advanced production operations such as external
-SIEM/WORM storage, distributed token revocation, privileged-user MFA and
-authenticated DAST contexts are treated as operational hardening beyond the
-current sprint scope.
+generated through tests, live endpoint checks and ZAP baseline evidence. Full
+agent-based IAST, external SIEM/WORM storage, distributed token revocation,
+privileged-user MFA and authenticated DAST contexts are treated as operational
+hardening beyond the current sprint scope.

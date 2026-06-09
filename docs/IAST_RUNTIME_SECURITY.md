@@ -1,4 +1,4 @@
-# Runtime Security Evidence and IAST Readiness
+# Runtime Security Evidence and IAST-like Testing
 
 GhostReport produces runtime security evidence in the `dast-scan / dast-scan`
 job of the main GitHub Actions workflow:
@@ -7,9 +7,11 @@ job of the main GitHub Actions workflow:
 .github/workflows/dev.yml
 ```
 
-This is not presented as complete IAST by default. The project always produces
-runtime security evidence through automated tests. External IAST telemetry is
-optional and depends on Contrast Java agent variables/secrets being configured.
+The project does not claim full agent-based IAST. For the DESOFS academic
+requirement, GhostReport uses an IAST-like runtime security testing approach:
+security-focused Spring Boot tests run against the application runtime, the
+application is started as a packaged JAR, selected endpoints are exercised, and
+OWASP ZAP baseline scans the live HTTP surface.
 
 ## Architecture
 
@@ -19,8 +21,10 @@ GitHub Actions dev workflow
   -> Maven security-focused tests
   -> Spring Boot application context / MockMvc runtime
   -> AuditLogService and SecurityMonitoringService
-  -> Surefire reports and runtime security evidence artifact
-  -> optional Contrast Java Agent readiness notes
+  -> packaged Spring Boot JAR on localhost:8081
+  -> endpoint smoke traffic
+  -> OWASP ZAP baseline traffic
+  -> runtime security evidence artifacts
 ```
 
 ## Runtime Coverage
@@ -30,10 +34,26 @@ The runtime security evidence job executes tests for:
 - successful and failed authentication events;
 - invalid/expired JWT handling;
 - login rate limiting and brute-force alert generation;
-- CSRF security behaviour;
+- CSRF rejection and accepted CSRF-protected requests;
 - generic error responses without stack traces;
 - browser security headers;
 - audit/security event sanitization.
+
+## Endpoints Exercised in CI
+
+The workflow records HTTP status evidence for:
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /index.html` | Public frontend availability and security headers |
+| `GET /login.html` | Unauthenticated login page request |
+| `GET /admin/users` | Protected admin endpoint without token |
+| `GET /admin/users` with invalid bearer token | Invalid JWT rejection path |
+| `POST /auth/login` with invalid credentials | Failed login path |
+| repeated `POST /auth/login` failures | Rate-limit/brute-force evidence path |
+| `POST /auth/password/change` without CSRF token | CSRF rejection path |
+
+ZAP baseline also crawls and passively scans `http://localhost:8081`.
 
 ## Monitored Events
 
@@ -53,32 +73,23 @@ The runtime security evidence job executes tests for:
 | Workflow | `.github/workflows/dev.yml` |
 | Job | `dast-scan / dast-scan` |
 | Artifact | `iast-runtime-security-evidence` |
-| Gate mode | Runtime security tests are blocking; external IAST telemetry is optional |
+| Gate mode | Runtime security tests and app startup are blocking; ZAP is evidence review |
 
 The artifact contains:
 
 - Surefire reports for the security-focused runtime tests;
 - `target/iast-evidence/iast-runtime-evidence.md`;
-- readiness notes for optional external IAST agent telemetry.
-
-## Optional Contrast Java Agent Integration
-
-To enable external IAST telemetry in GitHub Actions, configure:
-
-```text
-CONTRAST_AGENT_VERSION
-CONTRAST__API__URL
-CONTRAST__API__API_KEY
-CONTRAST__API__SERVICE_KEY
-CONTRAST__API__USER_NAME
-```
-
-The current repository keeps these values outside source control and expects
-them to be supplied as GitHub Actions variables/secrets.
+- `target/iast-evidence/runtime-endpoints.md`;
+- `target/iast-evidence/runtime-log-sanitization.md`;
+- application startup/runtime log;
+- ZAP baseline evidence in the separate `dast-zap-baseline-reports` artifact.
 
 ## Scope Boundaries
 
-The repository always produces local runtime security evidence through
-automated tests. It does not claim complete IAST telemetry unless the optional
-Contrast integration is configured with a tenant, valid credentials and an
-instrumented runtime execution.
+This approach is intentionally described as runtime security testing or
+IAST-like evidence. It does not attach a JVM taint-tracking sensor, does not
+provide data-flow tracing from source to sink, and does not replace a commercial
+or dedicated open-source IAST platform. CSRF acceptance is validated by
+`CsrfSecurityTest`; live unauthenticated endpoint probes only evidence CSRF
+rejection. Findings are interpreted together with SAST, SCA, SBOM and DAST
+evidence.

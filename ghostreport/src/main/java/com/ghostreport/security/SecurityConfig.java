@@ -1,5 +1,6 @@
 package com.ghostreport.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghostreport.service.SecurityMonitoringService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -26,9 +27,13 @@ import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Configuration
 public class SecurityConfig {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -52,7 +57,7 @@ public class SecurityConfig {
                                 .maxAgeInSeconds(31_536_000)
                         )
                         .contentSecurityPolicy(csp -> csp
-                                .policyDirectives("default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'")
+                                .policyDirectives("default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
                         )
                         .referrerPolicy(referrer -> referrer
                                 .policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)
@@ -136,10 +141,11 @@ public class SecurityConfig {
     ) throws IOException {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write(
-                "{\"status\":%d,\"error\":\"%s\",\"correlationId\":\"%s\"}%s"
-                        .formatted(status, error, CorrelationId.current(), System.lineSeparator())
-        );
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", status);
+        body.put("error", error);
+        body.put("correlationId", CorrelationId.current());
+        OBJECT_MAPPER.writeValue(response.getWriter(), body);
     }
 
     @Bean

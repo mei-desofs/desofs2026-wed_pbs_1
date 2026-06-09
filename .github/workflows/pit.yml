@@ -1,0 +1,139 @@
+name: pit-mutation-testing
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "ghostreport/pom.xml"
+      - "ghostreport/src/main/**"
+      - "ghostreport/src/test/**"
+      - ".github/workflows/pit.yml"
+  push:
+    branches: [main]
+    paths:
+      - "ghostreport/pom.xml"
+      - "ghostreport/src/main/**"
+      - "ghostreport/src/test/**"
+      - ".github/workflows/pit.yml"
+
+jobs:
+  pit:
+    name: pit / mutation-testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        working-directory: ./ghostreport
+
+    steps:
+      - name: Checkout repository content
+        uses: actions/checkout@v6
+
+      - name: Prepare Java 17 with Maven cache
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: ghostreport/pom.xml
+
+      - name: Prepare PIT target class inventory
+        run: |
+          mkdir -p target/pit-reports
+          ./mvnw -DskipTests test-compile
+          find target/classes/com/ghostreport -type f -name '*.class' | sort > target/pit-reports/pit-target-classes.txt
+          class_count="$(wc -l < target/pit-reports/pit-target-classes.txt | tr -d ' ')"
+          echo "PIT target class files discovered: $class_count"
+          if [ "$class_count" -eq 0 ]; then
+            echo "No compiled GhostReport classes were found under target/classes/com/ghostreport."
+            exit 1
+          fi
+
+      - name: Run full configured PIT mutation testing
+        run: |
+          mkdir -p target/pit-reports
+          ./mvnw \
+            -Djacoco.skip=true \
+            -DskipTests=false \
+            -Dthreads=2 \
+            org.pitest:pitest-maven:mutationCoverage
+
+      - name: Validate PIT final HTML index
+        if: always()
+        run: |
+          mkdir -p target/pit-reports
+          if [ -s target/pit-reports/index.html ]; then
+            echo "PIT final HTML index generated: target/pit-reports/index.html" > target/pit-reports/pit-index-status.txt
+          else
+            echo "PIT final HTML index missing: target/pit-reports/index.html" > target/pit-reports/pit-index-status.txt
+            cat target/pit-reports/pit-index-status.txt
+            exit 1
+          fi
+
+      - name: Generate PIT mutation evidence summary
+        if: always()
+        run: |
+          mkdir -p target/pit-reports
+          python - <<'PY' > target/pit-reports/pit-mutation-summary.md
+          import pathlib
+          import xml.etree.ElementTree as ET
+
+          report = pathlib.Path("target/pit-reports/mutations.xml")
+          index = pathlib.Path("target/pit-reports/index.html")
+
+          print("| Metric | Value |")
+          print("| --- | --- |")
+          print("| Scope | Full PIT scope configured in `ghostreport/pom.xml` |")
+          print(f"| HTML index | {'Generated' if index.exists() else 'Missing'} |")
+
+          if not report.exists():
+              print("| Mutation XML | Not generated |")
+              raise SystemExit(0)
+
+          mutations = ET.parse(report).getroot().findall("mutation")
+          total = len(mutations)
+          killed = sum(1 for m in mutations if m.get("detected") == "true")
+          survived = sum(1 for m in mutations if (m.findtext("status") or "") == "SURVIVED")
+          no_coverage = sum(1 for m in mutations if (m.findtext("status") or "") == "NO_COVERAGE")
+          score = (killed / total * 100) if total else 0
+
+          print(f"| Total mutations | {total} |")
+          print(f"| Killed/detected | {killed} |")
+          print(f"| Survived | {survived} |")
+          print(f"| No coverage | {no_coverage} |")
+          print(f"| Mutation score | {score:.2f}% |")
+          PY
+
+          {
+            echo "# PIT Mutation Testing Evidence"
+            echo ""
+            echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo ""
+            echo "Workflow: dedicated full PIT mutation testing workflow."
+            echo "PIT command: ./mvnw -Djacoco.skip=true -DskipTests=false -Dthreads=2 org.pitest:pitest-maven:mutationCoverage"
+            echo "Report index: target/pit-reports/index.html"
+            echo ""
+            cat target/pit-reports/pit-mutation-summary.md
+          } > target/pit-reports/pit-evidence-summary.md
+
+          {
+            echo "## PIT Mutation Testing"
+            echo ""
+            cat target/pit-reports/pit-mutation-summary.md
+            echo ""
+            echo "Artifact: pit-mutation-testing-report"
+            echo "Open the artifact file: target/pit-reports/index.html"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload PIT mutation testing report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: pit-mutation-testing-report
+          path: ghostreport/target/pit-reports/**
+          if-no-files-found: error

@@ -64,33 +64,6 @@ jobs:
           DB_USERNAME: postgres
           DB_PASSWORD: user
 
-      - name: Run PIT mutation testing in evidence review mode
-        run: |
-          mkdir -p target/pit-reports
-          set +e
-          ./mvnw \
-            -Djacoco.skip=true \
-            -DskipTests=false \
-            org.pitest:pitest-maven:mutationCoverage
-          pit_exit_code=$?
-          set -e
-
-          echo "$pit_exit_code" > target/pit-reports/pit-exit-code.txt
-          {
-            echo "# PIT Mutation Testing Evidence"
-            echo ""
-            echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo ""
-            echo "PIT command exit code: $pit_exit_code"
-            echo ""
-            echo "Gate mode: evidence review. Mutation findings and thresholds remain triaged manually."
-          } > target/pit-reports/pit-evidence-summary.md
-
-          if [ "$pit_exit_code" -ne 0 ]; then
-            echo "::warning title=PIT evidence review::PIT exited with code $pit_exit_code. Evidence artifact was still generated for triage."
-          fi
-        continue-on-error: true
-
       - name: Upload Surefire test report artifact
         uses: actions/upload-artifact@v7
         if: always()
@@ -109,14 +82,6 @@ jobs:
             ghostreport/target/jacoco.exec
           if-no-files-found: warn
 
-      - name: Upload PIT mutation testing report
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: pit-mutation-testing-report
-          path: ghostreport/target/pit-reports/**
-          if-no-files-found: warn
-
       - name: Publish build and test evidence summary
         if: always()
         run: |
@@ -127,8 +92,8 @@ jobs:
             echo "| --- | --- |"
             echo "| Maven verify test results | ci-surefire-test-reports |"
             echo "| JaCoCo report and coverage check | ci-jacoco-coverage-report |"
-            echo "| PIT mutation testing | pit-mutation-testing-report |"
-            echo "| Gate mode | Blocking for compile/tests/coverage; PIT evidence review |"
+            echo "| PIT mutation testing | Dedicated pit-mutation-testing workflow |"
+            echo "| Gate mode | Blocking for compile/tests/coverage |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   security-secrets:
@@ -232,6 +197,7 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: java
+          build-mode: manual
 
       - name: Build GhostReport for SAST analysis
         run: ./mvnw -DskipTests clean compile
@@ -437,38 +403,17 @@ jobs:
             -Dtest=RuntimeSecurityEventLoggingTest,ErrorHandlingSecurityTest,SecurityHeadersTest,JwtServiceSecurityTest,LoginRateLimitSecurityTest,CsrfSecurityTest \
             test
 
-      - name: Prepare optional Contrast Java agent integration evidence
-        run: |
-          mkdir -p target/iast-evidence
-          {
-            echo "# Runtime Security Evidence and IAST Readiness"
-            echo ""
-            echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo ""
-            echo "Executed security-focused tests for authentication events, JWT validation, rate limiting, CSRF, security headers and error handling."
-            if [ -n "${CONTRAST_AGENT_VERSION:-}" ] && \
-               [ -n "${CONTRAST__API__URL:-}" ] && \
-               [ -n "${CONTRAST__API__API_KEY:-}" ] && \
-               [ -n "${CONTRAST__API__SERVICE_KEY:-}" ] && \
-               [ -n "${CONTRAST__API__USER_NAME:-}" ]; then
-              echo "Contrast Java agent configuration variables are present."
-            else
-              echo "Contrast Java agent configuration variables are not present in this run."
-            fi
-          } > target/iast-evidence/iast-runtime-evidence.md
-        env:
-          CONTRAST_AGENT_VERSION: ${{ vars.CONTRAST_AGENT_VERSION }}
-          CONTRAST__API__URL: ${{ vars.CONTRAST__API__URL }}
-          CONTRAST__API__API_KEY: ${{ secrets.CONTRAST__API__API_KEY }}
-          CONTRAST__API__SERVICE_KEY: ${{ secrets.CONTRAST__API__SERVICE_KEY }}
-          CONTRAST__API__USER_NAME: ${{ secrets.CONTRAST__API__USER_NAME }}
+      - name: Build GhostReport executable JAR for DAST and runtime security testing
+        run: ./mvnw -DskipTests package
 
       - name: Start GhostReport on the runner at localhost:8081
         run: |
           mkdir -p target/zap-reports
+          mkdir -p target/iast-evidence
           chmod 777 target/zap-reports
-          nohup ./mvnw spring-boot:run \
-            -Dspring-boot.run.profiles=dev \
+          nohup java \
+            -jar target/ghostreport-0.0.1-SNAPSHOT.jar \
+            --spring.profiles.active=dev \
             > target/ghostreport-dast-app.log 2>&1 &
           echo $! > target/ghostreport-dast-app.pid
         env:
@@ -490,6 +435,76 @@ jobs:
           cat target/ghostreport-dast-app.log
           exit 1
 
+      - name: Exercise runtime security endpoints for evidence
+        run: |
+          mkdir -p target/iast-evidence
+
+          login_payload='{"username":"ci-runtime-probe","password":"invalid-password"}'
+          failed_login_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            -H 'Content-Type: application/json' \
+            --data "$login_payload" \
+            http://localhost:8081/auth/login || true)"
+
+          rate_limit_status="not exercised"
+          for attempt in 1 2 3 4 5 6; do
+            rate_limit_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              -H 'Content-Type: application/json' \
+              --data "$login_payload" \
+              http://localhost:8081/auth/login || true)"
+          done
+
+          {
+            echo "| Endpoint | Purpose | HTTP status |"
+            echo "| --- | --- | --- |"
+            for item in \
+              "GET /index.html|Public frontend and security headers|http://localhost:8081/index.html" \
+              "GET /login.html|Unauthenticated login page request|http://localhost:8081/login.html" \
+              "GET /admin/users|Protected admin endpoint without token|http://localhost:8081/admin/users"
+            do
+              method_and_path="${item%%|*}"
+              rest="${item#*|}"
+              purpose="${rest%%|*}"
+              url="${rest#*|}"
+              status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$url" || true)"
+              echo "| $method_and_path | $purpose | $status |"
+            done
+
+            invalid_jwt_status="$(python -c "import http.client; conn = http.client.HTTPConnection('localhost', 8081, timeout=10); conn.request('GET', '/admin/users', headers={'Authorization': 'Bearer invalid-ci-runtime-token'}); print(conn.getresponse().status)" 2>/dev/null || echo 000)"
+            csrf_rejection_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              -H 'Content-Type: application/json' \
+              --data '{"currentPassword":"old-password","newPassword":"new-password"}' \
+              http://localhost:8081/auth/password/change || true)"
+
+            echo "| GET /admin/users | Protected endpoint with invalid JWT | $invalid_jwt_status |"
+            echo "| POST /auth/login | Failed login attempt with invalid credentials | $failed_login_status |"
+            echo "| POST /auth/login | Repeated failed login attempts for rate-limit/brute-force evidence | $rate_limit_status |"
+            echo "| POST /auth/password/change | CSRF rejection on protected state-changing endpoint without CSRF token | $csrf_rejection_status |"
+          } > target/iast-evidence/runtime-endpoints.md
+
+      - name: Check runtime logs for sensitive evidence leakage
+        if: always()
+        run: |
+          mkdir -p target/iast-evidence
+          {
+            echo "| Check | Result |"
+            echo "| --- | --- |"
+            if [ ! -s target/ghostreport-dast-app.log ]; then
+              echo "| Application log exists | Not generated |"
+              exit 0
+            fi
+
+            echo "| Application log exists | Generated |"
+
+            if grep -Eiq 'password=|password:|Authorization:|Bearer [A-Za-z0-9._-]+|JWT_SECRET|BACKUP_HMAC_SECRET|stacktrace|java\.[a-zA-Z.]+Exception:' target/ghostreport-dast-app.log; then
+              echo "| Sensitive-pattern scan | Review required: potential sensitive or stack-trace pattern found |"
+              grep -Ein 'password=|password:|Authorization:|Bearer [A-Za-z0-9._-]+|JWT_SECRET|BACKUP_HMAC_SECRET|stacktrace|java\.[a-zA-Z.]+Exception:' target/ghostreport-dast-app.log \
+                | sed -E 's/(Bearer )[A-Za-z0-9._-]+/\1[REDACTED]/g' \
+                | head -20 > target/iast-evidence/runtime-log-sensitive-findings.txt
+            else
+              echo "| Sensitive-pattern scan | No obvious passwords, bearer tokens, secret names or stack traces found |"
+            fi
+          } > target/iast-evidence/runtime-log-sanitization.md
+
       - name: Run OWASP ZAP Docker baseline scan in evidence mode
         run: |
           docker run --rm --network host \
@@ -505,7 +520,100 @@ jobs:
               -I
         continue-on-error: true
 
-      - name: Upload runtime security and IAST readiness evidence artifact
+      - name: Prepare runtime security and IAST evidence summary
+        if: always()
+        run: |
+          zap_result="not generated"
+          if [ -s target/zap-reports/zap-baseline.json ]; then
+            zap_result="generated: target/zap-reports/zap-baseline.json"
+          elif [ -s target/zap-reports/zap-baseline.html ]; then
+            zap_result="generated: target/zap-reports/zap-baseline.html"
+          fi
+
+          app_state="not confirmed"
+          if curl --fail --silent --show-error http://localhost:8081/index.html > /dev/null; then
+            app_state="running on http://localhost:8081"
+          fi
+
+          {
+            echo "# Runtime Security Evidence and IAST-like Testing"
+            echo ""
+            echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo ""
+            echo "This artifact provides academic runtime security testing evidence. It does not claim agent-based IAST."
+            echo ""
+            echo "## Evidence Classification"
+            echo ""
+            echo "| Evidence type | What this run provides | Claim boundary |"
+            echo "| --- | --- | --- |"
+            echo "| Agent-based IAST | Not present | No JVM agent, taint tracking or source-to-sink telemetry is claimed. |"
+            echo "| Runtime security testing | Spring Boot security tests, live endpoint probes and application logs | Validates implemented controls at runtime. |"
+            echo "| DAST baseline/passive testing | OWASP ZAP baseline against http://localhost:8081 | Evidence review only; unauthenticated baseline. |"
+            echo "| IAST-like academic evidence | Correlates runtime tests, live HTTP probes, logs and ZAP evidence | Defensible academic substitute, not commercial IAST. |"
+            echo ""
+            echo "## Application Runtime"
+            echo ""
+            echo "Application state: $app_state"
+            echo "Runtime: packaged Spring Boot JAR with dev profile and PostgreSQL service."
+            echo ""
+            echo "## Security-focused Runtime Tests"
+            echo ""
+            echo "Executed Maven tests:"
+            echo ""
+            echo "- RuntimeSecurityEventLoggingTest"
+            echo "- ErrorHandlingSecurityTest"
+            echo "- SecurityHeadersTest"
+            echo "- JwtServiceSecurityTest"
+            echo "- LoginRateLimitSecurityTest"
+            echo "- CsrfSecurityTest"
+            echo ""
+            echo "Validated controls:"
+            echo ""
+            echo "- authentication success/failure audit events;"
+            echo "- invalid/expired JWT handling and alerting;"
+            echo "- login rate limiting and brute-force detection;"
+            echo "- CSRF rejection/acceptance behaviour;"
+            echo "- browser security headers, including CSP;"
+            echo "- generic error handling without stack traces;"
+            echo "- security log sanitization for sensitive values."
+            echo ""
+            echo "Surefire reports are uploaded in this artifact and remain available even when a selected runtime test fails."
+            echo ""
+            echo "## Endpoints Exercised"
+            echo ""
+            if [ -s target/iast-evidence/runtime-endpoints.md ]; then
+              cat target/iast-evidence/runtime-endpoints.md
+            else
+              echo "Endpoint smoke evidence was not generated."
+            fi
+            echo ""
+            echo "## DAST Runtime Traffic"
+            echo ""
+            echo "ZAP baseline target: http://localhost:8081"
+            echo "ZAP result: $zap_result"
+            echo "ZAP mode: baseline/passive evidence review, not authenticated active exploitation."
+            echo ""
+            echo "## Runtime Logs"
+            echo ""
+            echo "Application log artifact: target/ghostreport-dast-app.log"
+            echo "Surefire reports artifact: target/surefire-reports"
+            echo ""
+            if [ -s target/iast-evidence/runtime-log-sanitization.md ]; then
+              cat target/iast-evidence/runtime-log-sanitization.md
+            else
+              echo "Runtime log sanitization evidence was not generated."
+            fi
+            echo ""
+            echo "## Limitations"
+            echo ""
+            echo "- No JVM IAST agent or taint-tracking sensor is attached."
+            echo "- The evidence is IAST-like runtime security testing, not full commercial IAST."
+            echo "- ZAP baseline is unauthenticated and does not cover all protected workflows."
+            echo "- CSRF acceptance is validated by CsrfSecurityTest; live unauthenticated probes only evidence rejection."
+            echo "- Findings must be interpreted together with SAST, SCA, SBOM and DAST evidence."
+          } > target/iast-evidence/iast-runtime-evidence.md
+
+      - name: Upload runtime security and IAST-like evidence artifact
         uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -513,6 +621,7 @@ jobs:
           path: |
             ghostreport/target/iast-evidence/**
             ghostreport/target/surefire-reports/**
+            ghostreport/target/ghostreport-dast-app.log
           if-no-files-found: warn
 
       - name: Upload OWASP ZAP DAST evidence artifacts
@@ -533,7 +642,7 @@ jobs:
             echo ""
             echo "| Evidence | Artifact |"
             echo "| --- | --- |"
-            echo "| Runtime security-focused tests and IAST readiness | iast-runtime-security-evidence |"
+            echo "| Runtime security-focused tests and IAST-like evidence | iast-runtime-security-evidence |"
             echo "| ZAP HTML/XML/JSON reports and application log | dast-zap-baseline-reports |"
             echo "| Gate mode | Runtime security tests blocking; ZAP evidence review |"
           } >> "$GITHUB_STEP_SUMMARY"
