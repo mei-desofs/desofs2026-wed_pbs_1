@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.UUID;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -56,6 +57,7 @@ class RbacAuthorizationMatrixTest {
     private ObjectMapper objectMapper;
 
     private String analystUsername;
+    private String otherAnalystUsername;
     private String adminUsername;
     private String auditorUsername;
     private Long reportId;
@@ -65,6 +67,7 @@ class RbacAuthorizationMatrixTest {
     void setUp() throws Exception {
         String suffix = UUID.randomUUID().toString();
         analystUsername = createUser("rbac_analyst_" + suffix, UserRole.ANALYST);
+        otherAnalystUsername = createUser("rbac_other_analyst_" + suffix, UserRole.ANALYST);
         adminUsername = createUser("rbac_admin_" + suffix, UserRole.ADMIN);
         auditorUsername = createUser("rbac_auditor_" + suffix, UserRole.AUDITOR);
 
@@ -158,6 +161,88 @@ class RbacAuthorizationMatrixTest {
         mockMvc.perform(get("/audit/logs")
                         .header("Authorization", bearerToken(analystUsername, PASSWORD)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void analystResourceEndpointsEnforceOwnAndForeignObjectAccess() throws Exception {
+        String ownerToken = bearerToken(analystUsername, PASSWORD);
+        String otherAnalystToken = bearerToken(otherAnalystUsername, PASSWORD);
+        String adminToken = bearerToken(adminUsername, PASSWORD);
+
+        mockMvc.perform(post("/analyst/reports/{id}/assign", reportId)
+                        .with(csrf())
+                        .header("Authorization", ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.assignedAnalystUsername").value(analystUsername));
+
+        mockMvc.perform(get("/analyst/reports/{id}/case-review", reportId)
+                        .header("Authorization", ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reportId").value(reportId));
+
+        mockMvc.perform(get("/analyst/reports/{id}/case-review", reportId)
+                        .header("Authorization", otherAnalystToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch("/analyst/reports/{id}/status", reportId)
+                        .with(csrf())
+                        .header("Authorization", otherAnalystToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "UNDER_REVIEW"
+                                }
+                                """))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/analyst/reports/{id}/attachments", reportId)
+                        .header("Authorization", otherAnalystToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/analyst/reports/{id}/case-package", reportId)
+                        .with(csrf())
+                        .header("Authorization", otherAnalystToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/analyst/reports/{id}/case-review", reportId)
+                        .header("Authorization", adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reportId").value(reportId));
+    }
+
+    @Test
+    void analystReportListRedactsUnassignedReportDescriptionUntilAssigned() throws Exception {
+        String ownerToken = bearerToken(analystUsername, PASSWORD);
+        String reportDescription = "Report used by RBAC authorization tests.";
+
+        String unassignedBody = mockMvc.perform(get("/analyst/reports")
+                        .header("Authorization", ownerToken))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(unassignedBody).contains("\"id\":" + reportId);
+        assertThat(unassignedBody).doesNotContain(reportDescription);
+
+        mockMvc.perform(post("/analyst/reports/{id}/assign", reportId)
+                        .with(csrf())
+                        .header("Authorization", ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        String assignedBody = mockMvc.perform(get("/analyst/reports")
+                        .header("Authorization", ownerToken))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(assignedBody).contains("\"id\":" + reportId);
+        assertThat(assignedBody).contains(reportDescription);
     }
 
     @Test

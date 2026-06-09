@@ -41,6 +41,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                        .ignoringRequestMatchers("/auth/login")
                 )
                 .headers(headers -> headers
                         .contentTypeOptions(contentTypeOptions -> {
@@ -73,6 +74,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/reports/verify").permitAll()
                         .requestMatchers(HttpMethod.POST, "/reports/{id}/attachments").permitAll()
                         .requestMatchers(HttpMethod.POST, "/reports/{id}/attachments/list").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/reports/download").permitAll()
 
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/analyst/**").hasAnyRole("ANALYST", "ADMIN")

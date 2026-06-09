@@ -8,6 +8,7 @@ import com.ghostreport.repository.AuditLogRepository;
 import com.ghostreport.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import com.ghostreport.repository.SecurityAlertRepository;
 import java.util.List;
@@ -67,7 +68,11 @@ public class AdminController {
                 .toList();
     }
 
-    @PostMapping("/users")
+    @PostMapping(
+            value = "/users",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse createUser(@Valid @RequestBody CreateUserRequest request) {
         return userService.createUser(request);

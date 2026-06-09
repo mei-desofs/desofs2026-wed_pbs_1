@@ -27,17 +27,26 @@ evidence.
 | V1 Encoding and Sanitization | Partially Compliant | DTO validation, domain value objects, safe filenames, CSP tests and ZAP baseline. | More output-encoding evidence and negative-path tests would strengthen this. |
 | V2 Validation and Business Logic | Partially Compliant | DTO validation, domain invariants, explicit report workflow transition policy, transactional state changes, optimistic locking, rollback/abuse tests, rate limiting and ownership tests. | Business limits outside report/case workflows can still be expanded. |
 | V3 Web Frontend Security | Partially Compliant | Security headers, CSP, externalized frontend scripts/styles and `SecurityHeadersTest`. | Fresh ZAP evidence should confirm the latest CSP behaviour. |
+| V1 Encoding and Sanitization | Partially Compliant | DTO validation, domain value objects, safe filenames, safe frontend DOM rendering, CSP tests and ZAP baseline. | Continue expanding negative-path tests beyond the reviewed frontend XSS/data-exposure scope. |
+| V2 Validation and Business Logic | Partially Compliant | DTO validation, service checks, domain invariants, rate limiting and ownership tests. | Business limits and workflow abuse cases need more explicit documentation/tests. |
+| V3 Web Frontend Security | Partially Compliant | Security headers, CSP, externalized frontend scripts/styles, safe DOM rendering and `SecurityHeadersTest`. | Fresh ZAP evidence should confirm the latest CSP behaviour. |
 | V4 API and Web Service | Partially Compliant | Controllers use DTOs, generic JSON errors and role-protected endpoints. | Cache behaviour, method restrictions and API abuse cases need more complete tests. |
-| V5 File Handling | Partially Compliant | Upload validation, safe path handling, MIME/extension checks and file service tests. | No antivirus scanning, quarantine workflow or per-user storage quotas. |
+| V5 File Handling | Partially Compliant | Upload validation, safe path handling, MIME/extension checks, magic-byte checks, mockable malware scanner, quarantine and secure download headers. | Local scanner is coursework evidence only; production should integrate a real AV service and define retention for quarantined files. |
 | V6 Authentication | Partially Compliant | BCrypt, inactive-user checks, login rate limiting, compromised-password denylist, password history/reuse prevention, authenticated password change and one-time expiring password reset tokens. | MFA is not implemented; reset delivery is represented by a generated token because no email/SMS provider is in scope. |
+| V5 File Handling | Partially Compliant | Upload validation, safe path handling, MIME/extension checks and file service tests. | No antivirus scanning, quarantine workflow or per-user storage quotas. |
+| V6 Authentication | Partially Compliant | BCrypt, inactive-user checks, login rate limiting and login/logout audit events. | No MFA, secure password reset or password history/reuse policy. |
 | V7 Session Management | Partially Compliant | Stateless JWT expiry, validation and logout-driven revocation evidence. | No refresh-token rotation, distributed revocation store or concurrent-session controls. |
-| V8 Authorization | Partially Compliant | `ADMIN`, `ANALYST`, `AUDITOR` rules, RBAC tests and analyst ownership tests. | Field-level authorization and service-level negative paths can be expanded. |
+| V8 Authorization | Compliant for current scope | `ADMIN`, `ANALYST`, `AUDITOR` rules, object ownership checks, field-level filtering, authorization matrix and negative-path tests. | Future roles or workflow changes must update the matrix and tests before tracker changes. |
 | V9 Self-contained Tokens | Partially Compliant | JWT signature, expiry, issuer/audience and revocation tests. | No key rotation or distributed revocation strategy. |
+| V7 Session Management | Partially Compliant | Stateless JWT expiry, validation and database-backed logout revocation evidence. | No refresh-token rotation or concurrent-session inventory controls. |
+| V8 Authorization | Partially Compliant | `ADMIN`, `ANALYST`, `AUDITOR` rules, RBAC tests and analyst ownership tests. | Field-level authorization and service-level negative paths can be expanded. |
+| V9 Self-contained Tokens | Partially Compliant | JWT signature, expiry, issuer/audience, `jti`, `kid`, key rotation and persistent revocation tests. | Rotation is configuration-driven; there is no JWKS endpoint or automated rollover scheduler. |
 | V10 OAuth and OIDC | Not Applicable | GhostReport does not use OAuth/OIDC or an external IdP. | Becomes applicable if an IdP is added. |
 | V11 Cryptography | Partially Compliant | BCrypt, JWT HMAC, backup manifest HMAC, SHA-256 integrity hashes, fail-fast key validation and key lifecycle documentation. | Backup ZIP encryption is not implemented; key rotation is documented but manual. |
+| V11 Cryptography | Partially Compliant | BCrypt, JWT HMAC with key identifiers and SHA-256 integrity hashes. | JWT rotation is implemented, but broader key custody and backup key lifecycle remain operational controls. |
 | V12 Secure Communication | Partially Compliant | Security headers and installation guidance for TLS deployment. | CI DAST runs on local HTTP and does not prove production TLS/cipher configuration. |
 | V13 Configuration | Partially Compliant | Profiles, environment variables, fail-fast validation, Gitleaks and SCA evidence. | Residual dependency findings require documented triage. |
-| V14 Data Protection | Partially Compliant | DTO responses avoid passwords/tokens and file/package integrity checks exist. | Retention, deletion and encryption-at-rest policies are incomplete. |
+| V14 Data Protection | Partially Compliant | DTO responses avoid passwords/tokens, tracking codes are not placed in frontend URLs and file/package integrity checks exist. | Retention, deletion and encryption-at-rest policies are incomplete. |
 | V15 Secure Coding and Architecture | Partially Compliant | Single `dev` pipeline, tests, JaCoCo, SpotBugs, SonarCloud, CodeQL, Dependency-Check, CycloneDX, Gitleaks, ZAP and PIT evidence review. | Security findings remain triage-driven; PIT is not a blocking quality gate. |
 | V16 Security Logging and Error Handling | Partially Compliant | Audit/security event services, sanitized error handling and runtime security tests. | No tamper-resistant logs or external SIEM integration. |
 | V17 WebRTC | Not Applicable | No WebRTC, TURN/STUN, media capture or real-time browser communication exists. | None in current scope. |
@@ -47,12 +56,15 @@ evidence.
 | Evidence type | Repository references |
 | --- | --- |
 | Authentication | `ghostreport/src/main/java/com/ghostreport/controller/AuthController.java`, `ghostreport/src/main/java/com/ghostreport/service/AuthService.java`, `ghostreport/src/main/java/com/ghostreport/service/JwtService.java` |
+| Authorization | `docs/AUTHORIZATION_MATRIX.md`, `ghostreport/src/main/java/com/ghostreport/security/SecurityConfig.java`, `ghostreport/src/main/java/com/ghostreport/service/ReportService.java`, `ghostreport/src/main/java/com/ghostreport/service/CaseReviewService.java`, `ghostreport/src/test/java/com/ghostreport/security/RbacAuthorizationMatrixTest.java`, `ghostreport/src/test/java/com/ghostreport/security/AnalystCaseOwnershipTest.java` |
 | Password policy and reset | `ghostreport/src/main/java/com/ghostreport/service/PasswordPolicyService.java`, `ghostreport/src/main/java/com/ghostreport/service/PasswordResetService.java`, `ghostreport/src/main/java/com/ghostreport/model/PasswordHistory.java`, `ghostreport/src/main/java/com/ghostreport/model/PasswordResetToken.java`, `ghostreport/src/test/java/com/ghostreport/security/PasswordPolicyAndResetSecurityTest.java` |
 | Authorization | `ghostreport/src/main/java/com/ghostreport/security/SecurityConfig.java`, `ghostreport/src/test/java/com/ghostreport/security/RbacAuthorizationMatrixTest.java` |
 | Business workflow | `ghostreport/src/main/java/com/ghostreport/service/ReportWorkflowPolicy.java`, `ghostreport/src/main/java/com/ghostreport/service/ReportService.java`, `ghostreport/src/main/java/com/ghostreport/service/CaseReviewService.java`, `ghostreport/src/main/java/com/ghostreport/model/Report.java`, `ghostreport/src/main/java/com/ghostreport/model/CaseReview.java`, `ghostreport/src/test/java/com/ghostreport/security/BusinessLogicWorkflowSecurityTest.java` |
 | Input validation | `ghostreport/src/main/java/com/ghostreport/dto`, `ghostreport/src/main/java/com/ghostreport/domain`, `ghostreport/src/test/java/com/ghostreport/domain` |
 | File handling | `ghostreport/src/main/java/com/ghostreport/service/FileStorageService.java`, `ghostreport/src/test/java/com/ghostreport/service/FileStorageServiceTest.java` |
 | Backup and integrity | `ghostreport/src/main/java/com/ghostreport/service/BackupService.java`, `ghostreport/src/test/java/com/ghostreport/service/BackupServiceIntegrationTest.java`, `docs/SECURE_INSTALLATION.md` |
+| File handling | `ghostreport/src/main/java/com/ghostreport/service/FileStorageService.java`, `ghostreport/src/main/java/com/ghostreport/service/MalwareScanner.java`, `ghostreport/src/main/java/com/ghostreport/service/LocalMalwareScanner.java`, `ghostreport/src/main/java/com/ghostreport/service/ReportService.java`, `ghostreport/src/test/java/com/ghostreport/service/FileStorageServiceTest.java`, `ghostreport/src/test/java/com/ghostreport/controller/ReportControllerAttachmentUploadTest.java` |
+| Backup and integrity | `ghostreport/src/main/java/com/ghostreport/service/BackupService.java`, `ghostreport/src/test/java/com/ghostreport/service/BackupServiceIntegrationTest.java` |
 | Error handling | `ghostreport/src/main/java/com/ghostreport/exception/GlobalExceptionHandler.java`, `ghostreport/src/test/java/com/ghostreport/security/ErrorHandlingSecurityTest.java` |
 | Runtime security events | `ghostreport/src/main/java/com/ghostreport/service/SecurityMonitoringService.java`, `ghostreport/src/test/java/com/ghostreport/security/RuntimeSecurityEventLoggingTest.java` |
 | Pipeline evidence | `.github/workflows/dev.yml`, GitHub Actions job summaries and downloaded artifacts |
@@ -100,6 +112,24 @@ evidence.
 | `RESOLVED` | Terminal state, no further transitions |
 | `REJECTED` | Terminal state, no further transitions |
 
+## Stateless Session and JWT Evidence
+
+Scope covered in this sprint update: `V7.2.1`, `V7.2.4`, `V7.4.2`,
+`V7.5.3`, `V9.2.1`, `V9.2.2`, `V9.2.3`, `V9.2.4`, `V11.3.1` and
+`V11.3.2`.
+
+| ASVS ID | Evidence | Status rationale |
+| --- | --- | --- |
+| V7.2.1 | `ghostreport/src/main/java/com/ghostreport/service/JwtService.java`; `ghostreport/src/main/java/com/ghostreport/security/JwtAuthenticationFilter.java`; `ghostreport/src/test/java/com/ghostreport/security/JwtServiceSecurityTest.java` | JWTs remain stateless, include `exp`, `iat`, `jti`, `iss`, `aud`, `role` and `kid`, and are rejected when expired, malformed, signed with an unknown key or issued for the wrong user/role. |
+| V7.2.4 | `ghostreport/src/main/java/com/ghostreport/controller/AuthController.java`; `ghostreport/src/main/java/com/ghostreport/model/RevokedToken.java`; `ghostreport/src/main/java/com/ghostreport/service/PersistentRevokedTokenStore.java`; `RuntimeSecurityEventLoggingTest` | Logout extracts the Bearer token, persists its `jti` until token expiry and subsequent use of the same token is rejected. |
+| V7.4.2 | `ghostreport/src/main/java/com/ghostreport/security/SecurityConfig.java`; `JwtService` | GhostReport uses `SessionCreationPolicy.STATELESS` and Bearer JWTs rather than server HTTP sessions or authentication cookies. CSRF cookie is not an auth secret. |
+| V7.5.3 | `JwtRevocationPersistenceIntegrationTest` | Replay of a logged-out token is blocked by the persisted `jti` revocation record, including after replacing the `JwtService` instance. Concurrent-session inventory is not implemented. |
+| V9.2.1 | `JwtService`; `JwtRevocationPersistenceIntegrationTest` | Revocation is keyed by `jti`, stored in the database and considered valid until `expires_at`. Expired revocation rows are purged opportunistically during revoke operations. |
+| V9.2.2 | `JwtService`; `application.yaml`; `SECURE_INSTALLATION.md` | Issued JWT headers include `kid`; validation requires a known `kid` and rejects missing/unknown key identifiers. |
+| V9.2.3 | `JwtServiceSecurityTest` | Tokens signed by configured previous keys are accepted during rotation, while newly issued tokens use the active key identifier. |
+| V9.2.4 | `JwtServiceSecurityTest` | Tokens with invalid `issuer`, invalid `audience`, invalid signature, expiry or unknown key id are rejected even when structurally valid. |
+| V11.3.1 | `application.yaml`; `JwtService`; `SECURE_INSTALLATION.md` | JWT signing secrets are externalized, length-validated and identified by `JWT_ACTIVE_KEY_ID`; previous keys are configured separately for validation-only rotation windows. |
+| V11.3.2 | `JwtService`; `JwtServiceSecurityTest` | Key rotation is supported through active and previous key sets. Old keys validate existing tokens but are not used to issue new tokens. |
 ## Requested Authentication ASVS Items
 
 | ASVS ID | Status | Evidence | Notes |
@@ -111,11 +141,41 @@ evidence.
 | V6.2.5 | Compliant | `UserService.changePassword`, `AuthController`, `PasswordPolicyAndResetSecurityTest` | Authenticated password change requires the current password. |
 | V6.3.1 | Not Applicable / Out of Scope | Documentation in this file and `docs/SECURITY_ASSESSMENT.md` | MFA is not implemented because the coursework app has no authenticator app, email/SMS provider or external IdP integration. |
 
+## File Upload, Malware Scanning and Download Evidence
+
+Scope covered in this sprint update: `V5.1.1`, `V5.2.4`, `V5.4.3` and
+`V3.2.1` for download response headers.
+
+| ASVS ID | Evidence | Status rationale |
+| --- | --- | --- |
+| V5.1.1 | `FileStorageService.validateFile`, `FileStorageServiceTest`, `ReportControllerAttachmentUploadTest` | Uploads are constrained by size, safe filename validation, allowlisted MIME types, extension-to-MIME mapping and magic-byte checks before storage. |
+| V5.2.4 | `MalwareScanner`, `LocalMalwareScanner`, `FileStorageService.scanFileOrReject`, `ReportControllerAttachmentUploadTest.eicarUploadIsRejectedQuarantinedAndAudited` | Uploads pass through a mockable scanner. The local implementation detects EICAR for deterministic test evidence. Production deployments should replace it with a real AV adapter. |
+| V5.4.3 | `FileStorageService.quarantineRejectedFile`, `SecurityMonitoringService.recordMalwareUploadRejected`, `ReportService.recordUploadRejected` | Scanner-rejected files are not persisted as attachments, are copied into `quarantine/reports/{id}`, and generate security/audit evidence without exposing raw filenames or paths. |
+| V3.2.1 | `ReportService.secureDownloadResponse`, `ReportControllerAttachmentUploadTest.publicDownloadReturnsSecureHeaders` | File downloads include `Content-Disposition: attachment`, `X-Content-Type-Options: nosniff` and no-store/no-cache headers. |
+
+## Frontend XSS and Data Exposure Evidence
+
+Scope covered in this sprint update: `V1.2.1`, `V1.2.2`, `V1.2.3`,
+`V3.2.2`, `V14.2.1` and re-evaluation of `V14.3.1`.
+
+| ASVS ID | Evidence | Status rationale |
+| --- | --- | --- |
+| V1.2.1 | `ghostreport/src/main/resources/static/js/dom.js`; `ghostreport/src/main/resources/static/js/*.js`; `ghostreport/src/test/java/com/ghostreport/security/FrontendXssDataExposureTest.java` | Frontend rendering now uses DOM APIs such as `createElement`, `textContent`, `createTextNode` and `replaceChildren`. Static tests fail if dangerous HTML parsing sinks are reintroduced. |
+| V1.2.2 | `ghostreport/src/main/resources/static/js/submit.js`; `ghostreport/src/main/resources/static/js/track.js`; `FrontendXssDataExposureTest` | Generated URLs use fixed paths or `encodeURIComponent` for path variables. The public tracking flow no longer redirects with a tracking code in the query string. |
+| V1.2.3 | `ghostreport/src/main/resources/static/js/dom.js`; `ghostreport/src/main/resources/static/js/admin.js`; `ghostreport/src/main/resources/static/js/analyst.js`; `ghostreport/src/main/resources/static/js/auditor.js` | API, URL and user-controlled values are inserted as text nodes or safe attributes through DOM APIs instead of string-concatenated HTML. |
+| V3.2.2 | `ghostreport/src/test/java/com/ghostreport/security/FrontendXssDataExposureTest.java` | The regression test scans frontend JavaScript for dangerous DOM sinks and verifies that XSS payload characters are handled through text-node APIs rather than manual escaping plus HTML parsing. |
+| V14.2.1 | `ghostreport/src/main/resources/static/js/submit.js`; `ghostreport/src/main/resources/static/js/track.js`; `FrontendXssDataExposureTest` | Tracking codes remain report-access secrets and are only submitted in request bodies where required. They are not placed in browser URLs, redirects or query-string parsers. |
+| V14.3.1 | `ghostreport/src/main/resources/static/js/admin.js`; `ghostreport/src/main/resources/static/js/analyst.js`; `ghostreport/src/main/resources/static/js/auditor.js`; `FrontendXssDataExposureTest` | This control is applicable because GhostReport has browser-based authenticated panels. Bearer tokens are now kept only in JavaScript memory for the active page lifecycle and are not persisted in browser storage. Refreshing the page requires login again. |
+
 ## Tool Evidence Status
 
 | Tool | Current evidence | Artifact/location | Status wording |
 | --- | --- | --- | --- |
 | JUnit/MockMvc | Local run passed with 134 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
+| JUnit/MockMvc | Local run passed with 131 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
+| JUnit/MockMvc | Local run passed with 129 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
+| JUnit/MockMvc | Local run passed with 123 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
+| JUnit/MockMvc | Local run passed with 121 tests and the workflow uploads Surefire reports. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Blocking test evidence. |
 | JaCoCo | Coverage report and coverage check run in `build-test`. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco` | Blocking coverage evidence. |
 | PIT | PIT runs in evidence review mode and uploads fallback summary/exit code when needed. | `pit-mutation-testing-report` | Evidence review, not a blocking mutation score gate. |
 | Gitleaks | Repository secret scan runs before dependent security jobs. Empty JSON means no leaks in scanned scope. | `secret-scan-gitleaks-json` | Blocking for confirmed leaks. |

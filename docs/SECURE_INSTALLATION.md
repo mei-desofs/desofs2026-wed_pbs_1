@@ -22,6 +22,8 @@ The default `application.yaml` is production-like. If no profile is active, the 
 | `JWT_SECRET` | Yes | HMAC signing secret for JWT tokens. Must be at least 32 characters. |
 | `BACKUP_HMAC_SECRET` | Yes | Separate HMAC signing secret for backup manifests. Must be at least 32 characters and must not equal `JWT_SECRET`. |
 | `BACKUP_HMAC_KEY_ID` | No | Logical key identifier written into backup signature metadata. Defaults to `backup-hmac-v1`. |
+| `JWT_ACTIVE_KEY_ID` | No | Identifier written to the JWT `kid` header for newly issued tokens. Defaults to `primary`. |
+| `JWT_PREVIOUS_SECRETS` | No | Comma-separated validation-only rotation keys in `kid:secret` format. |
 | `JWT_EXPIRATION_SECONDS` | No | Token lifetime. Defaults to `3600`. |
 | `PASSWORD_RESET_TOKEN_TTL_MINUTES` | No | Password reset token lifetime. Defaults to `30`. |
 | `PASSWORD_RESET_EXPOSE_TOKEN` | No | Development/test-only helper to expose reset tokens in API responses. Defaults to `false`; keep disabled outside controlled demos/tests. |
@@ -40,6 +42,7 @@ $env:DB_USERNAME="postgres"
 $env:DB_PASSWORD="user"
 $env:JWT_SECRET="dev-local-secret-with-at-least-32-chars"
 $env:BACKUP_HMAC_SECRET="dev-local-backup-hmac-secret-32-chars"
+$env:JWT_ACTIVE_KEY_ID="dev-key"
 
 .\mvnw.cmd spring-boot:run
 ```
@@ -61,6 +64,7 @@ $env:DB_PASSWORD="<from-secret-manager>"
 $env:JWT_SECRET="<random-secret-at-least-32-characters>"
 $env:BACKUP_HMAC_SECRET="<different-random-secret-at-least-32-characters>"
 $env:BACKUP_HMAC_KEY_ID="prod-backup-hmac-2026-06"
+$env:JWT_ACTIVE_KEY_ID="prod-2026-06"
 $env:JWT_EXPIRATION_SECONDS="3600"
 
 .\mvnw.cmd spring-boot:run
@@ -76,6 +80,7 @@ The repository includes a local Docker setup:
 $env:DB_PASSWORD="<local-database-password>"
 $env:JWT_SECRET="<random-secret-at-least-32-characters>"
 $env:BACKUP_HMAC_SECRET="<different-random-secret-at-least-32-characters>"
+$env:JWT_ACTIVE_KEY_ID="local-key"
 docker compose up --build
 ```
 
@@ -85,7 +90,24 @@ For local containerized execution, the provided compose setup defaults to the `d
 
 ## JWT Configuration
 
-JWT tokens are signed using HMAC SHA-256. The secret must be unique per environment and must not be reused between development, CI and production. The code validates minimum secret length, and the production-like configuration requires the value to be provided externally.
+JWT tokens are signed using HMAC SHA-256. The active secret must be unique per environment and must not be reused between development, CI and production. The code validates minimum secret length, validates token `issuer`, `audience`, `expiry`, `jti`, signature and `kid`, and the production-like configuration requires the active secret to be provided externally.
+
+New tokens include the active key identifier in the JWT header:
+
+```text
+JWT_ACTIVE_KEY_ID=prod-2026-06
+JWT_SECRET=<new-random-secret-at-least-32-characters>
+```
+
+During key rotation, keep previous keys only for validation until all tokens signed with them have expired:
+
+```text
+JWT_ACTIVE_KEY_ID=prod-2026-07
+JWT_SECRET=<new-july-secret-at-least-32-characters>
+JWT_PREVIOUS_SECRETS=prod-2026-06:<previous-june-secret-at-least-32-characters>
+```
+
+Remove previous keys after the maximum JWT lifetime has elapsed. Previous keys are never used to issue new tokens.
 
 ## Cryptographic Key Lifecycle
 
@@ -117,6 +139,22 @@ It must remain disabled in production-like environments.
 
 The production-like profile uses PostgreSQL and `ddl-auto=validate`. Schema changes must therefore be handled deliberately rather than generated implicitly at runtime. The development profile uses `ddl-auto=update` for easier local iteration.
 
+JWT logout/replay protection requires a persistent revocation table. Provision the equivalent schema before running production-like profiles:
+
+```sql
+CREATE TABLE revoked_tokens (
+    id BIGSERIAL PRIMARY KEY,
+    token_id VARCHAR(80) NOT NULL,
+    subject VARCHAR(120) NOT NULL,
+    key_id VARCHAR(80) NOT NULL,
+    revoked_at TIMESTAMPTZ NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE UNIQUE INDEX idx_revoked_tokens_jti ON revoked_tokens (token_id);
+CREATE INDEX idx_revoked_tokens_expires_at ON revoked_tokens (expires_at);
+```
+
 ## Seed Users
 
 Seed users are restricted to `dev` and `test` profiles through `DataInitializer`. In production-like execution, seed users are disabled by default and must not be used for operational accounts.
@@ -133,11 +171,14 @@ Development seed accounts are only for local testing:
 
 Uploads are stored under `app.upload-dir`. The application validates file size, extension, MIME type, magic bytes, normalized paths and the maximum number of files per request. The current multipart limit is 10 MB per file/request and the default application-level upload count limit is 5 files per request.
 
+Uploaded attachments are scanned through the `MalwareScanner` interface before they are persisted as report attachments. The default local implementation detects the EICAR test signature so automated tests can prove the scanner control path. Files rejected by the scanner are copied to `app.upload-dir/quarantine/reports/{reportId}` and are not stored in the attachment repository.
+
 Operational guidance:
 
 - Keep upload storage outside source-controlled directories.
 - Ensure the application user has only the filesystem permissions required for upload storage.
-- Do not claim antivirus or malware scanning unless a real scanner is integrated.
+- Replace the local scanner with a real antivirus adapter before claiming production malware detection coverage.
+- Define retention, review and deletion procedures for quarantined files.
 
 ## Backup Configuration
 
@@ -176,6 +217,8 @@ Stack traces are disabled in application configuration. Runtime audit and securi
 | `JWT_SECRET` | External, unique, at least 32 chars |
 | `BACKUP_HMAC_SECRET` | External, unique, at least 32 chars, different from `JWT_SECRET` |
 | `BACKUP_HMAC_KEY_ID` | Non-blank logical key id |
+| `JWT_ACTIVE_KEY_ID` | Stable key identifier for the active secret |
+| `JWT_PREVIOUS_SECRETS` | Only during rotation, removed after max token lifetime |
 | `PASSWORD_RESET_EXPOSE_TOKEN` | `false` |
 | Seed users | Disabled |
 | `ddl-auto` | `validate` |

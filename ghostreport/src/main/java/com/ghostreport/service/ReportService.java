@@ -25,6 +25,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.ghostreport.validation.ValidationConstants.trim;
+import static com.ghostreport.validation.ValidationConstants.upper;
+
 @Service
 public class ReportService {
 
@@ -87,7 +90,7 @@ public class ReportService {
         );
 
         report.setCategory(
-                request.getCategory()
+                trim(request.getCategory())
         );
 
         report.setStatus(
@@ -169,7 +172,7 @@ public class ReportService {
 
             return reportRepository.findVisibleToAnalyst(currentUsername)
                     .stream()
-                    .map(this::toReportResponse)
+                    .map(report -> toAnalystReportResponse(report, currentUsername))
                     .toList();
         }
 
@@ -207,7 +210,7 @@ public class ReportService {
 
     private ReportStatus parseRequestedStatus(String requestedStatus) {
         try {
-            return ReportStatus.valueOf(requestedStatus.toUpperCase());
+            return ReportStatus.valueOf(upper(requestedStatus));
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -412,7 +415,7 @@ public class ReportService {
             Long reportId
     ) {
 
-        checkInternalReadAccessToReport(reportId);
+        checkInternalAccessToReport(reportId);
 
         return attachmentRepository.findByReportId(reportId)
                 .stream()
@@ -490,56 +493,7 @@ public class ReportService {
                         attachment.getStoragePath()
                 );
 
-        return ResponseEntity.ok()
-                .contentType(
-                        MediaType.parseMediaType(
-                                attachment.getMimeType()
-                        )
-                )
-                .header(
-                        HttpHeaders.CONTENT_DISPOSITION,
-                        ContentDisposition.attachment()
-                                .filename(
-                                        attachment.getOriginalName(),
-                                        StandardCharsets.UTF_8
-                                )
-                                .build()
-                                .toString()
-                )
-                .body(resource);
-    }
-
-    private void checkInternalReadAccessToReport(
-            Long reportId
-    ) {
-
-        if (SecurityUtils.hasRole("ADMIN")) {
-            return;
-        }
-
-        CaseReview caseReview =
-                caseReviewRepository.findByReportId(
-                        reportId
-                ).orElse(null);
-
-        if (caseReview == null || caseReview.getAssignedAnalyst() == null) {
-            return;
-        }
-
-        String currentUser =
-                SecurityUtils.getCurrentUsername();
-
-        if (!caseReview.getAssignedAnalyst()
-                .getUsername()
-                .equals(currentUser)) {
-
-            auditLogService.log("ANALYST_ACCESS_DENIED", "REPORT", reportId, "Analyst attempted to read a report without ownership");
-            securityMonitoringService.recordUnauthorizedAnalystAccess(reportId);
-
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN
-            );
-        }
+        return secureDownloadResponse(attachment, resource);
     }
 
     public ResponseEntity<Resource> downloadAttachmentSecure(
@@ -563,11 +517,24 @@ public class ReportService {
                         )
                 );
 
+        String normalizedTrackingCode;
+
+        try {
+            normalizedTrackingCode = TrackingCode.from(trackingCode.trim()).value();
+        } catch (IllegalArgumentException e) {
+            securityMonitoringService.recordFailedTrackingCode(attachment.getReport().getId());
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Código inválido"
+            );
+        }
+
         if (!passwordEncoder.matches(
-                trackingCode,
+                normalizedTrackingCode,
                 attachment.getReport().getTrackingCodeHash()
         )) {
 
+            securityMonitoringService.recordFailedTrackingCode(attachment.getReport().getId());
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN
             );
@@ -577,6 +544,14 @@ public class ReportService {
                 fileStorageService.loadFileAsResource(
                         attachment.getStoragePath()
                 );
+
+        return secureDownloadResponse(attachment, resource);
+    }
+
+    private ResponseEntity<Resource> secureDownloadResponse(
+            Attachment attachment,
+            Resource resource
+    ) {
 
         return ResponseEntity.ok()
                 .contentType(
@@ -594,6 +569,10 @@ public class ReportService {
                                 .build()
                                 .toString()
                 )
+                .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate, max-age=0")
+                .header(HttpHeaders.PRAGMA, "no-cache")
+                .header(HttpHeaders.EXPIRES, "0")
+                .header("X-Content-Type-Options", "nosniff")
                 .body(resource);
     }
 
@@ -697,5 +676,35 @@ public class ReportService {
                 report.getCategory(),
                 report.getDescription()
         );
+    }
+
+    private ReportResponse toAnalystReportResponse(
+            Report report,
+            String currentUsername
+    ) {
+
+        return new ReportResponse(
+                report.getId(),
+                report.getTitle(),
+                report.getStatus().name(),
+                report.getCategory(),
+                analystOwnsReport(report, currentUsername)
+                        ? report.getDescription()
+                        : null
+        );
+    }
+
+    private boolean analystOwnsReport(
+            Report report,
+            String currentUsername
+    ) {
+
+        CaseReview caseReview = report.getCaseReview();
+
+        return caseReview != null &&
+                caseReview.getAssignedAnalyst() != null &&
+                caseReview.getAssignedAnalyst()
+                        .getUsername()
+                        .equals(currentUsername);
     }
 }

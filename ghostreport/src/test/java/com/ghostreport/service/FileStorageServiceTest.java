@@ -167,6 +167,25 @@ class FileStorageServiceTest {
     }
 
     @Test
+    void storeAttachmentRejectsExtensionThatDoesNotMatchMimeType() {
+        FileStorageService service = new FileStorageService(tempDir.resolve("uploads").toString());
+        MockMultipartFile mismatchedExtension = new MockMultipartFile(
+                "files",
+                "evidence.pdf",
+                "text/plain",
+                "plain text evidence".getBytes(StandardCharsets.UTF_8)
+        );
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.storeAttachment(1L, mismatchedExtension)
+        );
+
+        assertEquals(400, exception.getStatusCode().value());
+        assertEquals("File extension does not match type", exception.getReason());
+    }
+
+    @Test
     void storeAttachmentRejectsExecutableRenamedToPdf() {
         FileStorageService service = new FileStorageService(tempDir.resolve("uploads").toString());
         MockMultipartFile executable = new MockMultipartFile(
@@ -183,6 +202,33 @@ class FileStorageServiceTest {
 
         assertEquals(400, exception.getStatusCode().value());
         assertEquals("File signature does not match type", exception.getReason());
+    }
+
+    @Test
+    void storeAttachmentRejectsScannerMalwareFindingAndQuarantinesFile() throws Exception {
+        Path uploadDir = tempDir.resolve("uploads");
+        SecurityMonitoringService monitoringService = mock(SecurityMonitoringService.class);
+        MalwareScanner scanner = (inputStream, originalFilename, contentType) ->
+                MalwareScanner.ScanResult.malicious("test scanner finding");
+        FileStorageService service = new FileStorageService(uploadDir.toString(), monitoringService, scanner);
+
+        MockMultipartFile malware = new MockMultipartFile(
+                "files",
+                "evidence.txt",
+                "text/plain",
+                "valid text with suspicious scanner result".getBytes(StandardCharsets.UTF_8)
+        );
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.storeAttachment(1L, malware)
+        );
+
+        assertEquals(400, exception.getStatusCode().value());
+        assertEquals("File rejected by malware scanner", exception.getReason());
+        assertEquals(0, countRegularFiles(uploadDir.resolve("reports/1/attachments")));
+        assertEquals(1, countRegularFiles(uploadDir.resolve("quarantine/reports/1")));
+        verify(monitoringService).recordMalwareUploadRejected(1L);
     }
 
     @Test
@@ -283,5 +329,15 @@ class FileStorageServiceTest {
                 exception.getMessage().contains(tempDir.toString()),
                 "Error message should not expose internal filesystem paths"
         );
+    }
+
+    private long countRegularFiles(Path path) throws Exception {
+        if (path == null || !Files.exists(path)) {
+            return 0;
+        }
+
+        try (var files = Files.walk(path)) {
+            return files.filter(Files::isRegularFile).count();
+        }
     }
 }
