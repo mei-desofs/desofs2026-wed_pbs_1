@@ -18,7 +18,7 @@ Actions run.
 | --- | --- | --- |
 | `build-test / build-and-test` | `ci-surefire-test-reports` | `testing/` |
 | `build-test / build-and-test` | `ci-jacoco-coverage-report` | `testing/` |
-| `build-test / build-and-test` | `pit-mutation-testing-report` | `testing/` |
+| `pit-mutation-testing / pit / mutation-testing` | `pit-mutation-testing-report` | `testing/` |
 | `security-secrets / secrets` | `secret-scan-gitleaks-json` | `secret-scanning/` |
 | `sast / SonarCloud SAST Scan` | `sast-reports` | `sast/` |
 | `dependency-scanning / Dependency Vulnerability Scanning` | `dependency-check-sca-reports` | `sca/` |
@@ -35,7 +35,7 @@ Actions run.
 | `sca/` | OWASP Dependency-Check and CycloneDX SBOM. | Build and Test, Pipeline Automation | V13, V15 |
 | `secret-scanning/` | Gitleaks JSON reports. | Pipeline Automation, Production | V13, V14, V15 |
 | `dast/` | OWASP ZAP baseline reports and application logs. | Build and Test, ASVS | V3, V4, V12 |
-| `pipelines/` | GitHub Actions screenshots, job summaries, run links and actionlint evidence. | Pipeline Automation | V15 |
+| `pipelines/` | GitHub Actions screenshots, job summaries, run links and optional actionlint evidence when available. | Pipeline Automation | V15 |
 | `asvs/` | Tracker exports and ASVS notes. | ASVS, Overall Project | V1-V17 |
 | `code-review/` | Pull Request templates, review screenshots and governance evidence. | Development, Overall Project | V15, V16 |
 | `assessment/` | Security assessment summaries and triage notes. | Production, Operate, Overall Project | V13, V15, V16 |

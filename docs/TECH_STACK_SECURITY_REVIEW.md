@@ -37,16 +37,17 @@ Stack risks are monitored through:
 ## Current Triage Notes
 
 - CodeQL primary findings are stored in GitHub Code Scanning. The workflow also
-  uploads `sast-codeql-evidence-summary` so the run can be archived locally.
-- PIT mutation testing is evidence review. A non-zero PIT exit code is preserved
-  in the artifact and reviewed manually instead of blocking all Sprint 2
-  evidence.
+  uploads SAST notes through the `sast-reports` artifact; a local full CodeQL
+  SARIF archive is not claimed unless it is exported separately from GitHub.
+- PIT mutation testing is evidence review in the dedicated
+  `pit-mutation-testing` workflow. The expected presentation entry point is
+  `target/pit-reports/index.html` inside the `pit-mutation-testing-report`
+  artifact.
 - Gitleaks JSON output of `[]` is valid evidence that no leaks were detected in
   the scanned repository content.
 - The frontend CSP no longer allows `'unsafe-inline'` in the current code and
-  `form-action 'self'` is enforced. The downloaded ZAP evidence is
-  pre-remediation, so a fresh ZAP run is required before closing that finding in
-  the evidence folder.
+  `form-action 'self'` is enforced. Fresh ZAP/runtime artifacts from the latest
+  GitHub Actions run should be used as the assessment source of truth.
 - `org.eclipse.angus:angus-activation` is treated as a transitive dependency
   triage item. Do not suppress or override it without linking the
   Dependency-Check finding, current resolved version and compatibility impact.

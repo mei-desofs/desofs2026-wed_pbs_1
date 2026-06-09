@@ -188,7 +188,7 @@ Scope covered in this sprint update: `V1.2.1`, `V1.2.2`, `V1.2.3`,
 | CycloneDX | SBOM is generated in JSON/XML. | `sbom-cyclonedx` | Dependency inventory evidence. |
 | Runtime security / IAST-like evidence | Security-focused runtime tests run with JaCoCo skipped and upload Surefire, endpoint checks and runtime notes. | `iast-runtime-security-evidence` | Runtime evidence always; full agent-based IAST is not claimed. |
 | ZAP | Baseline DAST runs against a live CI application instance. | `dast-zap-baseline-reports` | Evidence review baseline DAST. |
-| actionlint | Workflow syntax/semantics validated locally. | Local terminal output or pipeline notes | Supporting pipeline evidence. |
+| actionlint | Workflow syntax can be validated locally when the tool is available. | Local terminal output or pipeline notes | Supporting evidence only; not a substitute for a real GitHub Actions run. |
 
 ## Not Applicable Scope
 

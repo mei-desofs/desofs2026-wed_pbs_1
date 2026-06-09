@@ -137,7 +137,7 @@ It must remain disabled in production-like environments.
 
 ## Database Configuration
 
-The production-like profile uses PostgreSQL and `ddl-auto=validate`. Schema changes must therefore be handled deliberately rather than generated implicitly at runtime. The development profile uses `ddl-auto=update` for easier local iteration.
+The production-like profile uses PostgreSQL and `ddl-auto=validate`. Schema changes must therefore be handled deliberately rather than generated implicitly at runtime. The development profile uses `ddl-auto=update` for easier local iteration. The current repository does not include a formal Flyway/Liquibase migration chain; use `docs/PRODUCTION_SCHEMA_CHECKLIST.md` as the deployment checklist until versioned migrations are added.
 
 JWT logout/replay protection requires a persistent revocation table. Provision the equivalent schema before running production-like profiles:
 

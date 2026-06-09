@@ -12,7 +12,8 @@ Garantir que o backend Spring Boot e a pipeline executam controlos minimos de se
 - SCA com OWASP Dependency-Check;
 - secret scanning com Gitleaks;
 - DAST baseline com OWASP ZAP;
-- publicacao de artifacts dos relatórios.
+- runtime security / IAST-like evidence without claiming an agent-based IAST sensor;
+- publicacao de evidence artifacts.
 
 ## Testes Automatizados
 
@@ -60,19 +61,10 @@ Thresholds minimos configurados:
 
 | Metrica | Minimo |
 | ------- | ------ |
-| Instruction coverage | 70% |
 | Line coverage | 70% |
 | Branch coverage | 50% |
 
-Cobertura observada localmente antes da configuracao do gate:
-
-| Metrica | Valor |
-| ------- | ----- |
-| Instruction coverage | 76.95% |
-| Line coverage | 75.24% |
-| Branch coverage | 58.95% |
-
-Impacto de seguranca: o gate reduz o risco de regressões em fluxos de autenticacao, autorizacao e validacao, obrigando a manter testes minimos para codigo novo.
+Impacto de seguranca: o gate reduz o risco de regressoes em fluxos de autenticacao, autorizacao e validacao, obrigando a manter testes minimos para codigo novo. Os valores reais devem ser lidos do artifact `ci-jacoco-coverage-report` de cada execucao.
 
 ## SpotBugs SAST
 
@@ -177,7 +169,6 @@ Headers verificados por teste automatizado:
 - `Referrer-Policy: no-referrer`
 - `Content-Security-Policy` com `default-src 'self'`
 - `Cache-Control` seguro em respostas publicas.
-
 Impacto de seguranca:
 
 - reduz XSS;
@@ -191,11 +182,12 @@ Os workflows publicam:
 
 | Job | Artifacts |
 | -------- | --------- |
-| `build-test / build-and-test` | Surefire reports, JaCoCo report, PIT report/summary |
+| `build-test / build-and-test` | Surefire reports, JaCoCo report |
 | `security-secrets / secrets` | Gitleaks JSON report |
 | `sast / SonarCloud SAST Scan` | SpotBugs XML, SAST summary, CodeQL/SonarCloud evidence |
 | `dependency-scanning / Dependency Vulnerability Scanning` | Dependency-Check HTML/XML/JSON/SARIF, CycloneDX SBOM |
 | `dast-scan / dast-scan` | Runtime security/IAST readiness notes, ZAP HTML/XML/JSON, application log |
+| `pit-mutation-testing / pit / mutation-testing` | Complete PIT HTML/XML report, including `target/pit-reports/index.html`, plus mutation summary |
 
 Os artifacts devem ser descarregados do GitHub Actions e guardados como evidencia da sprint quando solicitado.
 

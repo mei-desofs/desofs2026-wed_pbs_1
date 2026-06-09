@@ -15,6 +15,7 @@ the affected dependency families. A post-remediation Dependency-Check run on
 | Tomcat embed core/websocket/el | Critical/high Tomcat CVEs | 10.1.53 | Overrode Boot-managed Tomcat to 10.1.55, latest stable 10.1.x from Maven metadata. | Fixed by post-remediation scan | No Tomcat finding remains in the local post-remediation Dependency-Check report. |
 | PostgreSQL JDBC | CVE affecting versions before 42.7.11 | 42.7.10 | Set `postgresql.version` to 42.7.11. | Fixed by post-remediation scan | No PostgreSQL JDBC finding remains in the local post-remediation Dependency-Check report. |
 | Log4j API / log4j-to-slf4j | Medium CVEs reported for Log4j API 2.24.3 | 2.24.3 | Set `log4j2.version` to 2.26.0, latest stable 2.x line observed in Maven metadata. | Fixed by post-remediation scan | Application uses Spring Boot logging through SLF4J/Logback; no Log4j finding remains in the local post-remediation report. |
+| Spring Framework core/web | CVE-2026-41840, CVE-2026-41841, CVE-2026-41842, CVE-2026-41843, CVE-2026-41850, CVE-2026-41851 | 6.2.18 | Set `spring-framework.version` to 6.2.19, the compatible 6.2.x patch available while Spring Boot parent remains 3.5.14. | Fixed locally; pending CI SCA confirmation | Avoided Spring Framework 7.x / Spring Boot 4.x because that would be a major stack change for Sprint 2. |
 | Angus Activation | CVE-2025-7962 | 2.0.3 | No stable compatible upgrade selected; Maven metadata only showed 2.1.0-M1 as newer. | Accepted residual risk / applicability review | Transitive dependency via JAXB/Hibernate. GhostReport does not implement email/SMTP attachment processing. Revisit if a stable 2.1.x release is available. |
 | Hibernate Validator | CVE-2025-15104 | 8.0.3.Final | No direct upgrade selected in this phase. | Accepted residual risk / applicability review | Managed by Spring Boot validation stack. Upgrade to 9.x may imply Jakarta Validation stack changes; keep under manual triage and reassess with future Spring Boot patches. |
 
@@ -63,6 +64,13 @@ Local note for this remediation pass: `./mvnw clean test`, `./mvnw verify` and
 updates. The local post-remediation report is archived in the Evidence folder;
 the next GitHub Actions SCA run should still be downloaded for presentation
 timeline evidence.
+
+Additional note on 2026-06-09: Dependency-Check reported newly published Spring
+Framework CVEs against `spring-core` and `spring-web` 6.2.18. Maven metadata
+showed Spring Boot 3.5.14 still as the latest 3.5.x parent, while Spring
+Framework 6.2.19 was available. The project therefore uses the compatible
+`spring-framework.version` patch override and should keep it until the Spring
+Boot parent manages the same or newer fixed framework version.
 
 ## ASVS Mapping
 

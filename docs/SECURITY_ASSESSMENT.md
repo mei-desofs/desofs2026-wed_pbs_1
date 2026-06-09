@@ -82,7 +82,7 @@ evidence used to verify them. It should be read together with
 | CycloneDX | Generates JSON/XML SBOM. | `sbom-cyclonedx` | SBOM is inventory evidence, not vulnerability triage by itself. |
 | ZAP | Baseline DAST runs against a live app in CI. | `dast-zap-baseline-reports` | Baseline scan is unauthenticated and should be treated as first-line DAST evidence. |
 | Runtime security / IAST-like evidence | Security-focused tests run with JaCoCo skipped and upload Surefire, endpoint checks and runtime notes. | `iast-runtime-security-evidence` | Full agent-based IAST and taint tracking are not claimed. |
-| PIT | Runs in the dedicated `pit-mutation-testing` workflow and uploads summary/exit code. | `pit-mutation-testing-report` | Mutation score is not a blocking Sprint 2 gate. |
+| PIT | Runs in the dedicated `pit-mutation-testing` workflow, validates `target/pit-reports/index.html` and uploads the complete HTML/XML report plus summaries. | `pit-mutation-testing-report` | Mutation score is not a blocking Sprint 2 gate. |
 | actionlint | Workflow syntax can be validated locally when actionlint is available. | Local command output or pipeline validation notes | Does not replace a real GitHub Actions run. |
 
 ## Scope Boundaries

@@ -23,6 +23,7 @@
 		<java.version>17</java.version>
 		<log4j2.version>2.26.0</log4j2.version>
 		<postgresql.version>42.7.11</postgresql.version>
+		<spring-framework.version>6.2.19</spring-framework.version>
 		<tomcat.version>10.1.55</tomcat.version>
 		<sonar.organization>mei-desofs-ghostreport1</sonar.organization>
 	</properties>
