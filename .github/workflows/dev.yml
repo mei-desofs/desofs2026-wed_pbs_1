@@ -57,8 +57,8 @@ jobs:
           cache: maven
           cache-dependency-path: ghostreport/pom.xml
 
-      - name: Run automated tests and generate JaCoCo coverage evidence
-        run: ./mvnw test jacoco:report
+      - name: Run automated tests and enforce JaCoCo coverage
+        run: ./mvnw verify
         env:
           DB_URL: jdbc:postgresql://localhost:5432/ghostreport
           DB_USERNAME: postgres
@@ -127,8 +127,8 @@ jobs:
             echo ""
             echo "| Evidence | Artifact |"
             echo "| --- | --- |"
-            echo "| Maven test results | ci-surefire-test-reports |"
-            echo "| JaCoCo coverage | ci-jacoco-coverage-report |"
+            echo "| Maven verify test results | ci-surefire-test-reports |"
+            echo "| JaCoCo report and coverage check | ci-jacoco-coverage-report |"
             echo "| PIT mutation testing | pit-mutation-testing-report |"
             echo "| Gate mode | Blocking for compile/tests/coverage; PIT evidence review |"
           } >> "$GITHUB_STEP_SUMMARY"
