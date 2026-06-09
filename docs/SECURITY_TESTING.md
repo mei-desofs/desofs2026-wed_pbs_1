@@ -13,9 +13,18 @@ Phase 2 Sprint 2.
 
 ## PIT Configuration
 
-PIT is configured for the full GhostReport package:
+PIT is configured for the GhostReport application subpackages:
 
-- `com.ghostreport.*`
+- `com.ghostreport.config.*`
+- `com.ghostreport.controller.*`
+- `com.ghostreport.domain.*`
+- `com.ghostreport.dto.*`
+- `com.ghostreport.exception.*`
+- `com.ghostreport.model.*`
+- `com.ghostreport.repository.*`
+- `com.ghostreport.security.*`
+- `com.ghostreport.service.*`
+- `com.ghostreport.validation.*`
 
 HTML and XML output are enabled, and `timestampedReports=false` keeps the final
 report at a predictable path:

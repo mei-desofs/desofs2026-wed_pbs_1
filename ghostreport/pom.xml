@@ -181,7 +181,16 @@
 				<configuration>
 
 					<targetClasses>
-						<param>com.ghostreport.*</param>
+						<param>com.ghostreport.config.*</param>
+						<param>com.ghostreport.controller.*</param>
+						<param>com.ghostreport.domain.*</param>
+						<param>com.ghostreport.dto.*</param>
+						<param>com.ghostreport.exception.*</param>
+						<param>com.ghostreport.model.*</param>
+						<param>com.ghostreport.repository.*</param>
+						<param>com.ghostreport.security.*</param>
+						<param>com.ghostreport.service.*</param>
+						<param>com.ghostreport.validation.*</param>
 					</targetClasses>
 
 					<targetTests>
