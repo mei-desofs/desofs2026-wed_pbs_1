@@ -126,7 +126,7 @@
 
 					<execution>
 						<id>report</id>
-						<phase>test</phase>
+						<phase>verify</phase>
 
 						<goals>
 							<goal>report</goal>
@@ -135,7 +135,7 @@
 
 					<execution>
 						<id>coverage-check</id>
-						<phase>test</phase>
+						<phase>verify</phase>
 
 						<goals>
 							<goal>check</goal>

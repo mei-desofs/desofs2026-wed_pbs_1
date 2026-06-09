@@ -107,7 +107,7 @@ class PasswordPolicyAndResetSecurityTest {
                                 }
                                 """.formatted(CURRENT_PASSWORD)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Password is compromised"));
+                .andExpect(jsonPath("$.error").value("Invalid request"));
     }
 
     @Test
@@ -125,7 +125,7 @@ class PasswordPolicyAndResetSecurityTest {
                                 }
                                 """.formatted(NEW_PASSWORD, CURRENT_PASSWORD)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Password was already used"));
+                .andExpect(jsonPath("$.error").value("Invalid request"));
     }
 
     @Test
@@ -141,7 +141,7 @@ class PasswordPolicyAndResetSecurityTest {
                                 }
                                 """.formatted(NEW_PASSWORD)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Current password is invalid"));
+                .andExpect(jsonPath("$.error").value("Invalid request"));
     }
 
     @Test
@@ -162,7 +162,7 @@ class PasswordPolicyAndResetSecurityTest {
 
         confirmReset(token, NEW_PASSWORD)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Invalid or expired reset token"));
+                .andExpect(jsonPath("$.error").value("Invalid request"));
     }
 
     @Test
@@ -173,7 +173,7 @@ class PasswordPolicyAndResetSecurityTest {
 
         confirmReset(token, SECOND_NEW_PASSWORD)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Invalid or expired reset token"));
+                .andExpect(jsonPath("$.error").value("Invalid request"));
     }
 
     private org.springframework.test.web.servlet.ResultActions changePassword(
