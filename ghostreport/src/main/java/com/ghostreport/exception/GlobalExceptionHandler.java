@@ -2,6 +2,7 @@ package com.ghostreport.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
@@ -66,6 +67,17 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleAccessDeniedException(AccessDeniedException ex) {
         Map<String, Object> body = errorBody(HttpStatus.FORBIDDEN.value(), "Access denied");
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<Map<String, Object>> handleOptimisticLockingFailure(
+            ObjectOptimisticLockingFailureException ex
+    ) {
+        Map<String, Object> body = errorBody(
+                HttpStatus.CONFLICT.value(),
+                "Resource was modified by another transaction"
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
     @ExceptionHandler(Exception.class)
