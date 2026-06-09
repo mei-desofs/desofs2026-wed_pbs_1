@@ -468,9 +468,7 @@ jobs:
               echo "| $method_and_path | $purpose | $status |"
             done
 
-            invalid_jwt_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-              -H 'Authorization: Bearer invalid-ci-runtime-token' \
-              http://localhost:8081/admin/users || true)"
+            invalid_jwt_status="$(python -c "import http.client; conn = http.client.HTTPConnection('localhost', 8081, timeout=10); conn.request('GET', '/admin/users', headers={'Authorization': 'Bearer invalid-ci-runtime-token'}); print(conn.getresponse().status)" 2>/dev/null || echo 000)"
             csrf_rejection_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
               -H 'Content-Type: application/json' \
               --data '{"currentPassword":"old-password","newPassword":"new-password"}' \
