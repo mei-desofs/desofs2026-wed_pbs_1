@@ -17,12 +17,16 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.ghostreport.validation.ValidationConstants.trim;
+import static com.ghostreport.validation.ValidationConstants.upper;
 
 @Service
 public class ReportService {
@@ -36,6 +40,7 @@ public class ReportService {
     private final CaseReviewRepository caseReviewRepository;
     private final AuditLogService auditLogService;
     private final SecurityMonitoringService securityMonitoringService;
+    private final ReportWorkflowPolicy reportWorkflowPolicy;
 
     private final BCryptPasswordEncoder passwordEncoder =
             new BCryptPasswordEncoder();
@@ -46,7 +51,8 @@ public class ReportService {
             FileStorageService fileStorageService,
             CaseReviewRepository caseReviewRepository,
             AuditLogService auditLogService,
-            SecurityMonitoringService securityMonitoringService
+            SecurityMonitoringService securityMonitoringService,
+            ReportWorkflowPolicy reportWorkflowPolicy
     ) {
         this.reportRepository = reportRepository;
         this.attachmentRepository = attachmentRepository;
@@ -54,8 +60,10 @@ public class ReportService {
         this.caseReviewRepository = caseReviewRepository;
         this.auditLogService = auditLogService;
         this.securityMonitoringService = securityMonitoringService;
+        this.reportWorkflowPolicy = reportWorkflowPolicy;
     }
 
+    @Transactional
     public CreateReportResponse createReport(CreateReportRequest request) {
 
         TrackingCode trackingCode =
@@ -82,7 +90,7 @@ public class ReportService {
         );
 
         report.setCategory(
-                request.getCategory()
+                trim(request.getCategory())
         );
 
         report.setStatus(
@@ -156,6 +164,7 @@ public class ReportService {
         );
     }
 
+    @Transactional(readOnly = true)
     public List<ReportResponse> getAllReports() {
 
         if (SecurityUtils.hasRole("ANALYST") && !SecurityUtils.hasRole("ADMIN")) {
@@ -173,6 +182,7 @@ public class ReportService {
                 .toList();
     }
 
+    @Transactional
     public ReportResponse updateReportStatus(
             Long id,
             UpdateReportStatusRequest request
@@ -185,17 +195,28 @@ public class ReportService {
                         )
                 );
 
+        validateWorkflowActorRole();
         checkInternalAccessToReport(id);
 
-        report.setStatus(
-                ReportStatus.valueOf(
-                        request.getStatus().toUpperCase()
-                )
-        );
+        ReportStatus requestedStatus = parseRequestedStatus(request.getStatus());
+        reportWorkflowPolicy.validateTransition(report.getStatus(), requestedStatus);
+
+        report.setStatus(requestedStatus);
 
         Report saved = reportRepository.save(report);
 
         return toReportResponse(saved);
+    }
+
+    private ReportStatus parseRequestedStatus(String requestedStatus) {
+        try {
+            return ReportStatus.valueOf(requestedStatus.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid report status"
+            );
+        }
     }
 
     public AttachmentResponse uploadAttachment(
@@ -614,6 +635,17 @@ public class ReportService {
                     HttpStatus.FORBIDDEN
             );
         }
+    }
+
+    private void validateWorkflowActorRole() {
+        if (SecurityUtils.hasRole("ADMIN") || SecurityUtils.hasRole("ANALYST")) {
+            return;
+        }
+
+        throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "Only analysts or administrators can change report workflow state"
+        );
     }
 
     private void recordUploadRejected(Long reportId, String reason) {

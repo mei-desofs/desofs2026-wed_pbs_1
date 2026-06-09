@@ -14,6 +14,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
+import static com.ghostreport.validation.ValidationConstants.trim;
+import static com.ghostreport.validation.ValidationConstants.upper;
+
 @Service
 public class UserService {
 
@@ -22,15 +25,18 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
+    private final PasswordPolicyService passwordPolicyService;
 
     public UserService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            PasswordPolicyService passwordPolicyService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.auditLogService = auditLogService;
+        this.passwordPolicyService = passwordPolicyService;
     }
 
     public List<UserResponse> getAllUsers() {
@@ -46,29 +52,36 @@ public class UserService {
     }
 
     public UserResponse createUser(CreateUserRequest request) {
-        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+        String username = trim(request.getUsername());
+        String email = trim(request.getEmail());
+
+        if (userRepository.findByUsername(username).isPresent()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username already exists");
         }
 
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+        if (userRepository.findByEmail(email).isPresent()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already exists");
         }
 
         UserRole role;
         try {
-            role = UserRole.valueOf(request.getRole().toUpperCase());
+            role = UserRole.valueOf(upper(request.getRole()));
         } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
         }
 
         User user = new User();
+        user.setUsername(username);
+        user.setEmail(email);
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
+        passwordPolicyService.validateNewPassword(null, request.getPassword());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setRole(role);
         user.setActive(true);
 
         User saved = userRepository.save(user);
+        passwordPolicyService.rememberPassword(saved, saved.getPasswordHash());
 
         logger.info(
                 "User created with id={}, role={}",
@@ -84,6 +97,23 @@ public class UserService {
         );
 
         return toResponse(saved);
+    }
+
+    public void changePassword(String username, String currentPassword, String newPassword) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            auditLogService.log("PASSWORD_CHANGE_REJECTED", "USER", user.getId(), "Current password validation failed");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current password is invalid");
+        }
+
+        passwordPolicyService.validateNewPassword(user, newPassword);
+        String newHash = passwordEncoder.encode(newPassword);
+        user.setPasswordHash(newHash);
+        User saved = userRepository.save(user);
+        passwordPolicyService.rememberPassword(saved, newHash);
+        auditLogService.log("PASSWORD_CHANGED", "USER", saved.getId(), "Password changed by authenticated user");
     }
 
     public UserResponse setActive(Long userId, boolean active) {

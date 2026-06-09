@@ -1,4 +1,6 @@
 ghostreport:
   jwt:
     secret: test-only-change-this-secret-32-chars
+    active-key-id: test-key
+    previous-secrets:
     expiration-seconds: 3600

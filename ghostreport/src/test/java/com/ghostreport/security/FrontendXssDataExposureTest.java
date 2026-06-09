@@ -1,0 +1,120 @@
+package com.ghostreport.security;
+
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class FrontendXssDataExposureTest {
+
+    private static final Pattern DANGEROUS_DOM_SINK = Pattern.compile(
+            "\\b(?:innerHTML|outerHTML|insertAdjacentHTML)\\b|document\\.write\\s*\\(");
+    private static final Pattern PERSISTENT_BROWSER_STORAGE = Pattern.compile("\\b(?:localStorage|sessionStorage)\\b");
+    private static final Pattern TRACKING_CODE_QUERY = Pattern.compile(
+            "(?:/track\\.html\\?|[?&](?:code|trackingCode)=|URLSearchParams\\s*\\(|trackingCode[^\\n;]*window\\.location|window\\.location[^\\n;]*trackingCode)");
+
+    @Test
+    void frontendDoesNotUseDangerousHtmlParsingSinks() throws IOException {
+        Map<Path, String> sources = readStaticFiles(".js");
+
+        List<String> offenders = sources.entrySet().stream()
+                .filter(entry -> DANGEROUS_DOM_SINK.matcher(entry.getValue()).find())
+                .map(entry -> relativeStaticPath(entry.getKey()))
+                .toList();
+
+        assertThat(offenders)
+                .as("Frontend must render API, URL and user-controlled values with DOM APIs, not HTML parsing sinks")
+                .isEmpty();
+    }
+
+    @Test
+    void bearerTokensAreNotPersistedInBrowserStorage() throws IOException {
+        Map<Path, String> sources = readStaticFiles(".js");
+
+        List<String> offenders = sources.entrySet().stream()
+                .filter(entry -> PERSISTENT_BROWSER_STORAGE.matcher(entry.getValue()).find())
+                .map(entry -> relativeStaticPath(entry.getKey()))
+                .toList();
+
+        assertThat(offenders)
+                .as("Bearer tokens must remain in memory only; browser storage persists token exposure after XSS or shared-device access")
+                .isEmpty();
+    }
+
+    @Test
+    void trackingCodesAreNotPlacedInBrowserUrls() throws IOException {
+        Map<Path, String> sources = readStaticFiles(".js", ".html");
+
+        List<String> offenders = sources.entrySet().stream()
+                .filter(entry -> TRACKING_CODE_QUERY.matcher(entry.getValue()).find())
+                .map(entry -> relativeStaticPath(entry.getKey()))
+                .toList();
+
+        assertThat(offenders)
+                .as("Tracking codes are report access secrets and must not be placed in query strings, redirects or URL parsers")
+                .isEmpty();
+    }
+
+    @Test
+    void xssPayloadsAreRenderedThroughTextNodeApisOnly() throws IOException {
+        String payload = "<img src=x onerror=alert(1)>\"'&";
+        assertThat(payload).contains("<").contains("\"").contains("'").contains("&");
+
+        Map<Path, String> sources = readStaticFiles(".js");
+        String allSources = String.join("\n", sources.values());
+        String domHelper = sources.entrySet().stream()
+                .filter(entry -> entry.getKey().getFileName().toString().equals("dom.js"))
+                .map(Map.Entry::getValue)
+                .findFirst()
+                .orElse("");
+
+        assertThat(domHelper)
+                .contains("document.createTextNode")
+                .contains("textContent");
+        assertThat(allSources)
+                .doesNotContain("escapeHtml(")
+                .doesNotContain("replaceAll(\"<\"")
+                .doesNotContain("&#039;");
+    }
+
+    private static Map<Path, String> readStaticFiles(String... extensions) throws IOException {
+        Path staticRoot = staticRoot();
+        List<String> suffixes = List.of(extensions);
+
+        try (Stream<Path> paths = Files.walk(staticRoot)) {
+            return paths
+                    .filter(Files::isRegularFile)
+                    .filter(path -> suffixes.stream().anyMatch(suffix -> path.getFileName().toString().endsWith(suffix)))
+                    .collect(Collectors.toMap(path -> path, FrontendXssDataExposureTest::readString));
+        }
+    }
+
+    private static Path staticRoot() {
+        Path moduleRoot = Path.of("src/main/resources/static");
+        if (Files.exists(moduleRoot)) {
+            return moduleRoot;
+        }
+        return Path.of("ghostreport/src/main/resources/static");
+    }
+
+    private static String readString(Path path) {
+        try {
+            return Files.readString(path, StandardCharsets.UTF_8);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to read " + path, ex);
+        }
+    }
+
+    private static String relativeStaticPath(Path path) {
+        return staticRoot().relativize(path).toString();
+    }
+}

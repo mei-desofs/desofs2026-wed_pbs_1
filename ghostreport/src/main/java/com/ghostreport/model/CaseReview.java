@@ -11,6 +11,9 @@ public class CaseReview {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    private Long version;
+
     @OneToOne(optional = false)
     @JoinColumn(name = "report_id", nullable = false, unique = true)
     private Report report;
@@ -45,6 +48,10 @@ public class CaseReview {
         return id;
     }
 
+    public Long getVersion() {
+        return version;
+    }
+
     public Report getReport() {
         return report;
     }
@@ -67,6 +74,10 @@ public class CaseReview {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public void setReport(Report report) {
