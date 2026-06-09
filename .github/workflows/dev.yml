@@ -71,11 +71,41 @@ jobs:
           timeout 12m ./mvnw \
             -Djacoco.skip=true \
             -DskipTests=false \
+            -DtargetClasses=com.ghostreport.domain.* \
+            -DtargetTests=com.ghostreport.domain.* \
+            -Dthreads=2 \
             org.pitest:pitest-maven:mutationCoverage
           pit_exit_code=$?
           set -e
 
           echo "$pit_exit_code" > target/pit-reports/pit-exit-code.txt
+          python - <<'PY' > target/pit-reports/pit-mutation-summary.md
+          import pathlib
+          import xml.etree.ElementTree as ET
+
+          report = pathlib.Path("target/pit-reports/mutations.xml")
+          if not report.exists():
+              print("| Metric | Value |")
+              print("| --- | --- |")
+              print("| Mutation report | Not generated |")
+              raise SystemExit(0)
+
+          mutations = ET.parse(report).getroot().findall("mutation")
+          total = len(mutations)
+          killed = sum(1 for m in mutations if m.get("detected") == "true")
+          survived = sum(1 for m in mutations if (m.findtext("status") or "") == "SURVIVED")
+          no_coverage = sum(1 for m in mutations if (m.findtext("status") or "") == "NO_COVERAGE")
+          score = (killed / total * 100) if total else 0
+          print("| Metric | Value |")
+          print("| --- | --- |")
+          print(f"| Scope | `com.ghostreport.domain.*` |")
+          print(f"| Total mutations | {total} |")
+          print(f"| Killed/detected | {killed} |")
+          print(f"| Survived | {survived} |")
+          print(f"| No coverage | {no_coverage} |")
+          print(f"| Mutation score | {score:.2f}% |")
+          PY
+
           {
             echo "# PIT Mutation Testing Evidence"
             echo ""
@@ -84,7 +114,19 @@ jobs:
             echo "PIT command exit code: $pit_exit_code"
             echo ""
             echo "Gate mode: evidence review. Mutation findings and thresholds remain triaged manually."
+            echo ""
+            echo "CI scope: domain value objects only, to keep a stable percentage report inside the build-test time budget."
+            echo ""
+            cat target/pit-reports/pit-mutation-summary.md
           } > target/pit-reports/pit-evidence-summary.md
+
+          {
+            echo "## PIT Mutation Testing"
+            echo ""
+            cat target/pit-reports/pit-mutation-summary.md
+            echo ""
+            echo "Artifact: pit-mutation-testing-report"
+          } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$pit_exit_code" -eq 124 ]; then
             echo "::warning title=PIT evidence review::PIT reached the 12 minute CI evidence timebox. Evidence artifact was still generated for triage."
@@ -439,44 +481,74 @@ jobs:
             -Dtest=RuntimeSecurityEventLoggingTest,ErrorHandlingSecurityTest,SecurityHeadersTest,JwtServiceSecurityTest,LoginRateLimitSecurityTest,CsrfSecurityTest \
             test
 
-      - name: Prepare optional Contrast Java agent integration evidence
+      - name: Build GhostReport executable JAR for DAST and IAST
+        run: ./mvnw -DskipTests package
+
+      - name: Detect optional Contrast IAST configuration
+        id: contrast_config
         run: |
           mkdir -p target/iast-evidence
-          {
-            echo "# Runtime Security Evidence and IAST Readiness"
-            echo ""
-            echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo ""
-            echo "Executed security-focused tests for authentication events, JWT validation, rate limiting, CSRF, security headers and error handling."
-            if [ -n "${CONTRAST_AGENT_VERSION:-}" ] && \
-               [ -n "${CONTRAST__API__URL:-}" ] && \
-               [ -n "${CONTRAST__API__API_KEY:-}" ] && \
-               [ -n "${CONTRAST__API__SERVICE_KEY:-}" ] && \
-               [ -n "${CONTRAST__API__USER_NAME:-}" ]; then
-              echo "Contrast Java agent configuration variables are present."
-            else
-              echo "Contrast Java agent configuration variables are not present in this run."
+          missing=""
+          for required in CONTRAST__API__URL CONTRAST__API__API_KEY CONTRAST__API__SERVICE_KEY CONTRAST__API__USER_NAME; do
+            if [ -z "${!required:-}" ]; then
+              missing="$missing $required"
             fi
-          } > target/iast-evidence/iast-runtime-evidence.md
+          done
+
+          if [ -z "$missing" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "Contrast IAST configuration is present." > target/iast-evidence/contrast-agent-state.txt
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Contrast IAST configuration is incomplete. Missing:$missing" > target/iast-evidence/contrast-agent-state.txt
+          fi
         env:
-          CONTRAST_AGENT_VERSION: ${{ vars.CONTRAST_AGENT_VERSION }}
           CONTRAST__API__URL: ${{ vars.CONTRAST__API__URL }}
           CONTRAST__API__API_KEY: ${{ secrets.CONTRAST__API__API_KEY }}
           CONTRAST__API__SERVICE_KEY: ${{ secrets.CONTRAST__API__SERVICE_KEY }}
           CONTRAST__API__USER_NAME: ${{ secrets.CONTRAST__API__USER_NAME }}
 
+      - name: Download Contrast Java agent
+        if: steps.contrast_config.outputs.enabled == 'true'
+        run: |
+          mkdir -p target/contrast-agent
+          curl --fail --location --retry 3 \
+            --output target/contrast-agent/contrast-agent.jar \
+            "${CONTRAST_AGENT_URL:-https://download.java.contrastsecurity.com/latest}"
+          test -s target/contrast-agent/contrast-agent.jar
+        env:
+          CONTRAST_AGENT_URL: ${{ vars.CONTRAST_AGENT_URL }}
+
       - name: Start GhostReport on the runner at localhost:8081
         run: |
           mkdir -p target/zap-reports
           chmod 777 target/zap-reports
-          nohup ./mvnw spring-boot:run \
-            -Dspring-boot.run.profiles=dev \
+          contrast_agent_opts=""
+          if [ "${CONTRAST_ENABLED:-false}" = "true" ]; then
+            contrast_agent_opts="-javaagent:target/contrast-agent/contrast-agent.jar"
+            export CONTRAST__APPLICATION__NAME="${CONTRAST__APPLICATION__NAME:-GhostReport-CI}"
+            export CONTRAST__SERVER__NAME="${CONTRAST__SERVER__NAME:-github-actions}"
+            export CONTRAST__SERVER__ENVIRONMENT="${CONTRAST__SERVER__ENVIRONMENT:-qa}"
+          fi
+
+          nohup java $contrast_agent_opts \
+            -jar target/ghostreport-0.0.1-SNAPSHOT.jar \
+            --spring.profiles.active=dev \
             > target/ghostreport-dast-app.log 2>&1 &
           echo $! > target/ghostreport-dast-app.pid
         env:
+          CONTRAST_ENABLED: ${{ steps.contrast_config.outputs.enabled }}
           DB_URL: jdbc:postgresql://localhost:5432/ghostreport
           DB_USERNAME: postgres
           DB_PASSWORD: user
+          CONTRAST__API__URL: ${{ vars.CONTRAST__API__URL }}
+          CONTRAST__API__API_KEY: ${{ secrets.CONTRAST__API__API_KEY }}
+          CONTRAST__API__SERVICE_KEY: ${{ secrets.CONTRAST__API__SERVICE_KEY }}
+          CONTRAST__API__USER_NAME: ${{ secrets.CONTRAST__API__USER_NAME }}
+          CONTRAST__APPLICATION__NAME: ${{ vars.CONTRAST__APPLICATION__NAME }}
+          CONTRAST__SERVER__NAME: ${{ vars.CONTRAST__SERVER__NAME }}
+          CONTRAST__SERVER__ENVIRONMENT: ${{ vars.CONTRAST__SERVER__ENVIRONMENT }}
+          CONTRAST__ASSESS__ENABLE: "true"
 
       - name: Wait until GhostReport is ready for scanning
         run: |
@@ -506,6 +578,31 @@ jobs:
               -J zap-baseline.json \
               -I
         continue-on-error: true
+
+      - name: Prepare runtime security and IAST evidence summary
+        if: always()
+        run: |
+          {
+            echo "# Runtime Security Evidence and IAST"
+            echo ""
+            echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo ""
+            echo "Executed security-focused tests for authentication events, JWT validation, rate limiting, CSRF, security headers and error handling."
+            echo ""
+            echo "Application runtime: executable Spring Boot JAR on localhost:8081."
+            echo ""
+            if [ "${CONTRAST_ENABLED:-false}" = "true" ]; then
+              echo "Contrast Java agent: enabled and attached with -javaagent."
+              echo "IAST status: complete external IAST telemetry should be available in Contrast after the runtime tests and ZAP traffic are processed."
+            else
+              echo "Contrast Java agent: not enabled for this run."
+              echo "IAST status: runtime security evidence only. Configure Contrast variables/secrets to claim complete external IAST telemetry."
+            fi
+            echo ""
+            echo "ZAP baseline target: http://localhost:8081"
+          } > target/iast-evidence/iast-runtime-evidence.md
+        env:
+          CONTRAST_ENABLED: ${{ steps.contrast_config.outputs.enabled }}
 
       - name: Upload runtime security and IAST readiness evidence artifact
         uses: actions/upload-artifact@v7

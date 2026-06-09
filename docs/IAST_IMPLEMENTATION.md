@@ -10,10 +10,12 @@ GhostReport uses a practical two-part approach:
 | Layer | Purpose | Evidence |
 | --- | --- | --- |
 | Runtime security tests | Exercise authentication, authorization, CSRF, error handling and monitoring paths while the application context is running. | Surefire reports and runtime security events. |
-| Optional Contrast Java Agent | Provide JVM agent-based IAST telemetry when project/team credentials are configured. | Contrast platform findings plus workflow readiness notes. |
+| Optional Contrast Java Agent | Provide JVM agent-based IAST telemetry when project/team credentials are configured. | Contrast platform findings plus workflow evidence that the agent was attached. |
 
 This avoids storing commercial IAST credentials in the repository and keeps the
-pipeline executable in local and academic CI environments.
+pipeline executable in local and academic CI environments. When the Contrast
+configuration is complete, the workflow downloads the official Java agent and
+starts the packaged Spring Boot JAR with `-javaagent`.
 
 ## GitHub Actions Integration
 
@@ -40,14 +42,24 @@ build-and-test` owns the blocking coverage gate. The runtime security job should
 fail when the selected runtime security tests fail, when the application cannot
 start for DAST, or when there is a real execution error.
 
+## Complete IAST Execution
+
+The `dast-scan / dast-scan` job now has two modes:
+
+| Mode | Trigger | Runtime behaviour | Claim |
+| --- | --- | --- | --- |
+| Runtime evidence only | Contrast variables/secrets are missing | Security-focused tests run and ZAP scans the live app. | Runtime security evidence, not complete IAST. |
+| Complete external IAST | Contrast variables/secrets are present | The workflow downloads the Contrast Java agent, starts `target/ghostreport-0.0.1-SNAPSHOT.jar` with `-javaagent`, then sends runtime tests/ZAP traffic. | Runtime evidence plus external IAST telemetry in Contrast. |
+
 ## Evidence Generated
 
 | Evidence | Location |
 | --- | --- |
 | Runtime security test results | `ghostreport/target/surefire-reports/**` |
-| Runtime/IAST readiness evidence notes | `ghostreport/target/iast-evidence/iast-runtime-evidence.md` |
+| Runtime/IAST evidence notes | `ghostreport/target/iast-evidence/iast-runtime-evidence.md` |
 | GitHub artifact | `iast-runtime-security-evidence` |
 | Related DAST artifact | `dast-zap-baseline-reports` |
+| Contrast telemetry | Contrast application dashboard, only when the agent is configured and attached |
 
 ## Vulnerability Categories Exercised
 
@@ -64,9 +76,8 @@ start for DAST, or when there is a real execution error.
 
 - Local CI evidence is generated without external IAST credentials.
 - External IAST telemetry is enabled only when Contrast variables/secrets are
-  present in GitHub Actions.
+  present in GitHub Actions and the artifact confirms `-javaagent` attachment.
 - Without Contrast credentials, the project does not claim complete IAST
-  telemetry. It claims runtime security evidence plus readiness for optional
-  agent-based IAST.
+  telemetry. It claims runtime security evidence only.
 - IAST findings, when available, are reviewed together with SAST, DAST and SCA
   findings because exploitability and application context matter.

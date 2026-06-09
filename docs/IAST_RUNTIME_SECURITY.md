@@ -8,8 +8,10 @@ job of the main GitHub Actions workflow:
 ```
 
 This is not presented as complete IAST by default. The project always produces
-runtime security evidence through automated tests. External IAST telemetry is
-optional and depends on Contrast Java agent variables/secrets being configured.
+runtime security evidence through automated tests. Complete external IAST
+telemetry exists only when the Contrast Java agent is configured, downloaded,
+attached to the running Spring Boot application with `-javaagent`, and the
+runtime tests/ZAP traffic exercise that instrumented application.
 
 ## Architecture
 
@@ -20,7 +22,10 @@ GitHub Actions dev workflow
   -> Spring Boot application context / MockMvc runtime
   -> AuditLogService and SecurityMonitoringService
   -> Surefire reports and runtime security evidence artifact
-  -> optional Contrast Java Agent readiness notes
+  -> optional Contrast Java Agent download
+  -> instrumented Spring Boot JAR with -javaagent
+  -> ZAP traffic against the instrumented runtime
+  -> Contrast platform telemetry
 ```
 
 ## Runtime Coverage
@@ -53,25 +58,36 @@ The runtime security evidence job executes tests for:
 | Workflow | `.github/workflows/dev.yml` |
 | Job | `dast-scan / dast-scan` |
 | Artifact | `iast-runtime-security-evidence` |
-| Gate mode | Runtime security tests are blocking; external IAST telemetry is optional |
+| Gate mode | Runtime security tests and app startup are blocking; external IAST telemetry is conditional on Contrast configuration |
 
 The artifact contains:
 
 - Surefire reports for the security-focused runtime tests;
 - `target/iast-evidence/iast-runtime-evidence.md`;
-- readiness notes for optional external IAST agent telemetry.
+- whether the Contrast Java agent was attached;
+- ZAP/runtime traffic evidence for the instrumented application.
 
 ## Optional Contrast Java Agent Integration
 
-To enable external IAST telemetry in GitHub Actions, configure:
+To enable complete external IAST telemetry in GitHub Actions:
 
-```text
-CONTRAST_AGENT_VERSION
-CONTRAST__API__URL
-CONTRAST__API__API_KEY
-CONTRAST__API__SERVICE_KEY
-CONTRAST__API__USER_NAME
-```
+1. Create or select a Contrast application for GhostReport.
+2. Add repository variables:
+   - `CONTRAST__API__URL`
+   - `CONTRAST__APPLICATION__NAME` (optional; defaults to `GhostReport-CI`)
+   - `CONTRAST__SERVER__NAME` (optional; defaults to `github-actions`)
+   - `CONTRAST__SERVER__ENVIRONMENT` (optional; defaults to `qa`)
+   - `CONTRAST_AGENT_URL` (optional; defaults to `https://download.java.contrastsecurity.com/latest`)
+3. Add repository secrets:
+   - `CONTRAST__API__API_KEY`
+   - `CONTRAST__API__SERVICE_KEY`
+   - `CONTRAST__API__USER_NAME`
+4. Re-run the `dev` workflow.
+5. Open the `dast-scan / dast-scan` job and verify that
+   `iast-runtime-security-evidence` says `Contrast Java agent: enabled and
+   attached with -javaagent`.
+6. Confirm the application appears in Contrast with findings/route telemetry
+   from the runtime tests and ZAP baseline scan.
 
 The current repository keeps these values outside source control and expects
 them to be supplied as GitHub Actions variables/secrets.

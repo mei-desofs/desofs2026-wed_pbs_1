@@ -29,7 +29,7 @@ DAST/runtime evidence jobs only start after those two jobs complete.
 
 | Job | Purpose | Gate mode | Main artifacts/evidence |
 | --- | --- | --- | --- |
-| `build-test / build-and-test` | Maven compile, automated tests, JaCoCo coverage report and PIT mutation evidence review. | Blocking for compile, tests and coverage. PIT is evidence review. | `ci-surefire-test-reports`, `ci-jacoco-coverage-report`, `pit-mutation-testing-report` |
+| `build-test / build-and-test` | Maven automated tests, JaCoCo coverage report and scoped PIT mutation evidence review. | Blocking for tests and coverage. PIT is evidence review. | `ci-surefire-test-reports`, `ci-jacoco-coverage-report`, `pit-mutation-testing-report` |
 | `security-secrets / secrets` | Gitleaks scan of repository content using `.gitleaks.toml`. | Blocking for confirmed secret leaks. | `secret-scan-gitleaks-json` |
 | `sast / SonarCloud SAST Scan` | CodeQL, SpotBugs and SonarCloud SAST. | Evidence review. SonarCloud fails if `SONAR_TOKEN` is missing or the analysis fails. | `sast-reports`, GitHub Code Scanning alerts |
 | `dependency-scanning / Dependency Vulnerability Scanning` | OWASP Dependency-Check and CycloneDX SBOM. | Evidence review. Dependency-Check does not block the pipeline by CVSS threshold in Sprint 2 evidence mode. | `dependency-check-sca-reports`, `sbom-cyclonedx`, Code Scanning SARIF when generated |
@@ -51,8 +51,8 @@ mitigated elsewhere.
 | Area | What exists | What is not claimed |
 | --- | --- | --- |
 | CodeQL | CodeQL runs in GitHub Actions and publishes findings to GitHub Code Scanning. The workflow also uploads SAST summary files through `sast-reports`. | A local full CodeQL SARIF archive is not promised unless exported separately from GitHub. |
-| IAST | Runtime security-focused tests always run and produce Surefire plus `iast-runtime-evidence.md`. The workflow records whether Contrast Java agent configuration variables are present. | Full external IAST telemetry is not claimed unless the Contrast agent variables/secrets are configured and the agent is actually active. |
-| PIT | PIT runs in evidence review mode and writes `target/pit-reports/pit-evidence-summary.md` and `pit-exit-code.txt` even when PIT exits non-zero. | PIT is not a blocking mutation score gate in Sprint 2. |
+| IAST | Runtime security-focused tests always run and produce Surefire plus `iast-runtime-evidence.md`. When Contrast variables/secrets exist, the workflow downloads the Contrast Java agent and starts the packaged app with `-javaagent` before ZAP traffic. | Full external IAST telemetry is claimed only when the artifact confirms agent attachment and the Contrast dashboard receives the run telemetry. |
+| PIT | CI PIT runs in evidence review mode against `com.ghostreport.domain.*`, writes `pit-evidence-summary.md`, `pit-mutation-summary.md` and `pit-exit-code.txt`, and includes mutation percentages when `mutations.xml` is generated. | PIT is not a blocking mutation score gate in Sprint 2. Full-scope PIT can be run manually when deeper mutation evidence is needed. |
 | ZAP | ZAP baseline runs against a live local GhostReport instance in the CI runner and uploads HTML/XML/JSON reports plus the application log. | ZAP baseline is not authenticated deep DAST and is not equivalent to a full penetration test. |
 | Local evidence folder | `Deliverables/Phase 2/Evidence` is a curated local archive for downloaded artifacts. | GitHub Actions does not write directly into this repository folder. |
 
