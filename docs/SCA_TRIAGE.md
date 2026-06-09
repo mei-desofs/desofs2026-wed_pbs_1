@@ -18,6 +18,36 @@ the affected dependency families. A post-remediation Dependency-Check run on
 | Angus Activation | CVE-2025-7962 | 2.0.3 | No stable compatible upgrade selected; Maven metadata only showed 2.1.0-M1 as newer. | Accepted residual risk / applicability review | Transitive dependency via JAXB/Hibernate. GhostReport does not implement email/SMTP attachment processing. Revisit if a stable 2.1.x release is available. |
 | Hibernate Validator | CVE-2025-15104 | 8.0.3.Final | No direct upgrade selected in this phase. | Accepted residual risk / applicability review | Managed by Spring Boot validation stack. Upgrade to 9.x may imply Jakarta Validation stack changes; keep under manual triage and reassess with future Spring Boot patches. |
 
+## Current Code Scanning Review
+
+Local dependency-tree evidence shows:
+
+```text
+org.springframework.boot:spring-boot-starter-data-jpa:3.5.14
+\- org.hibernate.orm:hibernate-core:6.6.49.Final
+   \- org.glassfish.jaxb:jaxb-runtime:4.0.6
+      \- org.eclipse.angus:angus-activation:2.0.3
+
+org.springframework.boot:spring-boot-starter-validation:3.5.14
+\- org.hibernate.validator:hibernate-validator:8.0.3.Final
+```
+
+The two current Dependency-Check code scanning alerts are therefore not direct
+application dependencies. They are handled with a time-bounded suppression file
+at `ghostreport/owasp-dependency-check-suppressions.xml`:
+
+- `CVE-2025-15104`: NVD describes The Nu Html Checker (vnu), not Hibernate
+  Validator. Hibernate Validator 8.0.3.Final is the Spring Boot 3.5.14-managed
+  Jakarta Bean Validation implementation.
+- `CVE-2025-7962`: NVD describes SMTP injection in Jakarta Mail / Angus SMTP.
+  GhostReport does not depend on `org.eclipse.angus:smtp` and does not send
+  email. `angus-activation` is present only as a JAXB/Hibernate runtime
+  transitive dependency.
+
+These suppressions are not a replacement for future maintenance. Reassess them
+before the `until` date in the suppression XML, after Spring Boot dependency
+management changes, or if GhostReport adds email/SMTP processing.
+
 ## Verification Plan
 
 1. Run `./mvnw clean test`.

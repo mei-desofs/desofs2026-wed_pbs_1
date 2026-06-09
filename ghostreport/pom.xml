@@ -92,6 +92,7 @@
 					<ossindexAnalyzerEnabled>false</ossindexAnalyzerEnabled>
 					<failOnError>false</failOnError>
 					<failBuildOnCVSS>11</failBuildOnCVSS>
+					<suppressionFile>${project.basedir}/owasp-dependency-check-suppressions.xml</suppressionFile>
 
 					<formats>
 						<format>HTML</format>
