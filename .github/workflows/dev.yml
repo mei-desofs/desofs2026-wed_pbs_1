@@ -481,74 +481,23 @@ jobs:
             -Dtest=RuntimeSecurityEventLoggingTest,ErrorHandlingSecurityTest,SecurityHeadersTest,JwtServiceSecurityTest,LoginRateLimitSecurityTest,CsrfSecurityTest \
             test
 
-      - name: Build GhostReport executable JAR for DAST and IAST
+      - name: Build GhostReport executable JAR for DAST and runtime security testing
         run: ./mvnw -DskipTests package
-
-      - name: Detect optional Contrast IAST configuration
-        id: contrast_config
-        run: |
-          mkdir -p target/iast-evidence
-          missing=""
-          for required in CONTRAST__API__URL CONTRAST__API__API_KEY CONTRAST__API__SERVICE_KEY CONTRAST__API__USER_NAME; do
-            if [ -z "${!required:-}" ]; then
-              missing="$missing $required"
-            fi
-          done
-
-          if [ -z "$missing" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-            echo "Contrast IAST configuration is present." > target/iast-evidence/contrast-agent-state.txt
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "Contrast IAST configuration is incomplete. Missing:$missing" > target/iast-evidence/contrast-agent-state.txt
-          fi
-        env:
-          CONTRAST__API__URL: ${{ vars.CONTRAST__API__URL }}
-          CONTRAST__API__API_KEY: ${{ secrets.CONTRAST__API__API_KEY }}
-          CONTRAST__API__SERVICE_KEY: ${{ secrets.CONTRAST__API__SERVICE_KEY }}
-          CONTRAST__API__USER_NAME: ${{ secrets.CONTRAST__API__USER_NAME }}
-
-      - name: Download Contrast Java agent
-        if: steps.contrast_config.outputs.enabled == 'true'
-        run: |
-          mkdir -p target/contrast-agent
-          curl --fail --location --retry 3 \
-            --output target/contrast-agent/contrast-agent.jar \
-            "${CONTRAST_AGENT_URL:-https://download.java.contrastsecurity.com/latest}"
-          test -s target/contrast-agent/contrast-agent.jar
-        env:
-          CONTRAST_AGENT_URL: ${{ vars.CONTRAST_AGENT_URL }}
 
       - name: Start GhostReport on the runner at localhost:8081
         run: |
           mkdir -p target/zap-reports
+          mkdir -p target/iast-evidence
           chmod 777 target/zap-reports
-          contrast_agent_opts=""
-          if [ "${CONTRAST_ENABLED:-false}" = "true" ]; then
-            contrast_agent_opts="-javaagent:target/contrast-agent/contrast-agent.jar"
-            export CONTRAST__APPLICATION__NAME="${CONTRAST__APPLICATION__NAME:-GhostReport-CI}"
-            export CONTRAST__SERVER__NAME="${CONTRAST__SERVER__NAME:-github-actions}"
-            export CONTRAST__SERVER__ENVIRONMENT="${CONTRAST__SERVER__ENVIRONMENT:-qa}"
-          fi
-
-          nohup java $contrast_agent_opts \
+          nohup java \
             -jar target/ghostreport-0.0.1-SNAPSHOT.jar \
             --spring.profiles.active=dev \
             > target/ghostreport-dast-app.log 2>&1 &
           echo $! > target/ghostreport-dast-app.pid
         env:
-          CONTRAST_ENABLED: ${{ steps.contrast_config.outputs.enabled }}
           DB_URL: jdbc:postgresql://localhost:5432/ghostreport
           DB_USERNAME: postgres
           DB_PASSWORD: user
-          CONTRAST__API__URL: ${{ vars.CONTRAST__API__URL }}
-          CONTRAST__API__API_KEY: ${{ secrets.CONTRAST__API__API_KEY }}
-          CONTRAST__API__SERVICE_KEY: ${{ secrets.CONTRAST__API__SERVICE_KEY }}
-          CONTRAST__API__USER_NAME: ${{ secrets.CONTRAST__API__USER_NAME }}
-          CONTRAST__APPLICATION__NAME: ${{ vars.CONTRAST__APPLICATION__NAME }}
-          CONTRAST__SERVER__NAME: ${{ vars.CONTRAST__SERVER__NAME }}
-          CONTRAST__SERVER__ENVIRONMENT: ${{ vars.CONTRAST__SERVER__ENVIRONMENT }}
-          CONTRAST__ASSESS__ENABLE: "true"
 
       - name: Wait until GhostReport is ready for scanning
         run: |
@@ -563,6 +512,27 @@ jobs:
           echo "GhostReport did not become ready"
           cat target/ghostreport-dast-app.log
           exit 1
+
+      - name: Exercise runtime security endpoints for evidence
+        run: |
+          mkdir -p target/iast-evidence
+          {
+            echo "| Endpoint | Purpose | HTTP status |"
+            echo "| --- | --- | --- |"
+            for item in \
+              "GET /index.html|Public frontend and security headers|http://localhost:8081/index.html" \
+              "GET /login.html|Login page exposure and headers|http://localhost:8081/login.html" \
+              "GET /api/reports/track/INVALID-CI-CODE|Tracking endpoint negative path|http://localhost:8081/api/reports/track/INVALID-CI-CODE" \
+              "GET /api/admin/users|Protected admin endpoint without token|http://localhost:8081/api/admin/users"
+            do
+              method_and_path="${item%%|*}"
+              rest="${item#*|}"
+              purpose="${rest%%|*}"
+              url="${rest#*|}"
+              status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$url" || true)"
+              echo "| $method_and_path | $purpose | $status |"
+            done
+          } > target/iast-evidence/runtime-endpoints.md
 
       - name: Run OWASP ZAP Docker baseline scan in evidence mode
         run: |
@@ -582,29 +552,79 @@ jobs:
       - name: Prepare runtime security and IAST evidence summary
         if: always()
         run: |
+          zap_result="not generated"
+          if [ -s target/zap-reports/zap-baseline.json ]; then
+            zap_result="generated: target/zap-reports/zap-baseline.json"
+          elif [ -s target/zap-reports/zap-baseline.html ]; then
+            zap_result="generated: target/zap-reports/zap-baseline.html"
+          fi
+
+          app_state="not confirmed"
+          if curl --fail --silent --show-error http://localhost:8081/index.html > /dev/null; then
+            app_state="running on http://localhost:8081"
+          fi
+
           {
-            echo "# Runtime Security Evidence and IAST"
+            echo "# Runtime Security Evidence and IAST-like Testing"
             echo ""
             echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo ""
-            echo "Executed security-focused tests for authentication events, JWT validation, rate limiting, CSRF, security headers and error handling."
+            echo "This artifact provides academic runtime security testing evidence. It does not claim agent-based IAST."
             echo ""
-            echo "Application runtime: executable Spring Boot JAR on localhost:8081."
+            echo "## Application Runtime"
             echo ""
-            if [ "${CONTRAST_ENABLED:-false}" = "true" ]; then
-              echo "Contrast Java agent: enabled and attached with -javaagent."
-              echo "IAST status: complete external IAST telemetry should be available in Contrast after the runtime tests and ZAP traffic are processed."
+            echo "Application state: $app_state"
+            echo "Runtime: packaged Spring Boot JAR with dev profile and PostgreSQL service."
+            echo ""
+            echo "## Security-focused Runtime Tests"
+            echo ""
+            echo "Executed Maven tests:"
+            echo ""
+            echo "- RuntimeSecurityEventLoggingTest"
+            echo "- ErrorHandlingSecurityTest"
+            echo "- SecurityHeadersTest"
+            echo "- JwtServiceSecurityTest"
+            echo "- LoginRateLimitSecurityTest"
+            echo "- CsrfSecurityTest"
+            echo ""
+            echo "Validated controls:"
+            echo ""
+            echo "- authentication success/failure audit events;"
+            echo "- invalid/expired JWT handling and alerting;"
+            echo "- login rate limiting and brute-force detection;"
+            echo "- CSRF rejection/acceptance behaviour;"
+            echo "- browser security headers, including CSP;"
+            echo "- generic error handling without stack traces;"
+            echo "- security log sanitization for sensitive values."
+            echo ""
+            echo "## Endpoints Exercised"
+            echo ""
+            if [ -s target/iast-evidence/runtime-endpoints.md ]; then
+              cat target/iast-evidence/runtime-endpoints.md
             else
-              echo "Contrast Java agent: not enabled for this run."
-              echo "IAST status: runtime security evidence only. Configure Contrast variables/secrets to claim complete external IAST telemetry."
+              echo "Endpoint smoke evidence was not generated."
             fi
             echo ""
+            echo "## DAST Runtime Traffic"
+            echo ""
             echo "ZAP baseline target: http://localhost:8081"
+            echo "ZAP result: $zap_result"
+            echo "ZAP mode: baseline/passive evidence review, not authenticated active exploitation."
+            echo ""
+            echo "## Runtime Logs"
+            echo ""
+            echo "Application log artifact: target/ghostreport-dast-app.log"
+            echo "Surefire reports artifact: target/surefire-reports"
+            echo ""
+            echo "## Limitations"
+            echo ""
+            echo "- No JVM IAST agent or taint-tracking sensor is attached."
+            echo "- The evidence is IAST-like runtime security testing, not full commercial IAST."
+            echo "- ZAP baseline is unauthenticated and does not cover all protected workflows."
+            echo "- Findings must be interpreted together with SAST, SCA, SBOM and DAST evidence."
           } > target/iast-evidence/iast-runtime-evidence.md
-        env:
-          CONTRAST_ENABLED: ${{ steps.contrast_config.outputs.enabled }}
 
-      - name: Upload runtime security and IAST readiness evidence artifact
+      - name: Upload runtime security and IAST-like evidence artifact
         uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -612,6 +632,7 @@ jobs:
           path: |
             ghostreport/target/iast-evidence/**
             ghostreport/target/surefire-reports/**
+            ghostreport/target/ghostreport-dast-app.log
           if-no-files-found: warn
 
       - name: Upload OWASP ZAP DAST evidence artifacts
@@ -632,7 +653,7 @@ jobs:
             echo ""
             echo "| Evidence | Artifact |"
             echo "| --- | --- |"
-            echo "| Runtime security-focused tests and IAST readiness | iast-runtime-security-evidence |"
+            echo "| Runtime security-focused tests and IAST-like evidence | iast-runtime-security-evidence |"
             echo "| ZAP HTML/XML/JSON reports and application log | dast-zap-baseline-reports |"
             echo "| Gate mode | Runtime security tests blocking; ZAP evidence review |"
           } >> "$GITHUB_STEP_SUMMARY"

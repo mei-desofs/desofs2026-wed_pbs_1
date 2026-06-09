@@ -186,7 +186,7 @@ Scope covered in this sprint update: `V1.2.1`, `V1.2.2`, `V1.2.3`,
 | CodeQL | CodeQL runs and uploads primary findings to GitHub Code Scanning. | GitHub Code Scanning, `sast-reports` summary | Evidence review; local full SARIF is not claimed. |
 | Dependency-Check | HTML/XML/JSON/SARIF reports are generated in evidence mode. | `dependency-check-sca-reports` | Evidence review with manual triage. |
 | CycloneDX | SBOM is generated in JSON/XML. | `sbom-cyclonedx` | Dependency inventory evidence. |
-| Runtime security / IAST readiness | Security-focused runtime tests run with JaCoCo skipped and upload Surefire plus readiness notes. | `iast-runtime-security-evidence` | Runtime evidence always; external IAST only if Contrast variables/secrets exist. |
+| Runtime security / IAST-like evidence | Security-focused runtime tests run with JaCoCo skipped and upload Surefire, endpoint checks and runtime notes. | `iast-runtime-security-evidence` | Runtime evidence always; full agent-based IAST is not claimed. |
 | ZAP | Baseline DAST runs against a live CI application instance. | `dast-zap-baseline-reports` | Evidence review baseline DAST. |
 | actionlint | Workflow syntax/semantics validated locally. | Local terminal output or pipeline notes | Supporting pipeline evidence. |
 

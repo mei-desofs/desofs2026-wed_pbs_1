@@ -17,7 +17,7 @@ implemented mitigations and pipeline evidence.
 | CodeQL | Semantic static analysis | Findings require exploitability review | Dedicated CodeQL workflow, GitHub Code Scanning evidence and archiveable run summary |
 | Gitleaks | Secret scanning | Allowlist mistakes, secret rotation requirements | Repository-root scan and narrow placeholder allowlist |
 | OWASP ZAP | Baseline DAST scanner | Unauthenticated baseline does not cover all protected flows | Passive baseline against a live CI runtime and artifacts |
-| Contrast Java Agent | Optional JVM IAST agent | Requires tenant configuration and CI secrets | Workflow readiness checks and runtime security evidence |
+| Runtime security / IAST-like testing | Spring Boot runtime tests, endpoint checks and logs | No JVM taint-tracking sensor or source-to-sink telemetry | Runtime security evidence artifact plus ZAP baseline |
 | Docker / Compose | Local container execution | Root containers, writable filesystem, leaked env vars | Non-root app user, read-only app container, named volumes, `no-new-privileges` |
 | Static HTML/CSS/JS | Browser interface served by Spring Boot | XSS, weak CSP, unsafe inline code | Same-origin serving, external JavaScript files, removed inline handlers/styles, security headers and CSP baseline with `form-action 'self'` |
 | Angus Activation / Jakarta Activation | Transitive activation API implementation pulled by JAXB/Hibernate paths | Dependency-Check may flag CVEs or ecosystem risk when transitive versions lag | Managed through Spring Boot dependency management; triage against Dependency-Check report before adding an override |
@@ -32,7 +32,7 @@ Stack risks are monitored through:
 - SpotBugs and CodeQL for code-level vulnerability patterns.
 - Gitleaks for accidental secrets.
 - ZAP for runtime-facing HTTP findings.
-- Runtime security/IAST readiness workflow for security-focused runtime behavior.
+- Runtime security/IAST-like workflow for security-focused runtime behavior.
 
 ## Current Triage Notes
 

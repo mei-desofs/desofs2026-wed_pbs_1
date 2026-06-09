@@ -43,7 +43,7 @@ timeline for the presentation.
 | `security-secrets / secrets` | Gitleaks scan and no confirmed repository secrets. | `secret-scan-gitleaks-json` |
 | `sast / SonarCloud SAST Scan` | SpotBugs, SonarCloud and CodeQL. | `sast-reports`, GitHub Code Scanning |
 | `dependency-scanning / Dependency Vulnerability Scanning` | Dependency-Check and CycloneDX SBOM. | `dependency-check-sca-reports`, `sbom-cyclonedx` |
-| `dast-scan / dast-scan` | Runtime security tests, IAST readiness evidence and ZAP baseline. | `iast-runtime-security-evidence`, `dast-zap-baseline-reports` |
+| `dast-scan / dast-scan` | Runtime security tests, IAST-like evidence and ZAP baseline. | `iast-runtime-security-evidence`, `dast-zap-baseline-reports` |
 
 ## 4. Gate Policy To Explain
 
@@ -95,9 +95,9 @@ Then show the organized folders under `Deliverables/Phase 2/Evidence`.
 
 Use precise wording in the demo:
 
-- Runtime security evidence exists in every `dast-scan` run.
-- External IAST telemetry exists only if the optional Contrast agent variables
-  and secrets are configured.
+- Runtime security and IAST-like evidence exists in every `dast-scan` run.
+- Full agent-based IAST is not claimed; the academic evidence is Spring Boot
+  runtime tests, endpoint checks, logs and ZAP baseline.
 - PIT is evidence review, not a blocking mutation threshold gate.
 - CodeQL's primary evidence is GitHub Code Scanning.
 - ZAP is baseline DAST against a live application, not authenticated deep DAST.

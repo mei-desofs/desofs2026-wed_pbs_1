@@ -44,7 +44,7 @@ manually with `workflow_dispatch`. It provides one timeline with:
 - Gitleaks secret scanning;
 - SpotBugs, SonarCloud and CodeQL SAST;
 - OWASP Dependency-Check and CycloneDX SBOM;
-- runtime security tests, optional IAST readiness notes and OWASP ZAP baseline.
+- runtime security tests, IAST-like evidence and OWASP ZAP baseline.
 
 ## Demonstration Checklist
 
