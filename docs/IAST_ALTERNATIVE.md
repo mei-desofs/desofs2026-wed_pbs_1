@@ -40,9 +40,12 @@ coverage.
 | Endpoint | Runtime purpose |
 | --- | --- |
 | `GET /index.html` | Public frontend availability and browser security headers |
-| `GET /login.html` | Login page availability and headers |
-| `GET /api/reports/track/INVALID-CI-CODE` | Public report tracking negative path |
-| `GET /api/admin/users` | Protected admin endpoint without authentication |
+| `GET /login.html` | Unauthenticated login page request |
+| `GET /admin/users` | Protected admin endpoint without authentication |
+| `GET /admin/users` with invalid bearer token | Invalid JWT rejection path |
+| `POST /auth/login` with invalid credentials | Failed login path |
+| repeated `POST /auth/login` failures | Rate-limit/brute-force evidence path |
+| `POST /auth/password/change` without CSRF token | CSRF rejection path |
 
 ZAP baseline also scans the live application surface from
 `http://localhost:8081`.
@@ -59,6 +62,7 @@ ZAP baseline also scans the live application surface from
 | Security headers and CSP | `SecurityHeadersTest`, ZAP baseline |
 | Generic error handling without stack traces | `ErrorHandlingSecurityTest` |
 | Audit/security log sanitization | `RuntimeSecurityEventLoggingTest` |
+| Runtime log leakage check | `runtime-log-sanitization.md` |
 
 ## Relationship with SAST and DAST
 

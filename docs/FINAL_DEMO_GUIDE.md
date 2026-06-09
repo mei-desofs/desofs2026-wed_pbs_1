@@ -39,7 +39,7 @@ timeline for the presentation.
 
 | Job | What to show | Artifact/evidence |
 | --- | --- | --- |
-| `build-test / build-and-test` | Compile, automated tests, JaCoCo and PIT evidence review. | `ci-surefire-test-reports`, `ci-jacoco-coverage-report`, `pit-mutation-testing-report` |
+| `build-test / build-and-test` | Compile, automated tests and JaCoCo coverage. | `ci-surefire-test-reports`, `ci-jacoco-coverage-report` |
 | `security-secrets / secrets` | Gitleaks scan and no confirmed repository secrets. | `secret-scan-gitleaks-json` |
 | `sast / SonarCloud SAST Scan` | SpotBugs, SonarCloud and CodeQL. | `sast-reports`, GitHub Code Scanning |
 | `dependency-scanning / Dependency Vulnerability Scanning` | Dependency-Check and CycloneDX SBOM. | `dependency-check-sca-reports`, `sbom-cyclonedx` |
@@ -52,6 +52,7 @@ timeline for the presentation.
 - Evidence review: PIT mutation score/output, SpotBugs findings, CodeQL alerts,
   SonarCloud quality findings, Dependency-Check findings, SBOM and ZAP baseline
   alerts.
+- PIT evidence is shown from the separate `pit-mutation-testing` workflow.
 
 This wording is important. It shows that the pipeline is not "green by hiding
 security issues"; it separates hard build gates from findings that require

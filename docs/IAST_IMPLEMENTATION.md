@@ -49,6 +49,7 @@ start for DAST, or when there is a real execution error.
 | Runtime security test results | `ghostreport/target/surefire-reports/**` |
 | Runtime/IAST-like evidence notes | `ghostreport/target/iast-evidence/iast-runtime-evidence.md` |
 | Endpoint smoke evidence | `ghostreport/target/iast-evidence/runtime-endpoints.md` |
+| Runtime log leakage check | `ghostreport/target/iast-evidence/runtime-log-sanitization.md` |
 | GitHub artifact | `iast-runtime-security-evidence` |
 | Related DAST artifact | `dast-zap-baseline-reports` |
 
@@ -63,6 +64,8 @@ start for DAST, or when there is a real execution error.
 | Browser-facing hardening | Security header tests and ZAP baseline |
 | Security monitoring | Audit and security alert persistence tests |
 | Access control surface | Protected endpoint smoke check without token |
+| Invalid token handling | Protected endpoint smoke check with invalid bearer token |
+| Runtime abuse controls | Failed login and repeated failed-login endpoint probes |
 
 ## Assumptions
 

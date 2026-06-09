@@ -1,0 +1,123 @@
+name: pit-mutation-testing
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "ghostreport/pom.xml"
+      - "ghostreport/src/main/**"
+      - "ghostreport/src/test/**"
+      - ".github/workflows/pit.yml"
+  push:
+    branches: [main]
+    paths:
+      - "ghostreport/pom.xml"
+      - "ghostreport/src/main/**"
+      - "ghostreport/src/test/**"
+      - ".github/workflows/pit.yml"
+
+jobs:
+  pit:
+    name: pit / mutation-testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        working-directory: ./ghostreport
+
+    steps:
+      - name: Checkout repository content
+        uses: actions/checkout@v6
+
+      - name: Prepare Java 17 with Maven cache
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: ghostreport/pom.xml
+
+      - name: Run scoped PIT mutation testing in evidence review mode
+        run: |
+          mkdir -p target/pit-reports
+          set +e
+          timeout 15m ./mvnw \
+            -Djacoco.skip=true \
+            -DskipTests=false \
+            -DtargetClasses=com.ghostreport.domain.* \
+            -DtargetTests=com.ghostreport.domain.* \
+            -Dthreads=2 \
+            org.pitest:pitest-maven:mutationCoverage
+          pit_exit_code=$?
+          set -e
+
+          echo "$pit_exit_code" > target/pit-reports/pit-exit-code.txt
+          python - <<'PY' > target/pit-reports/pit-mutation-summary.md
+          import pathlib
+          import xml.etree.ElementTree as ET
+
+          report = pathlib.Path("target/pit-reports/mutations.xml")
+          if not report.exists():
+              print("| Metric | Value |")
+              print("| --- | --- |")
+              print("| Mutation report | Not generated |")
+              raise SystemExit(0)
+
+          mutations = ET.parse(report).getroot().findall("mutation")
+          total = len(mutations)
+          killed = sum(1 for m in mutations if m.get("detected") == "true")
+          survived = sum(1 for m in mutations if (m.findtext("status") or "") == "SURVIVED")
+          no_coverage = sum(1 for m in mutations if (m.findtext("status") or "") == "NO_COVERAGE")
+          score = (killed / total * 100) if total else 0
+          print("| Metric | Value |")
+          print("| --- | --- |")
+          print("| Scope | `com.ghostreport.domain.*` |")
+          print(f"| Total mutations | {total} |")
+          print(f"| Killed/detected | {killed} |")
+          print(f"| Survived | {survived} |")
+          print(f"| No coverage | {no_coverage} |")
+          print(f"| Mutation score | {score:.2f}% |")
+          PY
+
+          {
+            echo "# PIT Mutation Testing Evidence"
+            echo ""
+            echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo ""
+            echo "PIT command exit code: $pit_exit_code"
+            echo ""
+            echo "Workflow: dedicated mutation testing workflow."
+            echo "Gate mode: evidence review. Mutation findings and thresholds remain triaged manually."
+            echo ""
+            echo "CI scope: domain value objects only, to keep a stable percentage report inside the mutation-testing time budget."
+            echo ""
+            cat target/pit-reports/pit-mutation-summary.md
+          } > target/pit-reports/pit-evidence-summary.md
+
+          {
+            echo "## PIT Mutation Testing"
+            echo ""
+            cat target/pit-reports/pit-mutation-summary.md
+            echo ""
+            echo "Artifact: pit-mutation-testing-report"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$pit_exit_code" -eq 124 ]; then
+            echo "::warning title=PIT evidence review::PIT reached the 15 minute workflow timebox. Evidence artifact was still generated for triage."
+          elif [ "$pit_exit_code" -ne 0 ]; then
+            echo "::warning title=PIT evidence review::PIT exited with code $pit_exit_code. Evidence artifact was still generated for triage."
+          fi
+        continue-on-error: true
+
+      - name: Upload PIT mutation testing report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: pit-mutation-testing-report
+          path: ghostreport/target/pit-reports/**
+          if-no-files-found: warn

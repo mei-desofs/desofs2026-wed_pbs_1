@@ -16,7 +16,7 @@ evidence used to verify them. It should be read together with
 | Cryptography | JWT HMAC signing, backup manifest HMAC signing, SHA-256 integrity checks, BCrypt password hashing and key validation. |
 | Audit and monitoring | Audit logs and security alerts for security-relevant events, correlation IDs, UTC timestamps, redaction and event integrity hashes. |
 | Configuration | Runtime profiles, environment variables, JWT/backup HMAC secret validation and seed-user controls. |
-| DevSecOps | The single `dev` GitHub Actions workflow: build, tests, coverage, secret scanning, SAST, SCA, SBOM, DAST, runtime security/IAST-like evidence and PIT evidence review. |
+| DevSecOps | The `dev` GitHub Actions workflow covers build, tests, coverage, secret scanning, SAST, SCA, SBOM, DAST and runtime security/IAST-like evidence. PIT evidence runs in the separate `pit-mutation-testing` workflow. |
 
 ## Evidence Matrix
 
@@ -53,7 +53,7 @@ evidence used to verify them. It should be read together with
 | Secret scanning | Gitleaks in `security-secrets` | Repository secret scan evidence is generated and confirmed leaks block the workflow. | Implemented |
 | DAST | ZAP baseline in `dast-scan` | Runtime HTTP baseline evidence is generated against a live CI application instance. | Evidence review |
 | Runtime security / IAST-like evidence | Runtime tests, live endpoint checks and ZAP-adjacent runtime notes in `dast-scan` | Runtime security tests always run; full agent-based IAST is not claimed. | Evidence review |
-| Coverage and mutation testing | JaCoCo and PIT in `build-test` | Coverage is blocking; PIT is evidence review with report/fallback artifact. | Evidence review |
+| Coverage and mutation testing | JaCoCo in `build-test`; PIT in `pit-mutation-testing` | Coverage is blocking; PIT is evidence review with report/fallback artifact. | Evidence review |
 
 ## Gate Policy
 
@@ -82,7 +82,7 @@ evidence used to verify them. It should be read together with
 | CycloneDX | Generates JSON/XML SBOM. | `sbom-cyclonedx` | SBOM is inventory evidence, not vulnerability triage by itself. |
 | ZAP | Baseline DAST runs against a live app in CI. | `dast-zap-baseline-reports` | Baseline scan is unauthenticated and should be treated as first-line DAST evidence. |
 | Runtime security / IAST-like evidence | Security-focused tests run with JaCoCo skipped and upload Surefire, endpoint checks and runtime notes. | `iast-runtime-security-evidence` | Full agent-based IAST and taint tracking are not claimed. |
-| PIT | Runs in evidence review mode and uploads summary/exit code. | `pit-mutation-testing-report` | Mutation score is not a blocking Sprint 2 gate. |
+| PIT | Runs in the dedicated `pit-mutation-testing` workflow and uploads summary/exit code. | `pit-mutation-testing-report` | Mutation score is not a blocking Sprint 2 gate. |
 | actionlint | Workflow syntax can be validated locally when actionlint is available. | Local command output or pipeline validation notes | Does not replace a real GitHub Actions run. |
 
 ## Scope Boundaries

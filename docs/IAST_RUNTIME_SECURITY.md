@@ -46,9 +46,12 @@ The workflow records HTTP status evidence for:
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /index.html` | Public frontend availability and security headers |
-| `GET /login.html` | Login page exposure and headers |
-| `GET /api/reports/track/INVALID-CI-CODE` | Public tracking negative path |
-| `GET /api/admin/users` | Protected admin endpoint without token |
+| `GET /login.html` | Unauthenticated login page request |
+| `GET /admin/users` | Protected admin endpoint without token |
+| `GET /admin/users` with invalid bearer token | Invalid JWT rejection path |
+| `POST /auth/login` with invalid credentials | Failed login path |
+| repeated `POST /auth/login` failures | Rate-limit/brute-force evidence path |
+| `POST /auth/password/change` without CSRF token | CSRF rejection path |
 
 ZAP baseline also crawls and passively scans `http://localhost:8081`.
 
@@ -77,6 +80,7 @@ The artifact contains:
 - Surefire reports for the security-focused runtime tests;
 - `target/iast-evidence/iast-runtime-evidence.md`;
 - `target/iast-evidence/runtime-endpoints.md`;
+- `target/iast-evidence/runtime-log-sanitization.md`;
 - application startup/runtime log;
 - ZAP baseline evidence in the separate `dast-zap-baseline-reports` artifact.
 
@@ -85,5 +89,7 @@ The artifact contains:
 This approach is intentionally described as runtime security testing or
 IAST-like evidence. It does not attach a JVM taint-tracking sensor, does not
 provide data-flow tracing from source to sink, and does not replace a commercial
-or dedicated open-source IAST platform. Findings are interpreted together with
-SAST, SCA, SBOM and DAST evidence.
+or dedicated open-source IAST platform. CSRF acceptance is validated by
+`CsrfSecurityTest`; live unauthenticated endpoint probes only evidence CSRF
+rejection. Findings are interpreted together with SAST, SCA, SBOM and DAST
+evidence.

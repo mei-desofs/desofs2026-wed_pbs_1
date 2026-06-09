@@ -64,77 +64,6 @@ jobs:
           DB_USERNAME: postgres
           DB_PASSWORD: user
 
-      - name: Run PIT mutation testing in evidence review mode
-        run: |
-          mkdir -p target/pit-reports
-          set +e
-          timeout 12m ./mvnw \
-            -Djacoco.skip=true \
-            -DskipTests=false \
-            -DtargetClasses=com.ghostreport.domain.* \
-            -DtargetTests=com.ghostreport.domain.* \
-            -Dthreads=2 \
-            org.pitest:pitest-maven:mutationCoverage
-          pit_exit_code=$?
-          set -e
-
-          echo "$pit_exit_code" > target/pit-reports/pit-exit-code.txt
-          python - <<'PY' > target/pit-reports/pit-mutation-summary.md
-          import pathlib
-          import xml.etree.ElementTree as ET
-
-          report = pathlib.Path("target/pit-reports/mutations.xml")
-          if not report.exists():
-              print("| Metric | Value |")
-              print("| --- | --- |")
-              print("| Mutation report | Not generated |")
-              raise SystemExit(0)
-
-          mutations = ET.parse(report).getroot().findall("mutation")
-          total = len(mutations)
-          killed = sum(1 for m in mutations if m.get("detected") == "true")
-          survived = sum(1 for m in mutations if (m.findtext("status") or "") == "SURVIVED")
-          no_coverage = sum(1 for m in mutations if (m.findtext("status") or "") == "NO_COVERAGE")
-          score = (killed / total * 100) if total else 0
-          print("| Metric | Value |")
-          print("| --- | --- |")
-          print(f"| Scope | `com.ghostreport.domain.*` |")
-          print(f"| Total mutations | {total} |")
-          print(f"| Killed/detected | {killed} |")
-          print(f"| Survived | {survived} |")
-          print(f"| No coverage | {no_coverage} |")
-          print(f"| Mutation score | {score:.2f}% |")
-          PY
-
-          {
-            echo "# PIT Mutation Testing Evidence"
-            echo ""
-            echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo ""
-            echo "PIT command exit code: $pit_exit_code"
-            echo ""
-            echo "Gate mode: evidence review. Mutation findings and thresholds remain triaged manually."
-            echo ""
-            echo "CI scope: domain value objects only, to keep a stable percentage report inside the build-test time budget."
-            echo ""
-            cat target/pit-reports/pit-mutation-summary.md
-          } > target/pit-reports/pit-evidence-summary.md
-
-          {
-            echo "## PIT Mutation Testing"
-            echo ""
-            cat target/pit-reports/pit-mutation-summary.md
-            echo ""
-            echo "Artifact: pit-mutation-testing-report"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$pit_exit_code" -eq 124 ]; then
-            echo "::warning title=PIT evidence review::PIT reached the 12 minute CI evidence timebox. Evidence artifact was still generated for triage."
-          elif [ "$pit_exit_code" -ne 0 ]; then
-            echo "::warning title=PIT evidence review::PIT exited with code $pit_exit_code. Evidence artifact was still generated for triage."
-          fi
-        continue-on-error: true
-
       - name: Upload Surefire test report artifact
         uses: actions/upload-artifact@v7
         if: always()
@@ -153,14 +82,6 @@ jobs:
             ghostreport/target/jacoco.exec
           if-no-files-found: warn
 
-      - name: Upload PIT mutation testing report
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: pit-mutation-testing-report
-          path: ghostreport/target/pit-reports/**
-          if-no-files-found: warn
-
       - name: Publish build and test evidence summary
         if: always()
         run: |
@@ -171,8 +92,8 @@ jobs:
             echo "| --- | --- |"
             echo "| Maven verify test results | ci-surefire-test-reports |"
             echo "| JaCoCo report and coverage check | ci-jacoco-coverage-report |"
-            echo "| PIT mutation testing | pit-mutation-testing-report |"
-            echo "| Gate mode | Blocking for compile/tests/coverage; PIT evidence review |"
+            echo "| PIT mutation testing | Dedicated pit-mutation-testing workflow |"
+            echo "| Gate mode | Blocking for compile/tests/coverage |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   security-secrets:
@@ -516,14 +437,28 @@ jobs:
       - name: Exercise runtime security endpoints for evidence
         run: |
           mkdir -p target/iast-evidence
+
+          login_payload='{"username":"ci-runtime-probe","password":"invalid-password"}'
+          failed_login_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            -H 'Content-Type: application/json' \
+            --data "$login_payload" \
+            http://localhost:8081/auth/login || true)"
+
+          rate_limit_status="not exercised"
+          for attempt in 1 2 3 4 5 6; do
+            rate_limit_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              -H 'Content-Type: application/json' \
+              --data "$login_payload" \
+              http://localhost:8081/auth/login || true)"
+          done
+
           {
             echo "| Endpoint | Purpose | HTTP status |"
             echo "| --- | --- | --- |"
             for item in \
               "GET /index.html|Public frontend and security headers|http://localhost:8081/index.html" \
-              "GET /login.html|Login page exposure and headers|http://localhost:8081/login.html" \
-              "GET /api/reports/track/INVALID-CI-CODE|Tracking endpoint negative path|http://localhost:8081/api/reports/track/INVALID-CI-CODE" \
-              "GET /api/admin/users|Protected admin endpoint without token|http://localhost:8081/api/admin/users"
+              "GET /login.html|Unauthenticated login page request|http://localhost:8081/login.html" \
+              "GET /admin/users|Protected admin endpoint without token|http://localhost:8081/admin/users"
             do
               method_and_path="${item%%|*}"
               rest="${item#*|}"
@@ -532,7 +467,44 @@ jobs:
               status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$url" || true)"
               echo "| $method_and_path | $purpose | $status |"
             done
+
+            invalid_jwt_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              -H 'Authorization: Bearer invalid-ci-runtime-token' \
+              http://localhost:8081/admin/users || true)"
+            csrf_rejection_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              -H 'Content-Type: application/json' \
+              --data '{"currentPassword":"old-password","newPassword":"new-password"}' \
+              http://localhost:8081/auth/password/change || true)"
+
+            echo "| GET /admin/users | Protected endpoint with invalid JWT | $invalid_jwt_status |"
+            echo "| POST /auth/login | Failed login attempt with invalid credentials | $failed_login_status |"
+            echo "| POST /auth/login | Repeated failed login attempts for rate-limit/brute-force evidence | $rate_limit_status |"
+            echo "| POST /auth/password/change | CSRF rejection on protected state-changing endpoint without CSRF token | $csrf_rejection_status |"
           } > target/iast-evidence/runtime-endpoints.md
+
+      - name: Check runtime logs for sensitive evidence leakage
+        if: always()
+        run: |
+          mkdir -p target/iast-evidence
+          {
+            echo "| Check | Result |"
+            echo "| --- | --- |"
+            if [ ! -s target/ghostreport-dast-app.log ]; then
+              echo "| Application log exists | Not generated |"
+              exit 0
+            fi
+
+            echo "| Application log exists | Generated |"
+
+            if grep -Eiq 'password=|password:|Authorization:|Bearer [A-Za-z0-9._-]+|JWT_SECRET|BACKUP_HMAC_SECRET|stacktrace|java\.[a-zA-Z.]+Exception:' target/ghostreport-dast-app.log; then
+              echo "| Sensitive-pattern scan | Review required: potential sensitive or stack-trace pattern found |"
+              grep -Ein 'password=|password:|Authorization:|Bearer [A-Za-z0-9._-]+|JWT_SECRET|BACKUP_HMAC_SECRET|stacktrace|java\.[a-zA-Z.]+Exception:' target/ghostreport-dast-app.log \
+                | sed -E 's/(Bearer )[A-Za-z0-9._-]+/\1[REDACTED]/g' \
+                | head -20 > target/iast-evidence/runtime-log-sensitive-findings.txt
+            else
+              echo "| Sensitive-pattern scan | No obvious passwords, bearer tokens, secret names or stack traces found |"
+            fi
+          } > target/iast-evidence/runtime-log-sanitization.md
 
       - name: Run OWASP ZAP Docker baseline scan in evidence mode
         run: |
@@ -571,6 +543,15 @@ jobs:
             echo ""
             echo "This artifact provides academic runtime security testing evidence. It does not claim agent-based IAST."
             echo ""
+            echo "## Evidence Classification"
+            echo ""
+            echo "| Evidence type | What this run provides | Claim boundary |"
+            echo "| --- | --- | --- |"
+            echo "| Agent-based IAST | Not present | No JVM agent, taint tracking or source-to-sink telemetry is claimed. |"
+            echo "| Runtime security testing | Spring Boot security tests, live endpoint probes and application logs | Validates implemented controls at runtime. |"
+            echo "| DAST baseline/passive testing | OWASP ZAP baseline against http://localhost:8081 | Evidence review only; unauthenticated baseline. |"
+            echo "| IAST-like academic evidence | Correlates runtime tests, live HTTP probes, logs and ZAP evidence | Defensible academic substitute, not commercial IAST. |"
+            echo ""
             echo "## Application Runtime"
             echo ""
             echo "Application state: $app_state"
@@ -597,6 +578,8 @@ jobs:
             echo "- generic error handling without stack traces;"
             echo "- security log sanitization for sensitive values."
             echo ""
+            echo "Surefire reports are uploaded in this artifact and remain available even when a selected runtime test fails."
+            echo ""
             echo "## Endpoints Exercised"
             echo ""
             if [ -s target/iast-evidence/runtime-endpoints.md ]; then
@@ -616,11 +599,18 @@ jobs:
             echo "Application log artifact: target/ghostreport-dast-app.log"
             echo "Surefire reports artifact: target/surefire-reports"
             echo ""
+            if [ -s target/iast-evidence/runtime-log-sanitization.md ]; then
+              cat target/iast-evidence/runtime-log-sanitization.md
+            else
+              echo "Runtime log sanitization evidence was not generated."
+            fi
+            echo ""
             echo "## Limitations"
             echo ""
             echo "- No JVM IAST agent or taint-tracking sensor is attached."
             echo "- The evidence is IAST-like runtime security testing, not full commercial IAST."
             echo "- ZAP baseline is unauthenticated and does not cover all protected workflows."
+            echo "- CSRF acceptance is validated by CsrfSecurityTest; live unauthenticated probes only evidence rejection."
             echo "- Findings must be interpreted together with SAST, SCA, SBOM and DAST evidence."
           } > target/iast-evidence/iast-runtime-evidence.md
 

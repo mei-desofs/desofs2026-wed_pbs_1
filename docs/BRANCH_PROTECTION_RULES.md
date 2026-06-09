@@ -40,11 +40,12 @@ remaining jobs reviewed as security evidence.
 The `dev` workflow should run on Pull Requests and can also be triggered
 manually with `workflow_dispatch`. It provides one timeline with:
 
-- build, tests, JaCoCo and PIT evidence review;
+- build, tests and JaCoCo coverage;
 - Gitleaks secret scanning;
 - SpotBugs, SonarCloud and CodeQL SAST;
 - OWASP Dependency-Check and CycloneDX SBOM;
-- runtime security tests, IAST-like evidence and OWASP ZAP baseline.
+- runtime security tests, IAST-like evidence and OWASP ZAP baseline;
+- PIT evidence review in the separate `pit-mutation-testing` workflow.
 
 ## Demonstration Checklist
 
