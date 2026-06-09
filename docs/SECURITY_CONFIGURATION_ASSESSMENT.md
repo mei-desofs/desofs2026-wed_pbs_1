@@ -10,6 +10,7 @@ local development, automated tests and production-like execution.
 | Runtime profiles | `application.yaml`, `application-dev.yaml`, `application-test.yaml` | Implemented |
 | Production-like configuration | Default profile requires database and JWT environment variables | Implemented |
 | JWT secret validation | `SecurityConfigurationValidator`, `JwtService`, validator tests | Implemented |
+| Backup HMAC key validation | `SecurityConfigurationValidator`, `BackupService`, backup/config tests | Implemented |
 | Seed users | Disabled by default and controlled by profile/validator | Implemented |
 | Database configuration | PostgreSQL default/dev, H2 test profile, `ddl-auto=validate` in production-like config | Implemented |
 | H2 console | Disabled outside the test profile | Implemented |
@@ -24,9 +25,13 @@ local development, automated tests and production-like execution.
 The application validates configuration at startup:
 
 - `JWT_SECRET` must be at least 32 characters.
+- `BACKUP_HMAC_SECRET` must be at least 32 characters.
+- `BACKUP_HMAC_SECRET` must be different from `JWT_SECRET`.
+- `BACKUP_HMAC_KEY_ID` must not be blank.
 - `JWT_EXPIRATION_SECONDS` must be positive.
 - Upload and backup directories must be configured and distinct.
 - Production-like profiles must not use dev/test JWT placeholders.
+- Production-like profiles must not use dev/test backup HMAC placeholders.
 - Production-like profiles must not enable seed users.
 
 Evidence: `SecurityConfigurationValidatorTest`.
@@ -39,6 +44,8 @@ Evidence: `SecurityConfigurationValidatorTest`.
 | `DB_USERNAME` | Database username |
 | `DB_PASSWORD` | Database password |
 | `JWT_SECRET` | JWT HMAC signing secret |
+| `BACKUP_HMAC_SECRET` | Backup manifest HMAC signing secret |
+| `BACKUP_HMAC_KEY_ID` | Backup manifest HMAC key identifier |
 | `JWT_EXPIRATION_SECONDS` | Token lifetime |
 | `APP_UPLOAD_MAX_FILES_PER_REQUEST` | Upload abuse-control limit |
 

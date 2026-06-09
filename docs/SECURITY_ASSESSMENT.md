@@ -13,8 +13,9 @@ evidence used to verify them. It should be read together with
 | Business workflow | Explicit report state transitions, terminal case protection, transactional workflow updates and optimistic locking for report/case review state. |
 | Input validation | DTO validation, domain primitives and upload validation. |
 | File handling | Safe upload storage, attachment access, evidence packages and backup verification. |
+| Cryptography | JWT HMAC signing, backup manifest HMAC signing, SHA-256 integrity checks, BCrypt password hashing and key validation. |
 | Audit and monitoring | Audit logs and security alerts for security-relevant events. |
-| Configuration | Runtime profiles, environment variables, JWT secret validation and seed-user controls. |
+| Configuration | Runtime profiles, environment variables, JWT/backup HMAC secret validation and seed-user controls. |
 | DevSecOps | The single `dev` GitHub Actions workflow: build, tests, coverage, secret scanning, SAST, SCA, SBOM, DAST, runtime security/IAST readiness and PIT evidence review. |
 
 ## Evidence Matrix
@@ -26,7 +27,7 @@ evidence used to verify them. It should be read together with
 | Authenticated password change | `AuthController`, `UserService`, `ChangePasswordRequest` | Current password is required and new password is stored only as a hash. | Implemented |
 | Password reset | `PasswordResetService`, `PasswordResetToken`, reset tests | Reset tokens are random, single-use, expiring and stored only as SHA-256 hashes. | Implemented |
 | JWT signing, validation and revocation | `JwtService`, `AuthController`, `JwtServiceSecurityTest`, `RuntimeSecurityEventLoggingTest` | Signature, expiry, issuer, audience, role validation and logout-driven revocation are tested. | Implemented with residual risk |
-| JWT secret validation | `SecurityConfigurationValidator`, `.env.example`, validator tests | Unsafe production-like JWT configuration fails fast. | Implemented |
+| JWT and backup key validation | `SecurityConfigurationValidator`, `.env.example`, validator tests | Unsafe production-like JWT/backup HMAC configuration fails fast; backup HMAC key must be separate from JWT key. | Implemented |
 | Login abuse protection | `RateLimiterService`, `LoginRateLimitSecurityTest` | Repeated failures trigger rate limiting and alerts. | Implemented |
 | Runtime auth monitoring | `RuntimeSecurityEventLoggingTest`, `AuditLogService`, `SecurityMonitoringService` | Auth events are recorded without passwords or tokens. | Implemented |
 | RBAC | `SecurityConfig`, `RbacAuthorizationMatrixTest` | Role-specific access is verified. | Implemented |
@@ -40,7 +41,7 @@ evidence used to verify them. It should be read together with
 | Security headers | `SecurityConfig`, `SecurityHeadersTest` | Browser-facing headers are configured and tested, including CSP `form-action 'self'`. | Implemented baseline |
 | Audit logs | `AuditLogService`, audit tests | Critical state changes are logged with sanitized details. | Implemented |
 | Security alerts | `SecurityMonitoringService`, alert tests | Suspicious activity creates security alerts. | Implemented |
-| Backup integrity | `BackupService`, backup tests | Manifests and SHA-256 validation are implemented. | Implemented |
+| Backup integrity and authenticity | `BackupService`, backup tests | Manifests include SHA-256 file hashes and an HMAC-SHA256 manifest signature; verify/restore rejects tampering and unsigned extra entries. | Implemented |
 | Evidence packages | `CasePackageService`, package tests | Closed-case packages can be generated and verified. | Implemented |
 | DevSecOps pipeline | `.github/workflows/dev.yml` | One visible workflow timeline with dependent jobs and downloadable artifacts. | Implemented |
 | SAST | SpotBugs, SonarCloud and CodeQL in the `sast` job | Static analysis evidence is generated; CodeQL primary evidence is GitHub Code Scanning. | Evidence review |
@@ -67,7 +68,7 @@ evidence used to verify them. It should be read together with
 
 | Tool | Result | Evidence | Residual risk |
 | --- | --- | --- | --- |
-| JUnit/MockMvc | Latest local run passed with 129 tests. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Keep expanding negative-path tests for admin, report and backup workflows over time. |
+| JUnit/MockMvc | Latest local run passed with 134 tests. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Keep expanding negative-path tests for admin, report and backup workflows over time. |
 | JaCoCo | Coverage gate passes locally and runs in CI. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco` | Some controllers/services can still be improved, but the current gate is passing. |
 | Gitleaks | Generates JSON evidence and blocks confirmed leaks. | `secret-scan-gitleaks-json` | Workspace-wide local scans can include ignored diagnostic files; use repository-scope CI evidence for assessment. |
 | SpotBugs | Runs in the SAST job and uploads XML evidence. | `sast-reports` | Findings require triage before suppression or acceptance. |

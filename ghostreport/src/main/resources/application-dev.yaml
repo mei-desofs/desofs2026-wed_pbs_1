@@ -33,6 +33,9 @@ ghostreport:
     expose-token: ${PASSWORD_RESET_EXPOSE_TOKEN:false}
   seed-users:
     enabled: ${GHOSTREPORT_SEED_USERS_ENABLED:true}
+  backup:
+    hmac-secret: ${BACKUP_HMAC_SECRET:dev-only-backup-hmac-secret-32-chars}
+    hmac-key-id: ${BACKUP_HMAC_KEY_ID:dev-backup-hmac-v1}
 
 app:
   upload:

@@ -28,6 +28,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,15 +37,20 @@ import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -58,6 +65,9 @@ public class BackupService {
     private static final Pattern SAFE_BACKUP_NAME = Pattern.compile("^ghostreport-backup-\\d{8}-\\d{6}\\.zip$");
     private static final DateTimeFormatter FILE_TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private static final String FORMAT_VERSION = "1";
+    private static final String HMAC_ALGORITHM = "HmacSHA256";
+    private static final String MANIFEST_ENTRY = "manifest.json";
+    private static final String MANIFEST_HMAC_ENTRY = "manifest.hmac.json";
 
     private final ReportRepository reportRepository;
     private final AttachmentRepository attachmentRepository;
@@ -70,6 +80,8 @@ public class BackupService {
     private final ObjectMapper objectMapper;
     private final Path backupDir;
     private final Path uploadDir;
+    private final byte[] backupHmacSecret;
+    private final String backupHmacKeyId;
 
     @Value("${ghostreport.backup-enabled:true}")
     private boolean backupEnabled;
@@ -85,7 +97,9 @@ public class BackupService {
             SecurityMonitoringService securityMonitoringService,
             ObjectMapper objectMapper,
             @Value("${ghostreport.backup-dir:backups}") String backupDir,
-            @Value("${app.upload-dir:uploads}") String uploadDir
+            @Value("${app.upload-dir:uploads}") String uploadDir,
+            @Value("${ghostreport.backup.hmac-secret}") String backupHmacSecret,
+            @Value("${ghostreport.backup.hmac-key-id:backup-hmac-v1}") String backupHmacKeyId
     ) {
         this.reportRepository = reportRepository;
         this.attachmentRepository = attachmentRepository;
@@ -98,6 +112,14 @@ public class BackupService {
         this.objectMapper = objectMapper;
         this.backupDir = Paths.get(backupDir).toAbsolutePath().normalize();
         this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
+        if (backupHmacSecret == null || backupHmacSecret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("ghostreport.backup.hmac-secret must be configured with at least 32 characters");
+        }
+        if (backupHmacKeyId == null || backupHmacKeyId.isBlank()) {
+            throw new IllegalStateException("ghostreport.backup.hmac-key-id must not be blank");
+        }
+        this.backupHmacSecret = backupHmacSecret.getBytes(StandardCharsets.UTF_8);
+        this.backupHmacKeyId = backupHmacKeyId;
     }
 
     @PostConstruct
@@ -183,6 +205,7 @@ public class BackupService {
     public BackupManifestSummaryResponse getBackupManifestSummary(String filename) {
         Path path = resolveExistingBackup(filename);
         try (ZipFile zipFile = new ZipFile(path.toFile())) {
+            verifyBackupFile(path);
             ZipEntry manifestEntry = zipFile.getEntry("manifest.json");
             if (manifestEntry == null) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Backup manifest not found");
@@ -303,8 +326,15 @@ public class BackupService {
             manifest.put("databaseExports", exportedData);
 
             byte[] manifestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(manifest);
-            zip.putNextEntry(new ZipEntry("manifest.json"));
+            zip.putNextEntry(new ZipEntry(MANIFEST_ENTRY));
             zip.write(manifestBytes);
+            zip.closeEntry();
+
+            byte[] manifestHmacBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(
+                    createManifestHmac(manifestBytes)
+            );
+            zip.putNextEntry(new ZipEntry(MANIFEST_HMAC_ENTRY));
+            zip.write(manifestHmacBytes);
             zip.closeEntry();
         }
 
@@ -360,15 +390,19 @@ public class BackupService {
         String zipSha256 = sha256(path);
 
         try (ZipFile zipFile = new ZipFile(path.toFile())) {
-            ZipEntry manifestEntry = zipFile.getEntry("manifest.json");
+            ZipEntry manifestEntry = zipFile.getEntry(MANIFEST_ENTRY);
             if (manifestEntry == null) {
                 throw new IOException("Missing manifest");
             }
 
+            byte[] manifestBytes;
             JsonNode manifest;
             try (InputStream input = zipFile.getInputStream(manifestEntry)) {
-                manifest = objectMapper.readTree(input);
+                manifestBytes = input.readAllBytes();
+                manifest = objectMapper.readTree(manifestBytes);
             }
+
+            verifyManifestHmac(zipFile, manifestBytes);
 
             JsonNode files = manifest.get("files");
             if (files == null || !files.isArray()) {
@@ -376,10 +410,12 @@ public class BackupService {
             }
 
             int checked = 0;
+            Set<String> expectedEntries = new HashSet<>();
             for (JsonNode fileNode : files) {
                 String entryName = fileNode.path("path").asText();
                 String expectedHash = fileNode.path("sha256").asText();
                 ensureSafeZipEntry(entryName);
+                expectedEntries.add(entryName);
 
                 ZipEntry entry = zipFile.getEntry(entryName);
                 if (entry == null) {
@@ -400,6 +436,8 @@ public class BackupService {
             if (manifest.path("totalFiles").asInt(-1) != checked) {
                 throw new IOException("Manifest total mismatch");
             }
+
+            rejectUnsignedZipEntries(zipFile, expectedEntries);
 
             Path sidecar = sidecarHashPath(path);
             if (Files.exists(sidecar)) {
@@ -467,6 +505,70 @@ public class BackupService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid backup path");
         }
         return zipPath.resolveSibling(filename.toString() + ".sha256");
+    }
+
+    private Map<String, Object> createManifestHmac(byte[] manifestBytes) {
+        Map<String, Object> signature = new LinkedHashMap<>();
+        signature.put("algorithm", HMAC_ALGORITHM);
+        signature.put("keyId", backupHmacKeyId);
+        signature.put("manifest", MANIFEST_ENTRY);
+        signature.put("hmacSha256", hmacSha256(manifestBytes));
+        return signature;
+    }
+
+    private void verifyManifestHmac(ZipFile zipFile, byte[] manifestBytes) throws IOException {
+        ZipEntry signatureEntry = zipFile.getEntry(MANIFEST_HMAC_ENTRY);
+        if (signatureEntry == null) {
+            throw new IOException("Missing manifest HMAC");
+        }
+
+        JsonNode signature;
+        try (InputStream input = zipFile.getInputStream(signatureEntry)) {
+            signature = objectMapper.readTree(input);
+        }
+
+        if (!HMAC_ALGORITHM.equals(signature.path("algorithm").asText())
+                || !backupHmacKeyId.equals(signature.path("keyId").asText())
+                || !MANIFEST_ENTRY.equals(signature.path("manifest").asText())) {
+            throw new IOException("Invalid manifest HMAC metadata");
+        }
+
+        String expected = hmacSha256(manifestBytes);
+        String supplied = signature.path("hmacSha256").asText();
+        if (!MessageDigest.isEqual(
+                expected.getBytes(StandardCharsets.US_ASCII),
+                supplied.getBytes(StandardCharsets.US_ASCII)
+        )) {
+            throw new IOException("Manifest HMAC mismatch");
+        }
+    }
+
+    private void rejectUnsignedZipEntries(ZipFile zipFile, Set<String> expectedEntries) throws IOException {
+        Enumeration<? extends ZipEntry> entries = zipFile.entries();
+        while (entries.hasMoreElements()) {
+            ZipEntry entry = entries.nextElement();
+            if (entry.isDirectory()) {
+                continue;
+            }
+
+            String name = entry.getName();
+            ensureSafeZipEntry(name);
+            if (!MANIFEST_ENTRY.equals(name)
+                    && !MANIFEST_HMAC_ENTRY.equals(name)
+                    && !expectedEntries.contains(name)) {
+                throw new IOException("Unsigned backup entry");
+            }
+        }
+    }
+
+    private String hmacSha256(byte[] bytes) {
+        try {
+            Mac mac = Mac.getInstance(HMAC_ALGORITHM);
+            mac.init(new SecretKeySpec(backupHmacSecret, HMAC_ALGORITHM));
+            return HexFormat.of().formatHex(mac.doFinal(bytes));
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("Could not sign backup manifest", e);
+        }
     }
 
     private String sha256(Path file) {
