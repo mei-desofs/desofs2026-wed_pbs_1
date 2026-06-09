@@ -83,7 +83,9 @@ PIT mutation testing is intentionally separated from the main `dev` workflow
 because it is the slowest evidence step and is reviewed manually rather than
 used as a fast merge gate. The dedicated `pit-mutation-testing` workflow runs on
 manual dispatch, pull requests to `main`, and `main` changes that touch source,
-tests, the Maven POM or the PIT workflow itself.
+tests, the Maven POM or the PIT workflow itself. Its expected final report entry
+point is `ghostreport/target/pit-reports/index.html` inside the
+`pit-mutation-testing-report` artifact.
 
 ## Documentation
 

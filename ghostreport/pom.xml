@@ -181,8 +181,7 @@
 				<configuration>
 
 					<targetClasses>
-						<param>com.ghostreport.domain.*</param>
-						<param>com.ghostreport.service.*</param>
+						<param>com.ghostreport.*</param>
 					</targetClasses>
 
 					<targetTests>
