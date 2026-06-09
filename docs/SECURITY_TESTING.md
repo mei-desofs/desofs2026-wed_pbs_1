@@ -42,6 +42,7 @@ the complete final report.
 
 The dedicated workflow:
 
+- compiles tests/classes and archives `pit-target-classes.txt` for diagnostics;
 - runs `org.pitest:pitest-maven:mutationCoverage`;
 - uses the full Maven PIT scope from `ghostreport/pom.xml`;
 - validates that `target/pit-reports/index.html` exists;
