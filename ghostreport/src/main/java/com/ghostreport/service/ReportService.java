@@ -25,6 +25,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.ghostreport.validation.ValidationConstants.trim;
+import static com.ghostreport.validation.ValidationConstants.upper;
+
 @Service
 public class ReportService {
 
@@ -87,7 +90,7 @@ public class ReportService {
         );
 
         report.setCategory(
-                request.getCategory()
+                trim(request.getCategory())
         );
 
         report.setStatus(

@@ -16,6 +16,7 @@ import com.ghostreport.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -56,7 +57,11 @@ public class AuthController {
         this.passwordResetService = passwordResetService;
     }
 
-    @PostMapping("/login")
+    @PostMapping(
+            value = "/login",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
     public AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         String clientKey = loginRateLimitKey(httpRequest, request.getUsername());
         rateLimiterService.checkLoginAllowed(clientKey);

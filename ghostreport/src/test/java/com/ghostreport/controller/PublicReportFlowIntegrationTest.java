@@ -113,7 +113,7 @@ class PublicReportFlowIntegrationTest {
                                 "category", "Fraud"
                         ))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Validation failed"))
+                .andExpect(jsonPath("$.error").value("Invalid request"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -160,7 +160,7 @@ class PublicReportFlowIntegrationTest {
                                 "trackingCode", "GR-aaaaaaaaaaaaaaaaaaaa"
                         ))))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("Denúncia não encontrada"))
+                .andExpect(jsonPath("$.error").value("Resource not found"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -177,7 +177,7 @@ class PublicReportFlowIntegrationTest {
                                 "trackingCode", "../invalid"
                         ))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Código inválido"))
+                .andExpect(jsonPath("$.error").value("Invalid request"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();

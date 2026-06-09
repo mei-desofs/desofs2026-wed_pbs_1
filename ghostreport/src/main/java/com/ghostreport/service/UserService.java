@@ -14,6 +14,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
+import static com.ghostreport.validation.ValidationConstants.trim;
+import static com.ghostreport.validation.ValidationConstants.upper;
+
 @Service
 public class UserService {
 
@@ -49,22 +52,27 @@ public class UserService {
     }
 
     public UserResponse createUser(CreateUserRequest request) {
-        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+        String username = trim(request.getUsername());
+        String email = trim(request.getEmail());
+
+        if (userRepository.findByUsername(username).isPresent()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username already exists");
         }
 
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+        if (userRepository.findByEmail(email).isPresent()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already exists");
         }
 
         UserRole role;
         try {
-            role = UserRole.valueOf(request.getRole().toUpperCase());
+            role = UserRole.valueOf(upper(request.getRole()));
         } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
         }
 
         User user = new User();
+        user.setUsername(username);
+        user.setEmail(email);
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         passwordPolicyService.validateNewPassword(null, request.getPassword());
