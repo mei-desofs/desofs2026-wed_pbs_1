@@ -493,23 +493,7 @@ public class ReportService {
                         attachment.getStoragePath()
                 );
 
-        return ResponseEntity.ok()
-                .contentType(
-                        MediaType.parseMediaType(
-                                attachment.getMimeType()
-                        )
-                )
-                .header(
-                        HttpHeaders.CONTENT_DISPOSITION,
-                        ContentDisposition.attachment()
-                                .filename(
-                                        attachment.getOriginalName(),
-                                        StandardCharsets.UTF_8
-                                )
-                                .build()
-                                .toString()
-                )
-                .body(resource);
+        return secureDownloadResponse(attachment, resource);
     }
 
     public ResponseEntity<Resource> downloadAttachmentSecure(
@@ -533,11 +517,24 @@ public class ReportService {
                         )
                 );
 
+        String normalizedTrackingCode;
+
+        try {
+            normalizedTrackingCode = TrackingCode.from(trackingCode.trim()).value();
+        } catch (IllegalArgumentException e) {
+            securityMonitoringService.recordFailedTrackingCode(attachment.getReport().getId());
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Código inválido"
+            );
+        }
+
         if (!passwordEncoder.matches(
-                trackingCode,
+                normalizedTrackingCode,
                 attachment.getReport().getTrackingCodeHash()
         )) {
 
+            securityMonitoringService.recordFailedTrackingCode(attachment.getReport().getId());
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN
             );
@@ -547,6 +544,14 @@ public class ReportService {
                 fileStorageService.loadFileAsResource(
                         attachment.getStoragePath()
                 );
+
+        return secureDownloadResponse(attachment, resource);
+    }
+
+    private ResponseEntity<Resource> secureDownloadResponse(
+            Attachment attachment,
+            Resource resource
+    ) {
 
         return ResponseEntity.ok()
                 .contentType(
@@ -564,6 +569,10 @@ public class ReportService {
                                 .build()
                                 .toString()
                 )
+                .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate, max-age=0")
+                .header(HttpHeaders.PRAGMA, "no-cache")
+                .header(HttpHeaders.EXPIRES, "0")
+                .header("X-Content-Type-Options", "nosniff")
                 .body(resource);
     }
 

@@ -39,13 +39,16 @@ public class FileStorageService {
 
     private final Path storageRoot;
     private final SecurityMonitoringService securityMonitoringService;
+    private final MalwareScanner malwareScanner;
 
     @Autowired
     public FileStorageService(
             @Value("${app.upload-dir:uploads}") String uploadDir,
-            SecurityMonitoringService securityMonitoringService
+            SecurityMonitoringService securityMonitoringService,
+            MalwareScanner malwareScanner
     ) {
         this.securityMonitoringService = securityMonitoringService;
+        this.malwareScanner = malwareScanner == null ? new LocalMalwareScanner() : malwareScanner;
 
         try {
             Path configuredRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
@@ -57,12 +60,18 @@ public class FileStorageService {
     }
 
     FileStorageService(String uploadDir) {
-        this(uploadDir, null);
+        this(uploadDir, null, new LocalMalwareScanner());
+    }
+
+    FileStorageService(String uploadDir, SecurityMonitoringService securityMonitoringService) {
+        this(uploadDir, securityMonitoringService, new LocalMalwareScanner());
     }
 
     public StoredFileInfo storeAttachment(Long reportId, MultipartFile file) {
 
         validateFile(file);
+        String originalName = sanitizeFilename(file.getOriginalFilename());
+        scanFileOrReject(reportId, file, originalName);
 
         try {
             Path attachmentsDir = resolveSafeStoragePath(
@@ -72,7 +81,6 @@ public class FileStorageService {
             Files.createDirectories(attachmentsDir);
             ensureRealPathInsideStorageRoot(attachmentsDir);
 
-            String originalName = sanitizeFilename(file.getOriginalFilename());
             String extension = getExtension(originalName);
 
             String fileRef = UUID.randomUUID().toString();
@@ -276,6 +284,61 @@ public class FileStorageService {
 
         validateExtensionForContentType(extension, contentType);
         validateMagicBytes(file, extension, contentType);
+    }
+
+    private void scanFileOrReject(Long reportId, MultipartFile file, String originalName) {
+        MalwareScanner.ScanResult scanResult;
+
+        try (InputStream input = file.getInputStream()) {
+            scanResult = malwareScanner.scan(input, originalName, file.getContentType());
+        } catch (IOException e) {
+            quarantineRejectedFile(reportId, file);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not scan file");
+        }
+
+        if (scanResult == null || !scanResult.clean()) {
+            quarantineRejectedFile(reportId, file);
+
+            if (securityMonitoringService != null) {
+                securityMonitoringService.recordMalwareUploadRejected(reportId);
+            }
+
+            logger.warn(
+                    "Malware scanner rejected upload for report id={}, reason={}",
+                    reportId,
+                    scanResult == null ? "no scan result" : scanResult.reason()
+            );
+
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File rejected by malware scanner");
+        }
+    }
+
+    private void quarantineRejectedFile(Long reportId, MultipartFile file) {
+        try {
+            String quarantinePath = "quarantine/reports/%d".formatted(reportId);
+            Path quarantineDir = resolveSafeStoragePath(quarantinePath);
+
+            Files.createDirectories(quarantineDir);
+            ensureRealPathInsideStorageRoot(quarantineDir);
+
+            String quarantineName = requireSafeStorageFilename(UUID.randomUUID() + ".quarantine");
+            Path target = resolveSafeStoragePath("%s/%s".formatted(quarantinePath, quarantineName));
+
+            ensureRealPathInsideStorageRoot(target.getParent());
+            rejectExistingSymlink(target);
+
+            try (InputStream input = file.getInputStream()) {
+                Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            logger.warn(
+                    "Rejected upload quarantined for report id={} at {}",
+                    reportId,
+                    storageRoot.relativize(target).toString().replace('\\', '/')
+            );
+        } catch (IOException e) {
+            logger.warn("Could not quarantine rejected upload for report id={}", reportId);
+        }
     }
 
     private String sanitizeFilename(String name) {

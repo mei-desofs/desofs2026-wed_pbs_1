@@ -150,11 +150,14 @@ Development seed accounts are only for local testing:
 
 Uploads are stored under `app.upload-dir`. The application validates file size, extension, MIME type, magic bytes, normalized paths and the maximum number of files per request. The current multipart limit is 10 MB per file/request and the default application-level upload count limit is 5 files per request.
 
+Uploaded attachments are scanned through the `MalwareScanner` interface before they are persisted as report attachments. The default local implementation detects the EICAR test signature so automated tests can prove the scanner control path. Files rejected by the scanner are copied to `app.upload-dir/quarantine/reports/{reportId}` and are not stored in the attachment repository.
+
 Operational guidance:
 
 - Keep upload storage outside source-controlled directories.
 - Ensure the application user has only the filesystem permissions required for upload storage.
-- Do not claim antivirus or malware scanning unless a real scanner is integrated.
+- Replace the local scanner with a real antivirus adapter before claiming production malware detection coverage.
+- Define retention, review and deletion procedures for quarantined files.
 
 ## Backup Configuration
 
