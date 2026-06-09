@@ -73,8 +73,6 @@ public class UserService {
         User user = new User();
         user.setUsername(username);
         user.setEmail(email);
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
         passwordPolicyService.validateNewPassword(null, request.getPassword());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setRole(role);
