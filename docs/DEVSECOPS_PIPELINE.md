@@ -79,17 +79,18 @@ them into:
 
 ## Current Local Validation
 
-The current workflow has been validated locally with `actionlint` 1.7.12.
-The Spring Boot module also runs locally with:
+Validate the workflow locally with `actionlint` when it is available. Validate
+the Spring Boot module with:
 
 ```powershell
 cd ghostreport
 .\mvnw test
+.\mvnw verify
 ```
 
-The latest local test run completed successfully with 117 tests passing and the
-JaCoCo coverage check passing. Final grading evidence should still come from a
-fresh GitHub Actions run after the branch is pushed.
+`verify` is the local command that generates the JaCoCo report and applies the
+coverage check. Final grading evidence should still come from a fresh GitHub
+Actions run after the branch is pushed.
 
 ## Demo Path
 

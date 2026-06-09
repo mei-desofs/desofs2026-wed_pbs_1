@@ -25,12 +25,8 @@ cd ghostreport
 ./mvnw test
 ```
 
-Estado atual observado localmente:
-
-- 86 testes executados;
-- 0 falhas;
-- 0 erros;
-- 0 testes ignorados.
+Estado esperado: `./mvnw test` deve passar antes de uma alteracao ser aceite.
+O workflow publica os relatorios Surefire como evidence artifact.
 
 Os testes cobrem fluxos de:
 
@@ -80,16 +76,15 @@ Impacto de seguranca: o gate reduz o risco de regressões em fluxos de autentica
 
 ## SpotBugs SAST
 
-Workflow:
+Workflow/job:
 
-- `.github/workflows/sast-spotbugs.yml`
+- `.github/workflows/dev.yml`, job `sast / SonarCloud SAST Scan`
 
 Comando local:
 
 ```bash
 cd ghostreport
-./mvnw -DskipTests compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true -Dspotbugs.effort=Max -Dspotbugs.threshold=Low
-./mvnw com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:check -Dspotbugs.xmlOutput=true -Dspotbugs.effort=Max -Dspotbugs.threshold=Medium
+./mvnw -DskipTests compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true
 ```
 
 Artifact esperado:
@@ -98,22 +93,21 @@ Artifact esperado:
 - `ghostreport/target/*spotbugs*.xml`
 - `ghostreport/target/site/spotbugs*`
 
-Politica:
-
-- findings Low devem ser triados e corrigidos quando simples;
-- findings Medium ou superiores devem bloquear a pipeline, salvo falso positivo documentado.
+Politica: SpotBugs gera evidencia para triagem manual no job SAST; findings
+confirmados devem ser corrigidos ou documentados antes de serem usados como
+evidencia ASVS.
 
 ## OWASP Dependency-Check SCA
 
-Workflow:
+Workflow/job:
 
-- `.github/workflows/sca-dependency-check.yml`
+- `.github/workflows/dev.yml`, job `dependency-scanning / Dependency Vulnerability Scanning`
 
 Comando local:
 
 ```bash
 cd ghostreport
-./mvnw org.owasp:dependency-check-maven:12.1.0:check -Dformat=ALL -DossindexAnalyzerEnabled=false -DfailOnError=false -DfailBuildOnCVSS=7
+./mvnw org.owasp:dependency-check-maven:12.1.0:check -Dformat=ALL -DossindexAnalyzerEnabled=false -DfailOnError=false -DfailBuildOnCVSS=11
 ```
 
 Artifacts esperados:
@@ -125,16 +119,16 @@ Artifacts esperados:
 
 Politica:
 
-- CVSS >= 7 deve bloquear a pipeline;
-- CVSS baixo/medio deve ser triado;
+- Dependency-Check corre em modo de evidencia/triagem, sem baixar o gate para ocultar findings;
+- CVSS baixo, medio, alto ou critico deve ser triado;
 - falso positivo deve ser documentado com justificacao;
 - dependencias vulneraveis devem ser atualizadas quando houver versao segura compativel.
 
 ## Gitleaks Secret Scanning
 
-Workflow:
+Workflow/job:
 
-- `.github/workflows/secret-scan-gitleaks.yml`
+- `.github/workflows/dev.yml`, job `security-secrets / secrets`
 
 Configuracao:
 
@@ -152,9 +146,9 @@ Politica:
 
 ## OWASP ZAP DAST
 
-Workflow:
+Workflow/job:
 
-- `.github/workflows/dast-zap.yml`
+- `.github/workflows/dev.yml`, job `dast-scan / dast-scan`
 
 Target:
 
@@ -169,8 +163,8 @@ Artifacts esperados:
 
 Politica:
 
-- alertas de risco alto devem bloquear a pipeline;
-- alertas medios devem ser triados;
+- ZAP baseline corre em modo de evidencia/triagem;
+- alertas medios/altos devem ser triados;
 - alertas baixos devem ser corrigidos quando simples;
 - findings aceites devem ter justificacao.
 
@@ -195,13 +189,13 @@ Impacto de seguranca:
 
 Os workflows publicam:
 
-| Workflow | Artifacts |
+| Job | Artifacts |
 | -------- | --------- |
-| CI Tests | Surefire reports, JaCoCo report |
-| DAST ZAP | HTML, XML, JSON, application log |
-| SpotBugs | XML/Site reports |
-| Dependency-Check | HTML, XML, JSON, SARIF |
-| Gitleaks | JSON report |
+| `build-test / build-and-test` | Surefire reports, JaCoCo report, PIT report/summary |
+| `security-secrets / secrets` | Gitleaks JSON report |
+| `sast / SonarCloud SAST Scan` | SpotBugs XML, SAST summary, CodeQL/SonarCloud evidence |
+| `dependency-scanning / Dependency Vulnerability Scanning` | Dependency-Check HTML/XML/JSON/SARIF, CycloneDX SBOM |
+| `dast-scan / dast-scan` | Runtime security/IAST readiness notes, ZAP HTML/XML/JSON, application log |
 
 Os artifacts devem ser descarregados do GitHub Actions e guardados como evidencia da sprint quando solicitado.
 

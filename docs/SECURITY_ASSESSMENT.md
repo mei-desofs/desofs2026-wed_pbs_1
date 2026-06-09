@@ -72,8 +72,8 @@ evidence used to verify them. It should be read together with
 
 | Tool | Result | Evidence | Residual risk |
 | --- | --- | --- | --- |
-| JUnit/MockMvc | Local run passed with 136 tests after the logging and monitoring hardening changes. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Keep expanding negative-path tests for admin, report and backup workflows over time. |
-| JaCoCo | Coverage gate passes locally and runs in CI. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco` | Some controllers/services can still be improved, but the current gate is passing. |
+| JUnit/MockMvc | Maven `test`/`verify` runs the automated test suite and CI uploads Surefire evidence. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Keep expanding negative-path tests for admin, report and backup workflows over time. |
+| JaCoCo | Coverage report and coverage check run during Maven `verify` in CI. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco`, `ghostreport/target/jacoco.exec` | Some controllers/services can still be improved without lowering the current gate. |
 | Gitleaks | Generates JSON evidence and blocks confirmed leaks. | `secret-scan-gitleaks-json` | Workspace-wide local scans can include ignored diagnostic files; use repository-scope CI evidence for assessment. |
 | SpotBugs | Runs in the SAST job and uploads XML evidence. | `sast-reports` | Findings require triage before suppression or acceptance. |
 | SonarCloud | Runs when `SONAR_TOKEN` is configured. | `sast-reports`, SonarCloud UI | The job depends on repository secrets/variables being configured. |
@@ -83,17 +83,17 @@ evidence used to verify them. It should be read together with
 | ZAP | Baseline DAST runs against a live app in CI. | `dast-zap-baseline-reports` | Baseline scan is unauthenticated and should be treated as first-line DAST evidence. |
 | Runtime security / IAST readiness | Security-focused tests run with JaCoCo skipped and upload Surefire plus readiness notes. | `iast-runtime-security-evidence` | Contrast/IAST telemetry is optional and only exists when configured. |
 | PIT | Runs in evidence review mode and uploads summary/exit code. | `pit-mutation-testing-report` | Mutation score is not a blocking Sprint 2 gate. |
-| actionlint | Current `dev.yml` validated locally with actionlint 1.7.12. | Local command output or pipeline validation notes | Does not replace a real GitHub Actions run. |
+| actionlint | Workflow syntax can be validated locally when actionlint is available. | Local command output or pipeline validation notes | Does not replace a real GitHub Actions run. |
 
 ## Scope Boundaries
 
 The current assessment covers the implemented coursework application and its
 automated security evidence. External SIEM, privileged-user MFA, distributed
-token revocation, authenticated deep DAST, production TLS operations and
-advanced monitoring, external SIEM, WORM/append-only log storage and automated
-retention are documented as future operational hardening. MFA remains
-out of scope for Sprint 2 because the application does not integrate an
-authenticator app, email/SMS provider or external identity provider.
+token revocation, authenticated deep DAST, production TLS operations, WORM or
+append-only log storage and automated retention are documented as future
+operational hardening. MFA remains out of scope for Sprint 2 because the
+application does not integrate an authenticator app, email/SMS provider or
+external identity provider.
 
 The local folder `Deliverables/Phase 2/Evidence` is not automatically written by
 GitHub Actions. It is a curated archive populated from downloaded workflow
