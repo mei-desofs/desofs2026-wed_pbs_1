@@ -14,14 +14,31 @@ function clearMessages() {
     ["loginError", "globalResult", "globalError", "caseResult", "caseError"].forEach(id => setText(id, ""));
 }
 
+function showElement(id, display = "block") {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.classList.remove("hidden");
+    node.style.display = display;
+}
+
+function hideElement(id) {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.classList.add("hidden");
+    node.style.display = "none";
+}
+
 function showPage(pageId) {
     clearMessages();
 
     document.querySelectorAll(".analyst-page").forEach(page => {
+        page.classList.add("hidden");
         page.style.display = "none";
     });
 
-    document.getElementById(pageId).style.display = "block";
+    const page = document.getElementById(pageId);
+    page.classList.remove("hidden");
+    page.style.display = "block";
 
     document.querySelectorAll("#analystNav button").forEach(button => {
         button.classList.remove("active");
@@ -63,8 +80,9 @@ async function safeFetch(url, options = {}) {
         ? csrfFetchOptions(options)
         : options;
     const response = await fetch(url, fetchOptions);
+    const authFlowRequest = String(url).includes("/auth/login");
 
-    if (response.status === 401 || response.status === 403) {
+    if (!authFlowRequest && (response.status === 401 || response.status === 403)) {
         analystAuth = null;
         analystUsername = null;
         throw new Error("Sessão expirada ou credenciais inválidas.");
@@ -84,12 +102,12 @@ async function validateSession() {
 }
 
 function showDashboard() {
-    document.getElementById("analystLoginPanel").style.display = "none";
-    document.getElementById("loginSection").style.display = "none";
-    document.getElementById("dashboard").style.display = "block";
+    hideElement("analystLoginPanel");
+    hideElement("loginSection");
+    showElement("dashboard");
 
-    document.getElementById("publicNav").style.display = "none";
-    document.getElementById("analystNav").style.display = "flex";
+    hideElement("publicNav");
+    showElement("analystNav", "flex");
 
     showPage("submittedPage");
     loadSubmittedReports();
@@ -140,11 +158,11 @@ async function logout(reload = true) {
     if (reload) {
         location.reload();
     } else {
-        document.getElementById("publicNav").style.display = "flex";
-        document.getElementById("analystNav").style.display = "none";
-        document.getElementById("dashboard").style.display = "none";
-        document.getElementById("analystLoginPanel").style.display = "block";
-        document.getElementById("loginSection").style.display = "block";
+        showElement("publicNav", "flex");
+        hideElement("analystNav");
+        hideElement("dashboard");
+        showElement("analystLoginPanel");
+        showElement("loginSection", "flex");
     }
 }
 

@@ -72,6 +72,7 @@ public class SecurityConfig {
                         .requestMatchers("/", "/index.html", "/submit.html", "/track.html", "/analyst.html", "/admin.html", "/auditor.html").permitAll()
                         .requestMatchers("/css/**", "/js/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/mfa/verify").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/password-reset/request").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/password-reset/confirm").permitAll()
 
@@ -115,7 +116,9 @@ public class SecurityConfig {
     private CookieCsrfTokenRepository csrfTokenRepository() {
         // The frontend reads XSRF-TOKEN and returns it in X-XSRF-TOKEN.
         // The token is not an authentication secret; JWTs remain in Authorization headers.
-        return CookieCsrfTokenRepository.withHttpOnlyFalse();
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookieCustomizer(cookie -> cookie.sameSite("Lax"));
+        return repository;
     }
 
     private static final class CsrfCookieFilter extends OncePerRequestFilter {
@@ -127,6 +130,9 @@ public class SecurityConfig {
                 FilterChain filterChain
         ) throws ServletException, IOException {
             CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+            if (csrfToken == null) {
+                csrfToken = (CsrfToken) request.getAttribute("_csrf");
+            }
             if (csrfToken != null) {
                 csrfToken.getToken();
             }

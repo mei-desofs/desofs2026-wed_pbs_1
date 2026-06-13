@@ -9,6 +9,8 @@ const {
 
 let adminSessionAuth = null;
 let adminUsername = null;
+let adminMfaChallengeId = null;
+let adminUsersCache = [];
 
 function getApiBase() {
     return typeof API_BASE !== "undefined" ? API_BASE : "";
@@ -32,8 +34,13 @@ async function adminHandleJsonResponse(response) {
 function clearAdminMessages() {
     [
         "loginError",
+        "mfaError",
         "globalResult",
         "globalError",
+        "userManagementResult",
+        "userManagementError",
+        "editUserResult",
+        "editUserError",
         "createUserResult",
         "createUserError",
         "backupResult",
@@ -41,14 +48,31 @@ function clearAdminMessages() {
     ].forEach(id => setText(id, ""));
 }
 
+function showElement(id, display = "block") {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.classList.remove("hidden");
+    node.style.display = display;
+}
+
+function hideElement(id) {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.classList.add("hidden");
+    node.style.display = "none";
+}
+
 function showAdminPage(pageId) {
     clearAdminMessages();
 
     document.querySelectorAll(".admin-page").forEach(page => {
+        page.classList.add("hidden");
         page.style.display = "none";
     });
 
-    document.getElementById(pageId).style.display = "block";
+    const page = document.getElementById(pageId);
+    page.classList.remove("hidden");
+    page.style.display = "block";
 
     document.querySelectorAll("#adminNav button").forEach(button => {
         button.classList.remove("active");
@@ -62,6 +86,7 @@ function showAdminPage(pageId) {
     }
 
     if (pageId === "usersPage") {
+        clearEditUserRoute();
         loadUsers();
     }
 
@@ -94,10 +119,12 @@ async function adminSafeFetch(url, options = {}) {
         ? csrfFetchOptions(options)
         : options;
     const response = await fetch(url, fetchOptions);
+    const authFlowRequest = String(url).includes("/auth/login") || String(url).includes("/auth/mfa/verify");
 
-    if (response.status === 401 || response.status === 403) {
+    if (!authFlowRequest && (response.status === 401 || response.status === 403)) {
         adminSessionAuth = null;
         adminUsername = null;
+        adminMfaChallengeId = null;
         throw new Error("Sessão expirada ou sem permissões de administrador.");
     }
 
@@ -115,12 +142,13 @@ async function adminValidateSession() {
 }
 
 function showAdminDashboard() {
-    document.getElementById("adminLoginPanel").style.display = "none";
-    document.getElementById("loginSection").style.display = "none";
-    document.getElementById("adminDashboard").style.display = "block";
+    hideElement("adminLoginPanel");
+    hideElement("loginSection");
+    hideElement("mfaSection");
+    showElement("adminDashboard");
 
-    document.getElementById("publicNav").style.display = "none";
-    document.getElementById("adminNav").style.display = "flex";
+    hideElement("publicNav");
+    showElement("adminNav", "flex");
 
     showAdminPage("usersPage");
     loadAuditLogs();
@@ -148,6 +176,17 @@ async function adminLogin() {
             body: JSON.stringify({ username, password })
         });
         const loginData = await adminHandleJsonResponse(loginResponse);
+        if (loginData.mfaRequired) {
+            adminSessionAuth = null;
+            adminUsername = loginData.username;
+            adminMfaChallengeId = loginData.mfaChallengeId;
+            hideElement("loginSection");
+            showElement("mfaSection");
+            hideElement("adminNav");
+            showElement("publicNav", "flex");
+            return;
+        }
+
         adminSessionAuth = `${loginData.tokenType} ${loginData.token}`;
 
         await adminValidateSession();
@@ -161,6 +200,51 @@ async function adminLogin() {
     }
 }
 
+async function verifyAdminMfa() {
+    clearAdminMessages();
+
+    const code = document.getElementById("mfaCode").value.trim();
+    if (!adminMfaChallengeId || !code) {
+        setText("mfaError", "Introduz o codigo de verificacao.");
+        return;
+    }
+
+    try {
+        const response = await adminSafeFetch(`${getApiBase()}/auth/mfa/verify`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                challengeId: adminMfaChallengeId,
+                code
+            })
+        });
+        const data = await adminHandleJsonResponse(response);
+        adminSessionAuth = `${data.tokenType} ${data.token}`;
+        adminUsername = data.username;
+        adminMfaChallengeId = null;
+        document.getElementById("mfaCode").value = "";
+
+        await adminValidateSession();
+        showAdminDashboard();
+    } catch (error) {
+        adminSessionAuth = null;
+        setText("mfaError", error.message || "Codigo invalido ou expirado.");
+    }
+}
+
+function cancelAdminMfa() {
+    adminSessionAuth = null;
+    adminUsername = null;
+    adminMfaChallengeId = null;
+    document.getElementById("mfaCode").value = "";
+    hideElement("mfaSection");
+    showElement("loginSection", "flex");
+    showElement("publicNav", "flex");
+    hideElement("adminNav");
+}
+
 async function adminLogout(reload = true) {
     if (typeof revokeCurrentToken === "function") {
         await revokeCurrentToken(adminSessionAuth);
@@ -168,15 +252,17 @@ async function adminLogout(reload = true) {
 
     adminSessionAuth = null;
     adminUsername = null;
+    adminMfaChallengeId = null;
 
     if (reload) {
         location.reload();
     } else {
-        document.getElementById("publicNav").style.display = "flex";
-        document.getElementById("adminNav").style.display = "none";
-        document.getElementById("adminDashboard").style.display = "none";
-        document.getElementById("adminLoginPanel").style.display = "block";
-        document.getElementById("loginSection").style.display = "block";
+        showElement("publicNav", "flex");
+        hideElement("adminNav");
+        hideElement("adminDashboard");
+        hideElement("mfaSection");
+        showElement("adminLoginPanel");
+        showElement("loginSection", "flex");
     }
 }
 
@@ -202,12 +288,26 @@ function safeClassToken(value) {
 }
 
 function renderUser(user) {
-    return element("div", { className: "user-card" },
-        element("h3", { text: user.username || user.name || "Utilizador" }),
-        metaLine("ID", user.id),
-        metaLine("Email", user.email),
-        metaLine("Role", roleLabel(user.role)),
-        metaLine("Estado", user.active === false ? "Inativo" : "Ativo")
+    return element("div", {
+        className: "user-card",
+        dataset: {
+            userId: user.id,
+            active: user.active === false ? "false" : "true"
+        }
+    },
+        element("h3", { text: user.username || "Utilizador" }),
+        element("div", { className: "user-summary" },
+            metaLine("ID", user.id),
+            metaLine("Email", user.email || "-"),
+            metaLine("Role", roleLabel(user.role)),
+            metaLine("Estado", user.active === false ? "Inativo" : "Ativo")
+        ),
+        element("div", { className: "user-actions" },
+            actionButton("Editar", "editUser", { userId: user.id }),
+            user.active === false
+                ? actionButton("Ativar", "activateUser", { userId: user.id })
+                : actionButton("Desativar", "deactivateUser", { userId: user.id }, "danger-btn")
+        )
     );
 }
 
@@ -265,6 +365,7 @@ async function loadUsers() {
 
         const data = await adminHandleJsonResponse(response);
         const users = Array.isArray(data) ? data : [];
+        adminUsersCache = users;
 
         count.textContent = users.length;
 
@@ -311,6 +412,97 @@ async function createUser() {
         showAdminPage("usersPage");
     } catch (error) {
         setText("createUserError", error.message);
+    }
+}
+
+function setEditUserRoute(userId) {
+    if (window.history?.replaceState) {
+        window.history.replaceState(null, document.title, `#/admin/users/${encodeURIComponent(userId)}/edit`);
+    }
+}
+
+function clearEditUserRoute() {
+    if (window.history?.replaceState && window.location.hash.startsWith("#/admin/users/")) {
+        window.history.replaceState(null, document.title, window.location.pathname);
+    }
+}
+
+function editUser(userId) {
+    clearAdminMessages();
+
+    const user = adminUsersCache.find(candidate => Number(candidate.id) === Number(userId));
+    if (!user) {
+        setText("userManagementError", "Utilizador nao encontrado. Atualiza a lista e tenta novamente.");
+        return;
+    }
+
+    document.getElementById("editUserId").value = user.id;
+    document.getElementById("editUsername").value = user.username || "";
+    document.getElementById("editEmail").value = user.email || "";
+    document.getElementById("editRole").value = roleLabel(user.role);
+    document.getElementById("editActive").value = user.active === false ? "false" : "true";
+
+    setEditUserRoute(user.id);
+    showAdminPage("editUserPage");
+}
+
+function cancelEditUser() {
+    document.getElementById("editUserId").value = "";
+    clearEditUserRoute();
+    showAdminPage("usersPage");
+}
+
+function editUserPayload() {
+    return {
+        username: document.getElementById("editUsername").value.trim(),
+        email: document.getElementById("editEmail").value.trim(),
+        role: document.getElementById("editRole").value,
+        active: document.getElementById("editActive").value === "true"
+    };
+}
+
+async function saveEditedUser() {
+    clearAdminMessages();
+
+    try {
+        const userId = document.getElementById("editUserId").value;
+        const payload = editUserPayload();
+
+        const response = await adminSafeFetch(`${getApiBase()}/admin/users/${encodeURIComponent(userId)}`, {
+            method: "PUT",
+            headers: adminAuthHeaders({
+                "Content-Type": "application/json"
+            }),
+            body: JSON.stringify(payload)
+        });
+
+        await adminHandleJsonResponse(response);
+        setText("editUserResult", "Utilizador atualizado com sucesso.");
+        await loadUsers();
+        setTimeout(() => {
+            clearEditUserRoute();
+            showAdminPage("usersPage");
+            setText("userManagementResult", "Utilizador atualizado com sucesso.");
+        }, 250);
+    } catch (error) {
+        setText("editUserError", error.message);
+    }
+}
+
+async function setUserActive(userId, active) {
+    clearAdminMessages();
+
+    try {
+        const response = await adminSafeFetch(`${getApiBase()}/admin/users/${encodeURIComponent(userId)}/${active ? "activate" : "deactivate"}`, {
+            method: "PATCH",
+            headers: adminAuthHeaders()
+        });
+
+        await adminHandleJsonResponse(response);
+        setText("userManagementResult", active ? "Utilizador ativado." : "Utilizador desativado.");
+        await loadUsers();
+    } catch (error) {
+        setText("userManagementError", error.message);
     }
 }
 
@@ -490,8 +682,15 @@ document.addEventListener("click", event => {
         showAdminPage: () => showAdminPage(button.dataset.page),
         adminLogout: () => adminLogout(),
         adminLogin,
+        verifyAdminMfa,
+        cancelAdminMfa,
         loadUsers,
         createUser,
+        editUser: () => editUser(Number(button.dataset.userId)),
+        saveEditedUser,
+        cancelEditUser,
+        activateUser: () => setUserActive(Number(button.dataset.userId), true),
+        deactivateUser: () => setUserActive(Number(button.dataset.userId), false),
         clearCreateUserForm,
         loadAuditLogs,
         loadSecurityAlerts,

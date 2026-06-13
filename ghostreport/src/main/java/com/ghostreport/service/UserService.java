@@ -1,6 +1,7 @@
 package com.ghostreport.service;
 
 import com.ghostreport.dto.CreateUserRequest;
+import com.ghostreport.dto.UpdateUserRequest;
 import com.ghostreport.dto.UserResponse;
 import com.ghostreport.model.User;
 import com.ghostreport.model.UserRole;
@@ -21,6 +22,7 @@ import static com.ghostreport.validation.ValidationConstants.upper;
 public class UserService {
 
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
+    private static final String USER_NOT_FOUND = "User not found";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -97,9 +99,54 @@ public class UserService {
         return toResponse(saved);
     }
 
+    public UserResponse updateUser(Long userId, UpdateUserRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, USER_NOT_FOUND));
+
+        String username = trim(request.getUsername());
+        String email = trim(request.getEmail());
+        UserRole role = parseRole(request.getRole());
+        boolean active = Boolean.TRUE.equals(request.getActive());
+
+        userRepository.findByUsername(username)
+                .filter(existing -> !existing.getId().equals(userId))
+                .ifPresent(existing -> {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username already exists");
+                });
+
+        userRepository.findByEmail(email)
+                .filter(existing -> !existing.getId().equals(userId))
+                .ifPresent(existing -> {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already exists");
+                });
+
+        boolean removesActiveAdmin = user.isActive()
+                && user.getRole() == UserRole.ADMIN
+                && (!active || role != UserRole.ADMIN);
+        if (removesActiveAdmin && userRepository.countByRoleAndActiveTrue(UserRole.ADMIN) <= 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "At least one active administrator is required");
+        }
+
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setRole(role);
+        user.setActive(active);
+
+        User saved = userRepository.save(user);
+        auditLogService.log(
+                "USER_UPDATED",
+                "USER",
+                saved.getId(),
+                "User updated with role " + saved.getRole() + " and active=" + saved.isActive()
+        );
+        logger.info("USER_UPDATED for user id={}, role={}, active={}", saved.getId(), saved.getRole(), saved.isActive());
+
+        return toResponse(saved);
+    }
+
     public void changePassword(String username, String currentPassword, String newPassword) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, USER_NOT_FOUND));
 
         if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
             auditLogService.log("PASSWORD_CHANGE_REJECTED", "USER", user.getId(), "Current password validation failed");
@@ -116,7 +163,7 @@ public class UserService {
 
     public UserResponse setActive(Long userId, boolean active) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, USER_NOT_FOUND));
 
         if (user.isActive() == active) {
             return toResponse(user);
@@ -136,6 +183,14 @@ public class UserService {
         logger.info("{} for user id={}", action, saved.getId());
 
         return toResponse(saved);
+    }
+
+    private UserRole parseRole(String roleValue) {
+        try {
+            return UserRole.valueOf(upper(roleValue));
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
+        }
     }
 
     private UserResponse toResponse(User user) {

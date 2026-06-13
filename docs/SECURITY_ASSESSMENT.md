@@ -51,7 +51,7 @@ evidence used to verify them. It should be read together with
 | SAST | SpotBugs, SonarCloud and CodeQL in the `sast` job | Static analysis evidence is generated; CodeQL primary evidence is GitHub Code Scanning. | Evidence review |
 | SCA/SBOM | Dependency-Check and CycloneDX in the `dependency-scanning` job | Dependency risk and inventory evidence is generated. | Evidence review |
 | Secret scanning | Gitleaks in `security-secrets` | Repository secret scan evidence is generated and confirmed leaks block the workflow. | Implemented |
-| DAST | ZAP baseline in `dast-scan` | Runtime HTTP baseline evidence is generated against a live CI application instance. | Evidence review |
+| DAST | ZAP baseline in `dast-scan`, `CsrfCookieAttributesTest`, `SecurityHeadersTest` | Runtime HTTP baseline evidence is generated against a live CI application instance; `XSRF-TOKEN` keeps frontend-readable CSRF behavior with `SameSite=Lax`; `no-store` and session-management informational alerts are accepted by design. | Evidence review |
 | Runtime security / IAST-like evidence | Runtime tests, live endpoint checks and ZAP-adjacent runtime notes in `dast-scan` | Runtime security tests always run; full agent-based IAST is not claimed. | Evidence review |
 | Coverage and mutation testing | JaCoCo in `build-test`; PIT in `pit-mutation-testing` | Coverage is blocking; PIT is evidence review with report/fallback artifact. | Evidence review |
 
@@ -80,7 +80,7 @@ evidence used to verify them. It should be read together with
 | CodeQL | Publishes primary findings to GitHub Code Scanning. | GitHub Code Scanning, `sast-reports` summary | Local full SARIF archive is not claimed by this workflow. |
 | Dependency-Check | Runs in evidence mode and uploads reports. | `dependency-check-sca-reports` | Findings require applicability and upgrade triage. |
 | CycloneDX | Generates JSON/XML SBOM. | `sbom-cyclonedx` | SBOM is inventory evidence, not vulnerability triage by itself. |
-| ZAP | Baseline DAST runs against a live app in CI. | `dast-zap-baseline-reports` | Baseline scan is unauthenticated and should be treated as first-line DAST evidence. |
+| ZAP | Baseline DAST runs against a live app in CI. | `dast-zap-baseline-reports`, `CsrfCookieAttributesTest` | `XSRF-TOKEN` is intentionally not `HttpOnly` because frontend JavaScript reads it for `X-XSRF-TOKEN`; `SameSite=Lax` is enforced. Baseline scan is unauthenticated and should be treated as first-line DAST evidence. |
 | Runtime security / IAST-like evidence | Security-focused tests run with JaCoCo skipped and upload Surefire, endpoint checks and runtime notes. | `iast-runtime-security-evidence` | Full agent-based IAST and taint tracking are not claimed. |
 | PIT | Runs in the dedicated `pit-mutation-testing` workflow, validates `target/pit-reports/index.html` and uploads the complete HTML/XML report plus summaries. | `pit-mutation-testing-report` | Mutation score is not a blocking Sprint 2 gate. |
 | actionlint | Workflow syntax can be validated locally when actionlint is available. | Local command output or pipeline validation notes | Does not replace a real GitHub Actions run. |
@@ -88,12 +88,12 @@ evidence used to verify them. It should be read together with
 ## Scope Boundaries
 
 The current assessment covers the implemented coursework application and its
-automated security evidence. External SIEM, privileged-user MFA, distributed
-token revocation, authenticated deep DAST, production TLS operations, WORM or
-append-only log storage and automated retention are documented as future
-operational hardening. MFA remains out of scope for Sprint 2 because the
-application does not integrate an authenticator app, email/SMS provider or
-external identity provider.
+automated security evidence. External SIEM, distributed token revocation,
+authenticated deep DAST, production TLS operations, WORM or append-only log
+storage and automated retention are documented as future operational hardening.
+MFA is implemented for ADMIN with short-lived one-time codes; production
+delivery/enrollment through email/SMS, TOTP or an external identity provider
+remains future operational hardening.
 
 The local folder `Deliverables/Phase 2/Evidence` is not automatically written by
 GitHub Actions. It is a curated archive populated from downloaded workflow

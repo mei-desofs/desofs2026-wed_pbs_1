@@ -1,4 +1,10 @@
 spring:
+  sql:
+    init:
+      mode: always
+      platform: postgresql
+      schema-locations: classpath:db/schema/postgresql/001_audit_alert_metadata.sql
+      separator: "@@"
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/ghostreport}
     username: ${DB_USERNAME:postgres}
@@ -6,6 +12,7 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   jpa:
+    defer-datasource-initialization: false
     hibernate:
       ddl-auto: update
     show-sql: false
@@ -31,6 +38,11 @@ ghostreport:
   password-reset:
     token-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:30}
     expose-token: ${PASSWORD_RESET_EXPOSE_TOKEN:false}
+  mfa:
+    enabled: ${GHOSTREPORT_MFA_ENABLED:true}
+    admin-required: ${GHOSTREPORT_MFA_ADMIN_REQUIRED:true}
+    code-ttl-seconds: ${GHOSTREPORT_MFA_CODE_TTL_SECONDS:300}
+    expose-code: ${GHOSTREPORT_MFA_EXPOSE_CODE:true}
   seed-users:
     enabled: ${GHOSTREPORT_SEED_USERS_ENABLED:true}
   backup:

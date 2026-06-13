@@ -3,6 +3,7 @@ package com.ghostreport.controller;
 import com.ghostreport.dto.CreateUserRequest;
 import com.ghostreport.dto.AuditLogResponse;
 import com.ghostreport.dto.SecurityAlertResponse;
+import com.ghostreport.dto.UpdateUserRequest;
 import com.ghostreport.dto.UserResponse;
 import com.ghostreport.repository.AuditLogRepository;
 import com.ghostreport.service.UserService;
@@ -82,6 +83,15 @@ public class AdminController {
         return userService.createUser(request);
     }
 
+    @PutMapping(
+            value = "/users/{id}",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public UserResponse updateUser(@PathVariable Long id, @Valid @RequestBody UpdateUserRequest request) {
+        return userService.updateUser(id, request);
+    }
+
     @PatchMapping("/users/{id}/activate")
     public UserResponse activateUser(@PathVariable Long id) {
         return userService.setActive(id, true);
@@ -89,6 +99,11 @@ public class AdminController {
 
     @PatchMapping("/users/{id}/deactivate")
     public UserResponse deactivateUser(@PathVariable Long id) {
+        return userService.setActive(id, false);
+    }
+
+    @DeleteMapping("/users/{id}")
+    public UserResponse removeUser(@PathVariable Long id) {
         return userService.setActive(id, false);
     }
 }

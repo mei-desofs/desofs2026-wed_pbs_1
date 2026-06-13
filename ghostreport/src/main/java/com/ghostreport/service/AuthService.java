@@ -2,13 +2,16 @@ package com.ghostreport.service;
 
 import com.ghostreport.dto.AuthResponse;
 import com.ghostreport.dto.LoginRequest;
+import com.ghostreport.dto.MfaVerifyRequest;
 import com.ghostreport.model.User;
+import com.ghostreport.model.UserRole;
 import com.ghostreport.repository.UserRepository;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -18,17 +21,23 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuditLogService auditLogService;
     private final UserRepository userRepository;
+    private final MfaChallengeService mfaChallengeService;
+    private final UserDetailsService userDetailsService;
 
     public AuthService(
             AuthenticationManager authenticationManager,
             JwtService jwtService,
             AuditLogService auditLogService,
-            UserRepository userRepository
+            UserRepository userRepository,
+            MfaChallengeService mfaChallengeService,
+            UserDetailsService userDetailsService
     ) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.auditLogService = auditLogService;
         this.userRepository = userRepository;
+        this.mfaChallengeService = mfaChallengeService;
+        this.userDetailsService = userDetailsService;
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -48,6 +57,18 @@ public class AuthService {
         );
 
         UserDetails user = (UserDetails) authentication.getPrincipal();
+
+        if (storedUser != null
+                && storedUser.getRole() == UserRole.ADMIN
+                && mfaChallengeService.isAdminMfaRequired()) {
+            MfaChallengeService.MfaChallenge challenge = mfaChallengeService.createChallenge(storedUser);
+            return AuthResponse.mfaRequired(
+                    user.getUsername(),
+                    storedUser.getRole().name(),
+                    challenge.challengeId()
+            );
+        }
+
         auditLogService.log(
                 "LOGIN_SUCCESS",
                 "USER",
@@ -66,6 +87,34 @@ public class AuthService {
                 "Bearer",
                 user.getUsername(),
                 role,
+                jwtService.getExpirationSeconds()
+        );
+    }
+
+    public AuthResponse verifyMfa(MfaVerifyRequest request) {
+        String username;
+        try {
+            username = mfaChallengeService.verifyChallenge(request.getChallengeId(), request.getCode());
+        } catch (IllegalArgumentException e) {
+            throw new BadCredentialsException("Invalid or expired verification code");
+        }
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+
+        if (!user.isActive() || user.getRole() != UserRole.ADMIN) {
+            throw new BadCredentialsException("Invalid credentials");
+        }
+
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        String token = jwtService.generateToken(userDetails);
+        auditLogService.log("LOGIN_SUCCESS", "USER", user.getId(), "Admin logged in after MFA");
+
+        return new AuthResponse(
+                token,
+                "Bearer",
+                userDetails.getUsername(),
+                user.getRole().name(),
                 jwtService.getExpirationSeconds()
         );
     }

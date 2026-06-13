@@ -47,6 +47,7 @@ class CsrfSecurityTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+
     private String adminUsername;
 
     @BeforeEach

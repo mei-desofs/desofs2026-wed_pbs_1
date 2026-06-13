@@ -23,8 +23,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -100,6 +102,85 @@ class AdminUserManagementSecurityTest {
         assertThat(userRepository.findById(analystId).orElseThrow().isActive()).isTrue();
         assertThat(auditLogRepository.findAll().stream().map(AuditLog::getAction))
                 .contains("USER_ACTIVATED");
+    }
+
+    @Test
+    void adminCanEditUserDetailsRoleAndActiveStatusWithAuditLog() throws Exception {
+        mockMvc.perform(put("/admin/users/{id}", analystId)
+                        .with(csrf())
+                        .header("Authorization", bearerToken(adminUsername, PASSWORD))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "updated_analyst",
+                                  "email": "updated_analyst@ghostreport.test",
+                                  "role": "AUDITOR",
+                                  "active": true
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(analystId))
+                .andExpect(jsonPath("$.username").value("updated_analyst"))
+                .andExpect(jsonPath("$.email").value("updated_analyst@ghostreport.test"))
+                .andExpect(jsonPath("$.role").value("AUDITOR"))
+                .andExpect(jsonPath("$.active").value(true));
+
+        User updated = userRepository.findById(analystId).orElseThrow();
+        assertThat(updated.getRole()).isEqualTo(UserRole.AUDITOR);
+        assertThat(auditLogRepository.findAll().stream().map(AuditLog::getAction))
+                .contains("USER_UPDATED");
+    }
+
+    @Test
+    void adminLogicalDeleteDeactivatesUserInsteadOfRemovingRecord() throws Exception {
+        mockMvc.perform(delete("/admin/users/{id}", analystId)
+                        .with(csrf())
+                        .header("Authorization", bearerToken(adminUsername, PASSWORD)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(analystId))
+                .andExpect(jsonPath("$.active").value(false));
+
+        assertThat(userRepository.findById(analystId)).isPresent();
+        assertThat(userRepository.findById(analystId).orElseThrow().isActive()).isFalse();
+    }
+
+    @Test
+    void lastActiveAdminCannotBeDemotedOrDisabledThroughEdit() throws Exception {
+        User admin = userRepository.findByUsername(adminUsername).orElseThrow();
+
+        mockMvc.perform(put("/admin/users/{id}", admin.getId())
+                        .with(csrf())
+                        .header("Authorization", bearerToken(adminUsername, PASSWORD))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "%s",
+                                  "email": "%s",
+                                  "role": "AUDITOR",
+                                  "active": true
+                                }
+                                """.formatted(admin.getUsername(), admin.getEmail())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("Request conflict"));
+
+        mockMvc.perform(put("/admin/users/{id}", admin.getId())
+                        .with(csrf())
+                        .header("Authorization", bearerToken(adminUsername, PASSWORD))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "%s",
+                                  "email": "%s",
+                                  "role": "ADMIN",
+                                  "active": false
+                                }
+                                """.formatted(admin.getUsername(), admin.getEmail())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("Request conflict"));
+
+        User unchanged = userRepository.findById(admin.getId()).orElseThrow();
+        assertThat(unchanged.getRole()).isEqualTo(UserRole.ADMIN);
+        assertThat(unchanged.isActive()).isTrue();
     }
 
     @Test

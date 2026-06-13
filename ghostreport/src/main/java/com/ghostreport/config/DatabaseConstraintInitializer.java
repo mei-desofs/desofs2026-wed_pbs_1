@@ -29,6 +29,7 @@ public class DatabaseConstraintInitializer implements ApplicationRunner {
         }
 
         jdbcTemplate.execute("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check");
+        jdbcTemplate.update("UPDATE users SET role = 'ANALYST', active = false WHERE role = 'USER'");
         jdbcTemplate.execute("""
                 ALTER TABLE users
                 ADD CONSTRAINT users_role_check

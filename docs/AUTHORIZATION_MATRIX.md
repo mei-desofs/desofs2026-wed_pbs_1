@@ -19,6 +19,8 @@ Covered ASVS IDs:
 | `/reports/{id}/attachments` | `POST` | Public with valid tracking code | Public with invalid tracking code | Report ID and tracking code must match | Mismatched ID/code denied | Returns attachment metadata only. |
 | `/reports/{id}/attachments/list` | `POST` | Public with valid tracking code | Public with invalid tracking code | Report ID and tracking code must match | Mismatched ID/code denied | Returns attachment `id`, `originalName`, `mimeType`, `size`; no storage path/hash. |
 | `/reports/download` | `POST` | Public with valid tracking code | Public with invalid tracking code | Attachment report and tracking code must match | Mismatched attachment/code denied | Streams file only after object check. |
+| `/auth/login` | `POST` | Public credentials endpoint | Invalid credentials | Not applicable | Not applicable | Non-admin users receive JWT after password validation; admins receive an MFA challenge when MFA is enabled. |
+| `/auth/mfa/verify` | `POST` | Admin with valid pending MFA challenge | Invalid, expired or reused MFA challenge | Challenge ID and code must match | Reused/expired challenge denied | Returns final JWT only after successful MFA. |
 | `/analyst/reports` | `GET` | `ANALYST`, `ADMIN` | Anonymous, `AUDITOR` | Analysts see own assigned reports | Analysts do not see reports assigned to another analyst | Analysts receive full description only for own assigned reports; unassigned reports have `description: null`. Admin receives full report DTOs. |
 | `/analyst/reports/{id}/assign` | `POST` | `ANALYST`, `ADMIN` at route level | Anonymous, `AUDITOR` | Analyst can claim unassigned or own case | Case assigned to another analyst returns conflict | Returns case review assignment metadata. |
 | `/analyst/reports/{id}/status` | `PATCH` | Assigned `ANALYST`, `ADMIN` | Anonymous, `AUDITOR` | Assigned analyst can update open case status | Other analysts denied | Returns report DTO for authorized caller only. |
@@ -33,7 +35,12 @@ Covered ASVS IDs:
 | `/audit/security-alerts` | `GET` | `AUDITOR`, `ADMIN` | Anonymous, `ANALYST` | Not applicable | Not applicable | Security alert DTO only. |
 | `/audit/cases/closed` | `GET` | `AUDITOR`, `ADMIN` | Anonymous, `ANALYST` | Not applicable | Not applicable | Closed-case metadata only; no report description, tracking hash or internal notes. |
 | `/audit/cases/{reportId}/evidence-package/verify` | `GET` | `AUDITOR`, `ADMIN` | Anonymous, `ANALYST` | Closed case only | Non-closed/missing package denied | Integrity result omits package path, stored filenames and original filenames. |
-| `/admin/**` | Various | `ADMIN` | Anonymous, `ANALYST`, `AUDITOR` | Admin oversight | Admin oversight | User DTOs omit password hashes. |
+| `/admin/users` | `GET`, `POST` | `ADMIN` | Anonymous, `ANALYST`, `AUDITOR` | Admin oversight | Admin oversight | User DTOs omit password hashes; create validates username, email, password and role. |
+| `/admin/users/{id}` | `PUT`, `DELETE` | `ADMIN` | Anonymous, `ANALYST`, `AUDITOR` | Admin oversight | Admin oversight | Edit supports username, email, role and active status; delete is logical deactivation. Last active admin cannot be demoted or disabled. |
+| `/admin/users/{id}/activate` | `PATCH` | `ADMIN` | Anonymous, `ANALYST`, `AUDITOR` | Admin oversight | Admin oversight | Activates the user and writes an audit log. |
+| `/admin/users/{id}/deactivate` | `PATCH` | `ADMIN` | Anonymous, `ANALYST`, `AUDITOR` | Admin oversight | Admin oversight | Deactivates the user and writes an audit log. Last active admin cannot be disabled. |
+| `/admin/backups/**` | Various | `ADMIN` | Anonymous, `ANALYST`, `AUDITOR` | Admin oversight | Admin oversight | Admin can create, list, verify, download and stage restores. |
+| `/admin/audit-logs`, `/admin/security-alerts` | `GET` | `ADMIN` | Anonymous, `ANALYST`, `AUDITOR` | Admin oversight | Admin oversight | Audit/security DTOs only. |
 
 ## Enforcement Points
 
@@ -43,6 +50,8 @@ Covered ASVS IDs:
 | Analyst object ownership | `ReportService.checkInternalAccessToReport` and `CaseReviewService.getAccessibleCaseReview` require the authenticated analyst to be assigned to the case. | `AnalystCaseOwnershipTest`, `RbacAuthorizationMatrixTest`. |
 | Direct object reference protection | Attachment downloads resolve the attachment, then authorize against the attachment's report before returning content. | `AnalystCaseOwnershipTest`. |
 | Field-level filtering | `ReportService.getAllReports` redacts report descriptions from unassigned analyst queue entries; `AuditReadService` returns closed-case metadata only; `UserService` returns `UserResponse` without password hashes. | `AnalystCaseOwnershipTest`, `RbacAuthorizationMatrixTest`, `AuditorAuthorizationTest`, `AdminUserManagementSecurityTest`. |
+| Admin lifecycle safety | `UserService.updateUser` and `UserService.setActive` prevent disabling or demoting the last active admin; logical delete maps to deactivation. | `AdminUserManagementSecurityTest`. |
+| Admin MFA | `AuthService` creates an MFA challenge for admins before JWT issuance; `MfaChallengeService` expires and invalidates one-time codes. | `AdminMfaAuthenticationTest`. |
 | Security event evidence | Ownership violations create audit logs and security alerts. | `AnalystCaseOwnershipTest`, `RuntimeSecurityEventLoggingTest`. |
 
 ## Residual Boundaries
@@ -50,3 +59,4 @@ Covered ASVS IDs:
 - Unassigned reports remain visible to analysts as queue entries so they can claim work, but sensitive description detail is redacted until assignment.
 - Admin is an oversight role and can access analyst/audit views by design.
 - Public report access is authorized with the report tracking code instead of a logged-in user identity.
+- Reporters are anonymous and use tracking codes only; there is no authenticated reporter `USER` role.

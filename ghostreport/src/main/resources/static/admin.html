@@ -46,6 +46,23 @@
             <div id="loginError" class="error"></div>
         </div>
 
+        <div id="mfaSection" class="hidden">
+            <div class="mfa-panel">
+                <h2>Verificacao MFA</h2>
+                <p class="mfa-instructions">Introduza o codigo de 6 digitos enviado pelo canal configurado.</p>
+
+                <label for="mfaCode">Codigo MFA</label>
+                <input id="mfaCode" class="mfa-code-input" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code">
+
+                <div class="mfa-actions">
+                    <button type="button" data-action="verifyAdminMfa">Verificar codigo</button>
+                    <button type="button" data-action="cancelAdminMfa">Voltar ao login</button>
+                </div>
+
+                <div id="mfaError" class="error"></div>
+            </div>
+        </div>
+
         <div id="globalMessages" class="hidden">
             <div id="globalResult" class="result"></div>
             <div id="globalError" class="error"></div>
@@ -67,6 +84,8 @@
             </div>
 
             <button type="button" data-action="loadUsers">Atualizar utilizadores</button>
+            <div id="userManagementResult" class="result"></div>
+            <div id="userManagementError" class="error"></div>
             <div id="users" class="admin-grid"></div>
         </section>
 
@@ -115,6 +134,58 @@
 
             <div id="createUserResult" class="result"></div>
             <div id="createUserError" class="error"></div>
+        </section>
+
+        <section id="editUserPage" class="dashboard-section admin-page hidden">
+            <div class="admin-hero">
+                <div>
+                    <h2>Editar utilizador</h2>
+                    <p>Atualiza apenas os dados da conta interna. A password e gerida noutro fluxo.</p>
+                </div>
+
+                <span class="admin-badge">Conta interna</span>
+            </div>
+
+            <div class="admin-card">
+                <input id="editUserId" type="hidden">
+
+                <div class="admin-form-grid">
+                    <div>
+                        <label for="editUsername">Username</label>
+                        <input id="editUsername" type="text" autocomplete="off">
+                    </div>
+
+                    <div>
+                        <label for="editEmail">Email</label>
+                        <input id="editEmail" type="email" autocomplete="off">
+                    </div>
+
+                    <div>
+                        <label for="editRole">Role</label>
+                        <select id="editRole">
+                            <option value="ANALYST">ANALYST</option>
+                            <option value="AUDITOR">AUDITOR</option>
+                            <option value="ADMIN">ADMIN</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="editActive">Estado</label>
+                        <select id="editActive">
+                            <option value="true">Ativo</option>
+                            <option value="false">Inativo</option>
+                        </select>
+                    </div>
+
+                    <div class="full-width admin-actions">
+                        <button type="button" data-action="saveEditedUser">Guardar alteracoes</button>
+                        <button type="button" data-action="cancelEditUser">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="editUserResult" class="result"></div>
+            <div id="editUserError" class="error"></div>
         </section>
 
         <section id="auditLogsPage" class="dashboard-section admin-page hidden">
