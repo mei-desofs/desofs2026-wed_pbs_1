@@ -9,6 +9,7 @@ const {
 
 let adminSessionAuth = null;
 let adminUsername = null;
+let adminMfaChallengeId = null;
 
 function getApiBase() {
     return typeof API_BASE !== "undefined" ? API_BASE : "";
@@ -32,6 +33,8 @@ async function adminHandleJsonResponse(response) {
 function clearAdminMessages() {
     [
         "loginError",
+        "mfaError",
+        "mfaDevCode",
         "globalResult",
         "globalError",
         "userManagementResult",
@@ -43,14 +46,31 @@ function clearAdminMessages() {
     ].forEach(id => setText(id, ""));
 }
 
+function showElement(id, display = "block") {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.classList.remove("hidden");
+    node.style.display = display;
+}
+
+function hideElement(id) {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.classList.add("hidden");
+    node.style.display = "none";
+}
+
 function showAdminPage(pageId) {
     clearAdminMessages();
 
     document.querySelectorAll(".admin-page").forEach(page => {
+        page.classList.add("hidden");
         page.style.display = "none";
     });
 
-    document.getElementById(pageId).style.display = "block";
+    const page = document.getElementById(pageId);
+    page.classList.remove("hidden");
+    page.style.display = "block";
 
     document.querySelectorAll("#adminNav button").forEach(button => {
         button.classList.remove("active");
@@ -96,10 +116,12 @@ async function adminSafeFetch(url, options = {}) {
         ? csrfFetchOptions(options)
         : options;
     const response = await fetch(url, fetchOptions);
+    const authFlowRequest = String(url).includes("/auth/login") || String(url).includes("/auth/mfa/verify");
 
-    if (response.status === 401 || response.status === 403) {
+    if (!authFlowRequest && (response.status === 401 || response.status === 403)) {
         adminSessionAuth = null;
         adminUsername = null;
+        adminMfaChallengeId = null;
         throw new Error("Sessão expirada ou sem permissões de administrador.");
     }
 
@@ -117,12 +139,13 @@ async function adminValidateSession() {
 }
 
 function showAdminDashboard() {
-    document.getElementById("adminLoginPanel").style.display = "none";
-    document.getElementById("loginSection").style.display = "none";
-    document.getElementById("adminDashboard").style.display = "block";
+    hideElement("adminLoginPanel");
+    hideElement("loginSection");
+    hideElement("mfaSection");
+    showElement("adminDashboard");
 
-    document.getElementById("publicNav").style.display = "none";
-    document.getElementById("adminNav").style.display = "flex";
+    hideElement("publicNav");
+    showElement("adminNav", "flex");
 
     showAdminPage("usersPage");
     loadAuditLogs();
@@ -150,6 +173,18 @@ async function adminLogin() {
             body: JSON.stringify({ username, password })
         });
         const loginData = await adminHandleJsonResponse(loginResponse);
+        if (loginData.mfaRequired) {
+            adminSessionAuth = null;
+            adminUsername = loginData.username;
+            adminMfaChallengeId = loginData.mfaChallengeId;
+            hideElement("loginSection");
+            showElement("mfaSection");
+            hideElement("adminNav");
+            showElement("publicNav", "flex");
+            setText("mfaDevCode", loginData.devMfaCode ? `Codigo dev/test: ${loginData.devMfaCode}` : "");
+            return;
+        }
+
         adminSessionAuth = `${loginData.tokenType} ${loginData.token}`;
 
         await adminValidateSession();
@@ -163,6 +198,40 @@ async function adminLogin() {
     }
 }
 
+async function verifyAdminMfa() {
+    clearAdminMessages();
+
+    const code = document.getElementById("mfaCode").value.trim();
+    if (!adminMfaChallengeId || !code) {
+        setText("mfaError", "Introduz o codigo de verificacao.");
+        return;
+    }
+
+    try {
+        const response = await adminSafeFetch(`${getApiBase()}/auth/mfa/verify`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                challengeId: adminMfaChallengeId,
+                code
+            })
+        });
+        const data = await adminHandleJsonResponse(response);
+        adminSessionAuth = `${data.tokenType} ${data.token}`;
+        adminUsername = data.username;
+        adminMfaChallengeId = null;
+        document.getElementById("mfaCode").value = "";
+
+        await adminValidateSession();
+        showAdminDashboard();
+    } catch (error) {
+        adminSessionAuth = null;
+        setText("mfaError", error.message || "Codigo invalido ou expirado.");
+    }
+}
+
 async function adminLogout(reload = true) {
     if (typeof revokeCurrentToken === "function") {
         await revokeCurrentToken(adminSessionAuth);
@@ -170,15 +239,17 @@ async function adminLogout(reload = true) {
 
     adminSessionAuth = null;
     adminUsername = null;
+    adminMfaChallengeId = null;
 
     if (reload) {
         location.reload();
     } else {
-        document.getElementById("publicNav").style.display = "flex";
-        document.getElementById("adminNav").style.display = "none";
-        document.getElementById("adminDashboard").style.display = "none";
-        document.getElementById("adminLoginPanel").style.display = "block";
-        document.getElementById("loginSection").style.display = "block";
+        showElement("publicNav", "flex");
+        hideElement("adminNav");
+        hideElement("adminDashboard");
+        hideElement("mfaSection");
+        showElement("adminLoginPanel");
+        showElement("loginSection", "flex");
     }
 }
 
@@ -193,7 +264,7 @@ function roleSelect(user) {
             "aria-label": `Role de ${user.username || "utilizador"}`
         }
     });
-    ["ANALYST", "AUDITOR", "ADMIN"].forEach(role => {
+    ["USER", "ANALYST", "AUDITOR", "ADMIN"].forEach(role => {
         const option = element("option", { attrs: { value: role }, text: role });
         if (roleLabel(user.role) === role) {
             option.selected = true;
@@ -588,6 +659,7 @@ document.addEventListener("click", event => {
         showAdminPage: () => showAdminPage(button.dataset.page),
         adminLogout: () => adminLogout(),
         adminLogin,
+        verifyAdminMfa,
         loadUsers,
         createUser,
         updateUser: () => updateUser(Number(button.dataset.userId)),

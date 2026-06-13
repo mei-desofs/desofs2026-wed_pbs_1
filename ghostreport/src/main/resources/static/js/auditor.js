@@ -10,6 +10,20 @@ const {
 let auditorAuth = null;
 let auditorUsername = null;
 
+function showElement(id, display = "block") {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.classList.remove("hidden");
+    node.style.display = display;
+}
+
+function hideElement(id) {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.classList.add("hidden");
+    node.style.display = "none";
+}
+
 function getApiBase() {
     return typeof API_BASE !== "undefined" ? API_BASE : "";
 }
@@ -48,8 +62,9 @@ async function auditorSafeFetch(url, options = {}) {
         ? csrfFetchOptions(options)
         : options;
     const response = await fetch(url, fetchOptions);
+    const authFlowRequest = String(url).includes("/auth/login");
 
-    if (response.status === 401 || response.status === 403) {
+    if (!authFlowRequest && (response.status === 401 || response.status === 403)) {
         auditorAuth = null;
         auditorUsername = null;
         throw new Error("Sessão expirada ou sem permissões de auditoria.");
@@ -102,12 +117,12 @@ async function auditorLogin() {
 }
 
 function showAuditorDashboard() {
-    document.getElementById("auditorLoginPanel").style.display = "none";
-    document.getElementById("loginSection").style.display = "none";
-    document.getElementById("auditorDashboard").style.display = "block";
+    hideElement("auditorLoginPanel");
+    hideElement("loginSection");
+    showElement("auditorDashboard");
 
-    document.getElementById("publicNav").style.display = "none";
-    document.getElementById("auditorNav").style.display = "flex";
+    hideElement("publicNav");
+    showElement("auditorNav", "flex");
 
     showAuditorPage("auditLogsPage");
     loadSecurityAlerts();
@@ -124,11 +139,11 @@ async function auditorLogout(reload = true) {
     if (reload) {
         location.reload();
     } else {
-        document.getElementById("publicNav").style.display = "flex";
-        document.getElementById("auditorNav").style.display = "none";
-        document.getElementById("auditorDashboard").style.display = "none";
-        document.getElementById("auditorLoginPanel").style.display = "block";
-        document.getElementById("loginSection").style.display = "block";
+        showElement("publicNav", "flex");
+        hideElement("auditorNav");
+        hideElement("auditorDashboard");
+        showElement("auditorLoginPanel");
+        showElement("loginSection", "flex");
     }
 }
 
@@ -136,10 +151,13 @@ function showAuditorPage(pageId) {
     clearAuditorMessages();
 
     document.querySelectorAll(".admin-page").forEach(page => {
+        page.classList.add("hidden");
         page.style.display = "none";
     });
 
-    document.getElementById(pageId).style.display = "block";
+    const page = document.getElementById(pageId);
+    page.classList.remove("hidden");
+    page.style.display = "block";
 
     document.querySelectorAll("#auditorNav button").forEach(button => {
         button.classList.remove("active");
