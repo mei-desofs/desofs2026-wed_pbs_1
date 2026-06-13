@@ -34,6 +34,8 @@ function clearAdminMessages() {
         "loginError",
         "globalResult",
         "globalError",
+        "userManagementResult",
+        "userManagementError",
         "createUserResult",
         "createUserError",
         "backupResult",
@@ -184,6 +186,23 @@ function roleLabel(role) {
     return String(role ?? "-").toUpperCase();
 }
 
+function roleSelect(user) {
+    const select = element("select", {
+        attrs: {
+            id: `user-role-${user.id}`,
+            "aria-label": `Role de ${user.username || "utilizador"}`
+        }
+    });
+    ["ANALYST", "AUDITOR", "ADMIN"].forEach(role => {
+        const option = element("option", { attrs: { value: role }, text: role });
+        if (roleLabel(user.role) === role) {
+            option.selected = true;
+        }
+        select.append(option);
+    });
+    return select;
+}
+
 function formatBytes(size) {
     const value = Number(size || 0);
     if (value < 1024) return `${value} B`;
@@ -202,12 +221,42 @@ function safeClassToken(value) {
 }
 
 function renderUser(user) {
-    return element("div", { className: "user-card" },
-        element("h3", { text: user.username || user.name || "Utilizador" }),
+    return element("div", {
+        className: "user-card",
+        dataset: {
+            userId: user.id,
+            active: user.active === false ? "false" : "true"
+        }
+    },
+        element("h3", { text: user.username || "Utilizador" }),
         metaLine("ID", user.id),
-        metaLine("Email", user.email),
-        metaLine("Role", roleLabel(user.role)),
-        metaLine("Estado", user.active === false ? "Inativo" : "Ativo")
+        element("label", { attrs: { for: `user-username-${user.id}` }, text: "Username" }),
+        element("input", {
+            attrs: {
+                id: `user-username-${user.id}`,
+                type: "text",
+                value: user.username || "",
+                autocomplete: "off"
+            }
+        }),
+        element("label", { attrs: { for: `user-email-${user.id}` }, text: "Email" }),
+        element("input", {
+            attrs: {
+                id: `user-email-${user.id}`,
+                type: "email",
+                value: user.email || "",
+                autocomplete: "off"
+            }
+        }),
+        element("label", { attrs: { for: `user-role-${user.id}` }, text: "Role" }),
+        roleSelect(user),
+        metaLine("Estado", user.active === false ? "Inativo" : "Ativo"),
+        element("div", { className: "user-actions" },
+            actionButton("Guardar", "updateUser", { userId: user.id }),
+            user.active === false
+                ? actionButton("Ativar", "activateUser", { userId: user.id })
+                : actionButton("Desativar", "deactivateUser", { userId: user.id }, "danger-btn")
+        )
     );
 }
 
@@ -311,6 +360,55 @@ async function createUser() {
         showAdminPage("usersPage");
     } catch (error) {
         setText("createUserError", error.message);
+    }
+}
+
+function userFormPayload(userId, active) {
+    return {
+        username: document.getElementById(`user-username-${userId}`).value.trim(),
+        email: document.getElementById(`user-email-${userId}`).value.trim(),
+        role: document.getElementById(`user-role-${userId}`).value,
+        active
+    };
+}
+
+async function updateUser(userId) {
+    clearAdminMessages();
+
+    try {
+        const card = document.getElementById(`user-username-${userId}`).closest(".user-card");
+        const payload = userFormPayload(userId, card?.dataset.active !== "false");
+
+        const response = await adminSafeFetch(`${getApiBase()}/admin/users/${encodeURIComponent(userId)}`, {
+            method: "PUT",
+            headers: adminAuthHeaders({
+                "Content-Type": "application/json"
+            }),
+            body: JSON.stringify(payload)
+        });
+
+        await adminHandleJsonResponse(response);
+        setText("userManagementResult", "Utilizador atualizado com sucesso.");
+        await loadUsers();
+    } catch (error) {
+        setText("userManagementError", error.message);
+    }
+}
+
+async function setUserActive(userId, active) {
+    clearAdminMessages();
+
+    try {
+        const response = await adminSafeFetch(`${getApiBase()}/admin/users/${encodeURIComponent(userId)}/${active ? "activate" : "deactivate"}`, {
+            method: "PATCH",
+            headers: adminAuthHeaders()
+        });
+
+        await adminHandleJsonResponse(response);
+        setText("userManagementResult", active ? "Utilizador ativado." : "Utilizador desativado.");
+        await loadUsers();
+    } catch (error) {
+        setText("userManagementError", error.message);
     }
 }
 
@@ -492,6 +590,9 @@ document.addEventListener("click", event => {
         adminLogin,
         loadUsers,
         createUser,
+        updateUser: () => updateUser(Number(button.dataset.userId)),
+        activateUser: () => setUserActive(Number(button.dataset.userId), true),
+        deactivateUser: () => setUserActive(Number(button.dataset.userId), false),
         clearCreateUserForm,
         loadAuditLogs,
         loadSecurityAlerts,

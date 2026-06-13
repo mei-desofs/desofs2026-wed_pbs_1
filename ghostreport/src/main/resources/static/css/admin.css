@@ -138,6 +138,21 @@
     margin-top: 14px;
 }
 
+.user-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.danger-btn {
+    background: #ef4444;
+}
+
+.danger-btn:hover {
+    background: #dc2626;
+}
+
 .backup-toolbar,
 .backup-actions {
     display: flex;
