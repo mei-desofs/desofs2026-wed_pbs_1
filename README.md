@@ -24,10 +24,11 @@ DESOFS secure software development coursework.
 | Anonymous reporter | Submit reports, verify tracking codes and upload evidence. |
 | Analyst | View eligible cases, claim cases, update assigned cases and generate evidence packages for closed cases. |
 | Auditor | View audit/security evidence and verify evidence packages and backups. |
-| Admin | Create/list/activate/deactivate users, view audit/security information and manage backup operations. |
+| Admin | Create/list/edit/activate/deactivate users, manage roles, view audit/security information and manage backup operations. |
 
 Admin user management currently supports the lifecycle operations needed by the
-implemented role model.
+implemented role model. User removal is implemented as logical deactivation so
+audit history and ownership references remain intact.
 
 ## Security Controls
 
@@ -103,6 +104,7 @@ point is `ghostreport/target/pit-reports/index.html` inside the
 - [ASVS Level 2 evidence](docs/ASVS_LEVEL2_EVIDENCE.md)
 - [Technology stack security review](docs/TECH_STACK_SECURITY_REVIEW.md)
 - [Final demo guide](docs/FINAL_DEMO_GUIDE.md)
+- [Final project review](docs/FINAL_PROJECT_REVIEW.md)
 - [Phase 2 evidence folder](Deliverables/Phase%202/Evidence/README.md)
 
 ## Authors
