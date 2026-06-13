@@ -29,7 +29,7 @@ evidence.
 | V3 Web Frontend Security | Partially Compliant | Security headers, CSP, externalized frontend scripts/styles, safe DOM rendering and `SecurityHeadersTest`. | Fresh ZAP evidence should confirm the latest CSP behaviour. |
 | V4 API and Web Service | Partially Compliant | Controllers use DTOs, generic JSON errors and role-protected endpoints. | Cache behaviour, method restrictions and API abuse cases need more complete tests. |
 | V5 File Handling | Partially Compliant | Upload validation, safe path handling, MIME/extension checks, magic-byte checks, mockable malware scanner, quarantine and secure download headers. | Local scanner is coursework evidence only; production should integrate a real AV service and define retention for quarantined files. |
-| V6 Authentication | Partially Compliant | BCrypt, inactive-user checks, login rate limiting, compromised-password denylist, password history/reuse prevention, authenticated password change and one-time expiring password reset tokens. | MFA is not implemented; reset delivery is represented by a generated token because no email/SMS provider is in scope. |
+| V6 Authentication | Partially Compliant | BCrypt, inactive-user checks, login rate limiting, compromised-password denylist, password history/reuse prevention, authenticated password change, one-time expiring password reset tokens and code-based ADMIN MFA. | Reset delivery is represented by a generated token because no email/SMS provider is in scope; MFA code delivery is demo/log based in dev and should use email/SMS or an IdP in production. |
 | V7 Session Management | Partially Compliant | Stateless JWT expiry, validation and database-backed logout revocation evidence. | No refresh-token rotation or concurrent-session inventory controls. |
 | V8 Authorization | Compliant for current scope | `ADMIN`, `ANALYST`, `AUDITOR` rules, object ownership checks, field-level filtering, authorization matrix and negative-path tests. | Future roles or workflow changes must update the matrix and tests before tracker changes. |
 | V9 Self-contained Tokens | Partially Compliant | JWT signature, expiry, issuer/audience, `jti`, `kid`, key rotation and persistent revocation tests. | Rotation is configuration-driven; there is no JWKS endpoint or automated rollover scheduler. |
@@ -145,7 +145,7 @@ Scope covered in this sprint update: `V7.2.1`, `V7.2.4`, `V7.4.2`,
 | V6.2.3 | Compliant | `PasswordPolicyService`, `UserService`, `PasswordPolicyAndResetSecurityTest` | Compromised examples from the local denylist are rejected before hashing/storage. |
 | V6.2.4 | Compliant | `PasswordResetService`, `PasswordResetToken`, `PasswordPolicyAndResetSecurityTest` | Reset tokens are random, stored as SHA-256 hashes, single-use and expiring. |
 | V6.2.5 | Compliant | `UserService.changePassword`, `AuthController`, `PasswordPolicyAndResetSecurityTest` | Authenticated password change requires the current password. |
-| V6.3.1 | Not Applicable / Out of Scope | Documentation in this file and `docs/SECURITY_ASSESSMENT.md` | MFA is not implemented because the coursework app has no authenticator app, email/SMS provider or external IdP integration. |
+| V6.3.1 | Partially Compliant | `AuthService`, `MfaChallengeService`, `AdminMfaAuthenticationTest`, `docs/FINAL_PROJECT_REVIEW.md` | ADMIN MFA is implemented with short-lived one-time codes before JWT issuance. Production-grade delivery/enrollment through email/SMS, TOTP or IdP remains future operational hardening. |
 
 ## File Upload, Malware Scanning and Download Evidence
 

@@ -10,7 +10,8 @@ DESOFS secure software development coursework.
 - Tracking code based report verification.
 - Evidence upload with file validation and safe storage.
 - JWT based authentication for internal users.
-- Role based access control for `ADMIN`, `ANALYST` and `AUDITOR`.
+- Mandatory code-based MFA for `ADMIN` users.
+- Role based access control for `ADMIN`, `ANALYST`, `AUDITOR` and `USER`.
 - Analyst case ownership controls.
 - Audit logs and security alerts.
 - Evidence package generation for closed cases.
@@ -22,6 +23,7 @@ DESOFS secure software development coursework.
 | Role | Implemented capabilities |
 | --- | --- |
 | Anonymous reporter | Submit reports, verify tracking codes and upload evidence. |
+| User | Authenticated basic role; no access to admin, analyst or audit routes. |
 | Analyst | View eligible cases, claim cases, update assigned cases and generate evidence packages for closed cases. |
 | Auditor | View audit/security evidence and verify evidence packages and backups. |
 | Admin | Create/list/edit/activate/deactivate users, manage roles, view audit/security information and manage backup operations. |
@@ -33,6 +35,7 @@ audit history and ownership references remain intact.
 ## Security Controls
 
 - Stateless JWT authentication.
+- Admin MFA before JWT issuance.
 - Login rate limiting and brute-force security alerts.
 - Inactive users are blocked from login.
 - BCrypt password hashing.
@@ -61,6 +64,8 @@ $env:JWT_SECRET="dev-local-secret-with-at-least-32-chars"
 ```
 
 The application uses port `8081` by default.
+For PowerShell, prefer `.\mvnw.cmd "-Dspring-boot.run.profiles=dev" spring-boot:run`.
+The dev profile seeds `admin`, `analyst`, `auditor` and `user`; admin login requires MFA and shows the demo code when `GHOSTREPORT_MFA_EXPOSE_CODE=true`.
 
 For local Docker execution with PostgreSQL:
 

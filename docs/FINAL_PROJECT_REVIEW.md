@@ -15,7 +15,8 @@ Review date: 2026-06-13.
   - protection against deactivating or demoting the last active admin;
   - audit logging for create, update, activate and deactivate actions.
 - Added admin UI controls for editing users and changing activation status.
-- Added regression tests for admin user-management authorization and navbar visibility before login.
+- Added regression tests for admin user-management authorization, navbar visibility before login and admin MFA.
+- Added mandatory code-based MFA for `ADMIN` users.
 
 ## Security And Authorization Findings
 
@@ -28,28 +29,39 @@ Review date: 2026-06-13.
 - Analyst object-level access is enforced in services and covered by existing RBAC/ownership tests.
 - Admin user DTOs do not expose password hashes.
 
-## MFA Feasibility
+## Admin MFA
 
-MFA is not implemented in this delivery.
+MFA is implemented for `ADMIN` users when `ghostreport.mfa.enabled=true` and `ghostreport.mfa.admin-required=true`.
 
-Current authentication is local username/password with JWT. There is no existing MFA domain model, enrollment flow, recovery flow, authenticator-app/TOTP library integration, email/SMS provider, or external identity provider. Adding MFA safely would require more than a login-screen prompt: administrators need enrollment, backup/recovery handling, secret storage, reset procedures, audit events and tests for bypass/lockout cases.
+Flow:
 
-Recommended future implementation:
+- ADMIN submits username/password.
+- After a correct password, the backend creates a short-lived MFA challenge and does not issue a JWT yet.
+- The admin panel shows the MFA form and keeps internal navigation hidden while MFA is pending.
+- `/auth/mfa/verify` validates the challenge code and only then returns the final JWT.
+- Codes expire, are hashed in memory and are invalidated after successful use.
+- Invalid, expired and successful MFA attempts are audit logged.
 
-- TOTP for `ADMIN` first, then optionally `AUDITOR`.
-- Store MFA secrets encrypted at rest or delegate MFA to an IdP.
-- Add setup, verify, disable and recovery flows.
-- Require MFA completion before issuing a full-privilege JWT or encode an MFA claim and enforce it for privileged routes.
-- Add tests for missing code, invalid code, replay/window behavior, disabled users, recovery and role changes.
+Configuration:
 
-Email codes are simpler for users, but only make sense if the project adds a reliable mail provider and delivery audit trail. For this codebase, TOTP or an external IdP is the cleaner security direction.
+```yaml
+ghostreport:
+  mfa:
+    enabled: true
+    admin-required: true
+    code-ttl-seconds: 300
+    expose-code: false
+```
+
+In `dev`, `expose-code` defaults to `true` so the academic demo can display the code in the admin MFA form and log it. In production, `expose-code` remains `false`; delivery by email/SMS or an IdP integration is still a future operational enhancement.
 
 ## Remaining Gaps And Risks
 
-- MFA remains a documented future security improvement.
+- MFA is code-based and in-memory. A server restart invalidates pending MFA challenges, which is acceptable for this academic implementation.
+- MFA delivery is not integrated with email/SMS; dev mode exposes the code for demonstration only.
 - Static panel pages are visible to unauthenticated users by design; they must not contain sensitive data. This should remain true in future UI work.
 - Admin user editing does not change passwords. Password change/reset is handled by the auth/password-reset flows.
-- There is no separate `USER` role for ordinary reporters; the public reporter journey is anonymous/tracking-code based.
+- A `USER` role exists for authenticated basic users, but the reporter journey remains anonymous/tracking-code based.
 - Audit/security endpoints currently return full lists without pagination; this may need pagination before production use.
 - Some frontend auth state is in memory only. A refresh logs the operator out, which is safe but not a persistent-session UX.
 
@@ -58,6 +70,7 @@ Email codes are simpler for users, but only make sense if the project adds a rel
 From `ghostreport/`:
 
 ```powershell
+.\mvnw.cmd "-Dspring-boot.run.profiles=dev" spring-boot:run
 .\mvnw.cmd "-Dtest=AdminUserManagementSecurityTest,FrontendNavbarVisibilityTest" test
 .\mvnw.cmd test
 ```

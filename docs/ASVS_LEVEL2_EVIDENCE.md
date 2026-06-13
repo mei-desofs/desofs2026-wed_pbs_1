@@ -12,7 +12,7 @@ artifacts.
 | V6 Authentication | Password history and reuse prevention | Current password and last stored password hashes are checked with `PasswordEncoder.matches` before accepting a new password | `PasswordHistory`, `PasswordHistoryRepository`, `PasswordPolicyService`, `PasswordPolicyAndResetSecurityTest` | Implemented |
 | V6 Authentication | Authenticated password change | Authenticated endpoint requires the current password and stores only a new BCrypt hash | `AuthController`, `ChangePasswordRequest`, `UserService`, `PasswordPolicyAndResetSecurityTest` | Implemented |
 | V6 Authentication | Password reset | Reset tokens are generated with `SecureRandom`, stored as SHA-256 hashes, expire, are one-time use and create audit events | `PasswordResetService`, `PasswordResetToken`, `PasswordResetTokenRepository`, `PasswordResetRequest`, `PasswordResetConfirmRequest`, `PasswordPolicyAndResetSecurityTest` | Implemented |
-| V6 Authentication | MFA evaluation | MFA is not implemented because the coursework scope uses local username/password plus JWT and has no external authenticator, email/SMS or IdP integration | `docs/ASVS_EVIDENCE.md`, `docs/SECURITY_ASSESSMENT.md` | Out of scope for Sprint 2 |
+| V6 Authentication | Admin MFA | Code-based MFA is required for ADMIN before final JWT issuance; codes expire and are one-time use | `AuthService`, `MfaChallengeService`, `AdminMfaAuthenticationTest`, `docs/FINAL_PROJECT_REVIEW.md` | Implemented for ADMIN |
 | V3 Session Management | Stateless API session | JWT signed with HS256, expiry checked, role claim validated and logout revokes the current token | `JwtService`, `AuthController`, `JwtAuthenticationFilter`, `JwtServiceSecurityTest`, `RuntimeSecurityEventLoggingTest` | Implemented with residual risk |
 | V8 Authorization (ASVS 5) | Role-based access control | Centralized ADMIN/ANALYST/AUDITOR route rules and documented endpoint matrix | `SecurityConfig`, `docs/AUTHORIZATION_MATRIX.md`, `RbacAuthorizationMatrixTest` | Implemented |
 | V8 Authorization (ASVS 5) | Object-level authorization | Endpoints with report/attachment IDs require admin oversight or assigned analyst ownership | `ReportService`, `CaseReviewService`, `AnalystCaseOwnershipTest`, `RbacAuthorizationMatrixTest` | Implemented |
@@ -48,6 +48,7 @@ The Level 2 evidence is scoped to implemented application features and automated
 pipeline evidence. CodeQL findings are primarily stored in GitHub Code Scanning,
 with an archiveable run summary artifact. Runtime security evidence is always
 generated through tests, live endpoint checks and ZAP baseline evidence. Full
-agent-based IAST, external SIEM/WORM storage, distributed token revocation,
-privileged-user MFA and authenticated DAST contexts are treated as operational
-hardening beyond the current sprint scope.
+agent-based IAST, external SIEM/WORM storage, distributed token revocation and
+authenticated DAST contexts are treated as operational hardening beyond the
+current sprint scope. MFA is implemented for ADMIN with an academic code-based
+flow; production delivery via email/SMS or IdP remains operational hardening.

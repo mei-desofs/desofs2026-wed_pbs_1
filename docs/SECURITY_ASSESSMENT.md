@@ -88,12 +88,12 @@ evidence used to verify them. It should be read together with
 ## Scope Boundaries
 
 The current assessment covers the implemented coursework application and its
-automated security evidence. External SIEM, privileged-user MFA, distributed
-token revocation, authenticated deep DAST, production TLS operations, WORM or
-append-only log storage and automated retention are documented as future
-operational hardening. MFA remains out of scope for Sprint 2 because the
-application does not integrate an authenticator app, email/SMS provider or
-external identity provider.
+automated security evidence. External SIEM, distributed token revocation,
+authenticated deep DAST, production TLS operations, WORM or append-only log
+storage and automated retention are documented as future operational hardening.
+MFA is implemented for ADMIN with short-lived one-time codes; production
+delivery/enrollment through email/SMS, TOTP or an external identity provider
+remains future operational hardening.
 
 The local folder `Deliverables/Phase 2/Evidence` is not automatically written by
 GitHub Actions. It is a curated archive populated from downloaded workflow
