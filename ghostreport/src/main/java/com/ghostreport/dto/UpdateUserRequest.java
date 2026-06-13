@@ -29,6 +29,7 @@ public class UpdateUserRequest {
     private Boolean active;
 
     public UpdateUserRequest() {
+        // Required by Jackson for request-body binding before Jakarta Bean Validation runs.
     }
 
     public String getUsername() {

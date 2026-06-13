@@ -15,6 +15,7 @@ public class MfaVerifyRequest {
     private String code;
 
     public MfaVerifyRequest() {
+        // Required by Jackson for request-body binding before Jakarta Bean Validation runs.
     }
 
     public String getChallengeId() {

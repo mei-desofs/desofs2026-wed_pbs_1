@@ -22,6 +22,7 @@ import static com.ghostreport.validation.ValidationConstants.upper;
 public class UserService {
 
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
+    private static final String USER_NOT_FOUND = "User not found";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -100,7 +101,7 @@ public class UserService {
 
     public UserResponse updateUser(Long userId, UpdateUserRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, USER_NOT_FOUND));
 
         String username = trim(request.getUsername());
         String email = trim(request.getEmail());
@@ -145,7 +146,7 @@ public class UserService {
 
     public void changePassword(String username, String currentPassword, String newPassword) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, USER_NOT_FOUND));
 
         if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
             auditLogService.log("PASSWORD_CHANGE_REJECTED", "USER", user.getId(), "Current password validation failed");
@@ -162,7 +163,7 @@ public class UserService {
 
     public UserResponse setActive(Long userId, boolean active) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, USER_NOT_FOUND));
 
         if (user.isActive() == active) {
             return toResponse(user);
