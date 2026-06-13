@@ -37,6 +37,16 @@ public class DataInitializer {
                 analyst.setActive(true);
                 userRepository.save(analyst);
             }
+
+            if (userRepository.findByUsername("user").isEmpty()) {
+                User user = new User();
+                user.setUsername("user");
+                user.setEmail("user@ghostreport.local");
+                user.setPasswordHash(passwordEncoder.encode("UserPassword123!"));
+                user.setRole(UserRole.USER);
+                user.setActive(true);
+                userRepository.save(user);
+            }
         };
     }
 

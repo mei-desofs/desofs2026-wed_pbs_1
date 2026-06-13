@@ -46,6 +46,14 @@
             <div id="loginError" class="error"></div>
         </div>
 
+        <div id="mfaSection" class="hidden">
+            <label>Introduza o cÃ³digo de verificaÃ§Ã£o</label>
+            <input id="mfaCode" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code">
+            <button type="button" data-action="verifyAdminMfa">Verificar cÃ³digo</button>
+            <div id="mfaDevCode" class="result"></div>
+            <div id="mfaError" class="error"></div>
+        </div>
+
         <div id="globalMessages" class="hidden">
             <div id="globalResult" class="result"></div>
             <div id="globalError" class="error"></div>
@@ -102,6 +110,7 @@
                     <div>
                         <label>Role</label>
                         <select id="newRole">
+                            <option value="USER">USER</option>
                             <option value="ANALYST">ANALYST</option>
                             <option value="AUDITOR">AUDITOR</option>
                             <option value="ADMIN">ADMIN</option>
