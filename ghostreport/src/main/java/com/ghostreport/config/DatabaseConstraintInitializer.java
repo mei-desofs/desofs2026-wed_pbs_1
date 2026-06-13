@@ -32,7 +32,7 @@ public class DatabaseConstraintInitializer implements ApplicationRunner {
         jdbcTemplate.execute("""
                 ALTER TABLE users
                 ADD CONSTRAINT users_role_check
-                CHECK (role IN ('ANALYST', 'AUDITOR', 'ADMIN'))
+                CHECK (role IN ('USER', 'ANALYST', 'AUDITOR', 'ADMIN'))
                 """);
     }
 

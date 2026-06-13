@@ -2,6 +2,13 @@ spring:
   application:
     name: ghostreport
 
+  sql:
+    init:
+      mode: ${SQL_INIT_MODE:always}
+      platform: postgresql
+      schema-locations: classpath:db/schema/postgresql/001_audit_alert_metadata.sql
+      separator: "@@"
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -10,6 +17,7 @@ spring:
 
 
   jpa:
+    defer-datasource-initialization: false
     hibernate:
       ddl-auto: validate
     show-sql: false
