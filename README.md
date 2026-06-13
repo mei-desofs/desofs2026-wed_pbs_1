@@ -66,6 +66,9 @@ $env:JWT_SECRET="dev-local-secret-with-at-least-32-chars"
 The application uses port `8081` by default.
 For PowerShell, prefer `.\mvnw.cmd "-Dspring-boot.run.profiles=dev" spring-boot:run`.
 The dev profile seeds `admin`, `analyst`, `auditor` and `user`; admin login requires MFA and shows the demo code when `GHOSTREPORT_MFA_EXPOSE_CODE=true`.
+The dev profile also runs an idempotent PostgreSQL schema repair script before
+Hibernate update so legacy audit/security rows receive `correlation_id` and
+`integrity_hash` values without deleting data.
 
 For local Docker execution with PostgreSQL:
 

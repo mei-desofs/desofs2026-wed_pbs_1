@@ -17,6 +17,7 @@ Review date: 2026-06-13.
 - Added admin UI controls for editing users and changing activation status.
 - Added regression tests for admin user-management authorization, navbar visibility before login and admin MFA.
 - Added mandatory code-based MFA for `ADMIN` users.
+- Added a safe PostgreSQL schema repair script for legacy audit/security metadata columns.
 
 ## Security And Authorization Findings
 
@@ -28,6 +29,19 @@ Review date: 2026-06-13.
 - The observed pre-login navbar issue was a frontend CSS cascade bug, not a backend authorization bypass. The backend still returned `401` or `403` for direct API access without the required role.
 - Analyst object-level access is enforced in services and covered by existing RBAC/ownership tests.
 - Admin user DTOs do not expose password hashes.
+
+## Schema Migration Finding
+
+Existing PostgreSQL databases with old `audit_logs` or `security_alerts` rows
+failed during `ddl-auto=update` because Hibernate attempted to add
+`correlation_id` and `integrity_hash` as `NOT NULL` columns while legacy rows had
+no values.
+
+The fix is `db/schema/postgresql/001_audit_alert_metadata.sql`, run before JPA
+schema update/validation through Spring SQL init. It adds the columns nullable,
+backfills existing rows, and only then applies `NOT NULL`. This preserves data
+and avoids using destructive workarounds such as dropping tables or recreating
+the database.
 
 ## Admin MFA
 
@@ -72,5 +86,6 @@ From `ghostreport/`:
 ```powershell
 .\mvnw.cmd "-Dspring-boot.run.profiles=dev" spring-boot:run
 .\mvnw.cmd "-Dtest=AdminUserManagementSecurityTest,FrontendNavbarVisibilityTest" test
+.\mvnw.cmd "-Dtest=SchemaMigrationScriptTest,RuntimeSecurityEventLoggingTest,SecurityConfigurationValidatorTest" test
 .\mvnw.cmd test
 ```
