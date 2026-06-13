@@ -54,3 +54,38 @@ Local execution on this workstation can still be unreliable with Java 23 because
 PIT has previously failed with `MINION_DIED` / `CoverageMinion` startup failure.
 The GitHub Actions workflow uses Java 17 and is the expected source of final PIT
 evidence.
+
+Latest local attempt on Java 23:
+
+- command: `.\mvnw.cmd test org.pitest:pitest-maven:mutationCoverage`;
+- Surefire completed first with `180` tests and `0` failures;
+- PIT failed during coverage generation with `Coverage generation minion exited
+  abnormally` and `Could not find or load main class
+  org.pitest.coverage.execute.CoverageMinion`;
+- no local `mutations.xml` was generated, so no survivor list was available for
+  safe targeted mutation-test work in this pass.
+
+The useful test hardening added in this pass focuses on real behavior rather
+than artificial mutant killing: deterministic MFA expiry/reuse checks and a live
+CSRF cookie attribute test.
+
+## Sonar Maintainability Review
+
+The final review pass resolved the Sonar maintainability findings for:
+
+- empty Jackson DTO constructors in `MfaVerifyRequest` and `UpdateUserRequest`,
+  now documented as required for request-body binding before Bean Validation;
+- duplicated `User not found` literals in `UserService`, now centralized in a
+  private constant;
+- chained AssertJ assertions in schema/frontend tests;
+- `AdminMfaAuthenticationTest` method references and removal of the real
+  `Thread.sleep()` expiry wait.
+
+## ZAP Alert Review
+
+| Alert | Decision | Rationale / evidence |
+| --- | --- | --- |
+| `Cookie No HttpOnly Flag` on `XSRF-TOKEN` | Accepted by design | The static frontend reads `XSRF-TOKEN` in `js/api.js` and returns it in `X-XSRF-TOKEN`. It is a CSRF token, not a JWT/session/authentication cookie. Setting `HttpOnly=true` would break the current SPA-style CSRF flow. |
+| `Cookie without SameSite Attribute` on `XSRF-TOKEN` | Fixed | `SecurityConfig` customizes the CSRF cookie with `SameSite=Lax`. `CsrfCookieAttributesTest` verifies `XSRF-TOKEN` includes `SameSite=Lax` and remains readable by frontend JavaScript. |
+| `Non-Storable Content` | Accepted informational | `Cache-Control: no-store` is intentional for a whistleblowing/reporting app with authentication and sensitive report flows. It should not be weakened to satisfy an informational DAST item. |
+| `Session Management Response Identified` | Accepted informational | `XSRF-TOKEN` is not a session identifier and carries no authenticated session or JWT credential. Authentication remains via JWT in the `Authorization` header. |
