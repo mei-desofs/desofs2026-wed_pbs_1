@@ -24,12 +24,30 @@ class FrontendNavbarVisibilityTest {
         assertThat(style).contains(".hidden,\n[hidden] {\n    display: none !important;");
         assertThat(admin).contains("id=\"adminNav\" class=\"admin-nav hidden\"");
         assertThat(admin).contains("id=\"mfaSection\" class=\"hidden\"");
+        assertThat(admin).doesNotContain("mfaDevCode");
+        assertThat(admin).contains("id=\"editUserPage\"");
+        assertThat(admin).doesNotContain("value=\"USER\"");
         assertThat(analyst).contains("id=\"analystNav\" class=\"analyst-nav hidden\"");
         assertThat(auditor).contains("id=\"auditorNav\" class=\"admin-nav hidden\"");
         assertThat(adminJs).contains("classList.remove(\"hidden\")");
         assertThat(adminJs).contains("classList.add(\"hidden\")");
         assertThat(adminJs).contains("loginData.mfaRequired");
+        assertThat(adminJs).doesNotContain("devMfaCode");
+        assertThat(adminJs).contains("cancelAdminMfa");
+        assertThat(adminJs).contains("#/admin/users/");
+        assertThat(adminJs).doesNotContain("updateUser: () => updateUser");
         assertThat(analystJs).contains("classList.remove(\"hidden\")");
         assertThat(auditorJs).contains("classList.remove(\"hidden\")");
+    }
+
+    @Test
+    void reporterModelDoesNotExposeAuthenticatedUserRole() throws Exception {
+        String userRole = Files.readString(Path.of("src/main/java/com/ghostreport/model/UserRole.java"));
+        String validation = Files.readString(Path.of("src/main/java/com/ghostreport/validation/ValidationConstants.java"));
+        String dataInitializer = Files.readString(Path.of("src/main/java/com/ghostreport/config/DataInitializer.java"));
+
+        assertThat(userRole).doesNotContain("USER");
+        assertThat(validation).doesNotContain("USER|");
+        assertThat(dataInitializer).doesNotContain("UserPassword123");
     }
 }

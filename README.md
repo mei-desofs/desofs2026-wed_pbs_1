@@ -11,7 +11,7 @@ DESOFS secure software development coursework.
 - Evidence upload with file validation and safe storage.
 - JWT based authentication for internal users.
 - Mandatory code-based MFA for `ADMIN` users.
-- Role based access control for `ADMIN`, `ANALYST`, `AUDITOR` and `USER`.
+- Role based access control for internal `ADMIN`, `ANALYST` and `AUDITOR` accounts.
 - Analyst case ownership controls.
 - Audit logs and security alerts.
 - Evidence package generation for closed cases.

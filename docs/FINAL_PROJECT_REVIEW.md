@@ -75,7 +75,7 @@ In `dev`, `expose-code` defaults to `true` so the academic demo can display the 
 - MFA delivery is not integrated with email/SMS; dev mode exposes the code for demonstration only.
 - Static panel pages are visible to unauthenticated users by design; they must not contain sensitive data. This should remain true in future UI work.
 - Admin user editing does not change passwords. Password change/reset is handled by the auth/password-reset flows.
-- A `USER` role exists for authenticated basic users, but the reporter journey remains anonymous/tracking-code based.
+- Reporters remain anonymous and tracking-code based; internal authentication is limited to `ADMIN`, `ANALYST` and `AUDITOR`.
 - Audit/security endpoints currently return full lists without pagination; this may need pagination before production use.
 - Some frontend auth state is in memory only. A refresh logs the operator out, which is safe but not a persistent-session UX.
 

@@ -10,6 +10,7 @@ const {
 let adminSessionAuth = null;
 let adminUsername = null;
 let adminMfaChallengeId = null;
+let adminUsersCache = [];
 
 function getApiBase() {
     return typeof API_BASE !== "undefined" ? API_BASE : "";
@@ -34,11 +35,12 @@ function clearAdminMessages() {
     [
         "loginError",
         "mfaError",
-        "mfaDevCode",
         "globalResult",
         "globalError",
         "userManagementResult",
         "userManagementError",
+        "editUserResult",
+        "editUserError",
         "createUserResult",
         "createUserError",
         "backupResult",
@@ -84,6 +86,7 @@ function showAdminPage(pageId) {
     }
 
     if (pageId === "usersPage") {
+        clearEditUserRoute();
         loadUsers();
     }
 
@@ -181,7 +184,6 @@ async function adminLogin() {
             showElement("mfaSection");
             hideElement("adminNav");
             showElement("publicNav", "flex");
-            setText("mfaDevCode", loginData.devMfaCode ? `Codigo dev/test: ${loginData.devMfaCode}` : "");
             return;
         }
 
@@ -232,6 +234,17 @@ async function verifyAdminMfa() {
     }
 }
 
+function cancelAdminMfa() {
+    adminSessionAuth = null;
+    adminUsername = null;
+    adminMfaChallengeId = null;
+    document.getElementById("mfaCode").value = "";
+    hideElement("mfaSection");
+    showElement("loginSection", "flex");
+    showElement("publicNav", "flex");
+    hideElement("adminNav");
+}
+
 async function adminLogout(reload = true) {
     if (typeof revokeCurrentToken === "function") {
         await revokeCurrentToken(adminSessionAuth);
@@ -255,23 +268,6 @@ async function adminLogout(reload = true) {
 
 function roleLabel(role) {
     return String(role ?? "-").toUpperCase();
-}
-
-function roleSelect(user) {
-    const select = element("select", {
-        attrs: {
-            id: `user-role-${user.id}`,
-            "aria-label": `Role de ${user.username || "utilizador"}`
-        }
-    });
-    ["USER", "ANALYST", "AUDITOR", "ADMIN"].forEach(role => {
-        const option = element("option", { attrs: { value: role }, text: role });
-        if (roleLabel(user.role) === role) {
-            option.selected = true;
-        }
-        select.append(option);
-    });
-    return select;
 }
 
 function formatBytes(size) {
@@ -300,30 +296,14 @@ function renderUser(user) {
         }
     },
         element("h3", { text: user.username || "Utilizador" }),
-        metaLine("ID", user.id),
-        element("label", { attrs: { for: `user-username-${user.id}` }, text: "Username" }),
-        element("input", {
-            attrs: {
-                id: `user-username-${user.id}`,
-                type: "text",
-                value: user.username || "",
-                autocomplete: "off"
-            }
-        }),
-        element("label", { attrs: { for: `user-email-${user.id}` }, text: "Email" }),
-        element("input", {
-            attrs: {
-                id: `user-email-${user.id}`,
-                type: "email",
-                value: user.email || "",
-                autocomplete: "off"
-            }
-        }),
-        element("label", { attrs: { for: `user-role-${user.id}` }, text: "Role" }),
-        roleSelect(user),
-        metaLine("Estado", user.active === false ? "Inativo" : "Ativo"),
+        element("div", { className: "user-summary" },
+            metaLine("ID", user.id),
+            metaLine("Email", user.email || "-"),
+            metaLine("Role", roleLabel(user.role)),
+            metaLine("Estado", user.active === false ? "Inativo" : "Ativo")
+        ),
         element("div", { className: "user-actions" },
-            actionButton("Guardar", "updateUser", { userId: user.id }),
+            actionButton("Editar", "editUser", { userId: user.id }),
             user.active === false
                 ? actionButton("Ativar", "activateUser", { userId: user.id })
                 : actionButton("Desativar", "deactivateUser", { userId: user.id }, "danger-btn")
@@ -385,6 +365,7 @@ async function loadUsers() {
 
         const data = await adminHandleJsonResponse(response);
         const users = Array.isArray(data) ? data : [];
+        adminUsersCache = users;
 
         count.textContent = users.length;
 
@@ -434,21 +415,58 @@ async function createUser() {
     }
 }
 
-function userFormPayload(userId, active) {
+function setEditUserRoute(userId) {
+    if (window.history?.replaceState) {
+        window.history.replaceState(null, document.title, `#/admin/users/${encodeURIComponent(userId)}/edit`);
+    }
+}
+
+function clearEditUserRoute() {
+    if (window.history?.replaceState && window.location.hash.startsWith("#/admin/users/")) {
+        window.history.replaceState(null, document.title, window.location.pathname);
+    }
+}
+
+function editUser(userId) {
+    clearAdminMessages();
+
+    const user = adminUsersCache.find(candidate => Number(candidate.id) === Number(userId));
+    if (!user) {
+        setText("userManagementError", "Utilizador nao encontrado. Atualiza a lista e tenta novamente.");
+        return;
+    }
+
+    document.getElementById("editUserId").value = user.id;
+    document.getElementById("editUsername").value = user.username || "";
+    document.getElementById("editEmail").value = user.email || "";
+    document.getElementById("editRole").value = roleLabel(user.role);
+    document.getElementById("editActive").value = user.active === false ? "false" : "true";
+
+    setEditUserRoute(user.id);
+    showAdminPage("editUserPage");
+}
+
+function cancelEditUser() {
+    document.getElementById("editUserId").value = "";
+    clearEditUserRoute();
+    showAdminPage("usersPage");
+}
+
+function editUserPayload() {
     return {
-        username: document.getElementById(`user-username-${userId}`).value.trim(),
-        email: document.getElementById(`user-email-${userId}`).value.trim(),
-        role: document.getElementById(`user-role-${userId}`).value,
-        active
+        username: document.getElementById("editUsername").value.trim(),
+        email: document.getElementById("editEmail").value.trim(),
+        role: document.getElementById("editRole").value,
+        active: document.getElementById("editActive").value === "true"
     };
 }
 
-async function updateUser(userId) {
+async function saveEditedUser() {
     clearAdminMessages();
 
     try {
-        const card = document.getElementById(`user-username-${userId}`).closest(".user-card");
-        const payload = userFormPayload(userId, card?.dataset.active !== "false");
+        const userId = document.getElementById("editUserId").value;
+        const payload = editUserPayload();
 
         const response = await adminSafeFetch(`${getApiBase()}/admin/users/${encodeURIComponent(userId)}`, {
             method: "PUT",
@@ -459,10 +477,15 @@ async function updateUser(userId) {
         });
 
         await adminHandleJsonResponse(response);
-        setText("userManagementResult", "Utilizador atualizado com sucesso.");
+        setText("editUserResult", "Utilizador atualizado com sucesso.");
         await loadUsers();
+        setTimeout(() => {
+            clearEditUserRoute();
+            showAdminPage("usersPage");
+            setText("userManagementResult", "Utilizador atualizado com sucesso.");
+        }, 250);
     } catch (error) {
-        setText("userManagementError", error.message);
+        setText("editUserError", error.message);
     }
 }
 
@@ -660,9 +683,12 @@ document.addEventListener("click", event => {
         adminLogout: () => adminLogout(),
         adminLogin,
         verifyAdminMfa,
+        cancelAdminMfa,
         loadUsers,
         createUser,
-        updateUser: () => updateUser(Number(button.dataset.userId)),
+        editUser: () => editUser(Number(button.dataset.userId)),
+        saveEditedUser,
+        cancelEditUser,
         activateUser: () => setUserActive(Number(button.dataset.userId), true),
         deactivateUser: () => setUserActive(Number(button.dataset.userId), false),
         clearCreateUserForm,

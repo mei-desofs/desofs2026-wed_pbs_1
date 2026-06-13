@@ -7,8 +7,7 @@ public record AuthResponse(
         String role,
         long expiresInSeconds,
         boolean mfaRequired,
-        String mfaChallengeId,
-        String devMfaCode
+        String mfaChallengeId
 ) {
     public AuthResponse(
             String token,
@@ -17,10 +16,10 @@ public record AuthResponse(
             String role,
             long expiresInSeconds
     ) {
-        this(token, tokenType, username, role, expiresInSeconds, false, null, null);
+        this(token, tokenType, username, role, expiresInSeconds, false, null);
     }
 
-    public static AuthResponse mfaRequired(String username, String role, String challengeId, String devMfaCode) {
-        return new AuthResponse(null, null, username, role, 0, true, challengeId, devMfaCode);
+    public static AuthResponse mfaRequired(String username, String role, String challengeId) {
+        return new AuthResponse(null, null, username, role, 0, true, challengeId);
     }
 }

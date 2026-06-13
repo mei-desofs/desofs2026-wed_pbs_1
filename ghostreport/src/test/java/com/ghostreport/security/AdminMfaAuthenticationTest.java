@@ -6,6 +6,7 @@ import com.ghostreport.model.User;
 import com.ghostreport.model.UserRole;
 import com.ghostreport.repository.AuditLogRepository;
 import com.ghostreport.repository.UserRepository;
+import com.ghostreport.service.MfaChallengeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,12 +62,14 @@ class AdminMfaAuthenticationTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
+    private MfaChallengeService mfaChallengeService;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     private String adminUsername;
     private String analystUsername;
     private String auditorUsername;
-    private String userUsername;
 
     @BeforeEach
     void setUp() {
@@ -76,7 +79,6 @@ class AdminMfaAuthenticationTest {
         adminUsername = createUser("mfa_admin_" + suffix, UserRole.ADMIN);
         analystUsername = createUser("mfa_analyst_" + suffix, UserRole.ANALYST);
         auditorUsername = createUser("mfa_auditor_" + suffix, UserRole.AUDITOR);
-        userUsername = createUser("mfa_user_" + suffix, UserRole.USER);
     }
 
     @Test
@@ -86,7 +88,8 @@ class AdminMfaAuthenticationTest {
         assertThat(challenge.path("mfaRequired").asBoolean()).isTrue();
         assertThat(challenge.path("token").isNull()).isTrue();
         assertThat(challenge.path("mfaChallengeId").asText()).isNotBlank();
-        assertThat(challenge.path("devMfaCode").asText()).matches("\\d{6}");
+        assertThat(challenge.has("devMfaCode")).isFalse();
+        assertThat(mfaCode(challenge)).matches("\\d{6}");
 
         mockMvc.perform(get("/admin/panel"))
                 .andExpect(status().isUnauthorized());
@@ -95,7 +98,7 @@ class AdminMfaAuthenticationTest {
     @Test
     void adminCanCompleteMfaAndUseAdminRoutes() throws Exception {
         JsonNode challenge = login(adminUsername);
-        JsonNode verified = verifyMfa(challenge.path("mfaChallengeId").asText(), challenge.path("devMfaCode").asText())
+        JsonNode verified = verifyMfa(challenge.path("mfaChallengeId").asText(), mfaCode(challenge))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.mfaRequired").value(false))
                 .andExpect(jsonPath("$.token").isNotEmpty())
@@ -118,7 +121,7 @@ class AdminMfaAuthenticationTest {
 
         JsonNode reusableChallenge = login(adminUsername);
         String challengeId = reusableChallenge.path("mfaChallengeId").asText();
-        String code = reusableChallenge.path("devMfaCode").asText();
+        String code = mfaCode(reusableChallenge);
         verifyMfa(challengeId, code).andExpect(status().isOk());
         verifyMfa(challengeId, code)
                 .andExpect(status().isUnauthorized())
@@ -126,7 +129,7 @@ class AdminMfaAuthenticationTest {
 
         JsonNode expiredChallenge = login(adminUsername);
         Thread.sleep(1_200);
-        verifyMfa(expiredChallenge.path("mfaChallengeId").asText(), expiredChallenge.path("devMfaCode").asText())
+        verifyMfa(expiredChallenge.path("mfaChallengeId").asText(), mfaCode(expiredChallenge))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("Invalid credentials"));
 
@@ -151,11 +154,25 @@ class AdminMfaAuthenticationTest {
                         .header("Authorization", "Bearer " + auditorLogin.path("token").asText()))
                 .andExpect(status().isOk());
 
-        JsonNode userLogin = login(userUsername);
-        assertThat(userLogin.path("mfaRequired").asBoolean()).isFalse();
         mockMvc.perform(get("/admin/panel")
-                        .header("Authorization", "Bearer " + userLogin.path("token").asText()))
+                        .header("Authorization", "Bearer " + auditorLogin.path("token").asText()))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void reporterEndpointsRemainAnonymousAndDoNotRequireUserRoleLogin() throws Exception {
+        mockMvc.perform(post("/reports")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "Anonymous report",
+                                  "description": "Reporter can submit without an account.",
+                                  "category": "Ethics"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.trackingCode").isNotEmpty());
     }
 
     private String createUser(String username, UserRole role) {
@@ -183,6 +200,14 @@ class AdminMfaAuthenticationTest {
                 .getResponse()
                 .getContentAsString();
         return objectMapper.readTree(response);
+    }
+
+    private String mfaCode(JsonNode challenge) {
+        String challengeId = challenge.path("mfaChallengeId").asText();
+        assertThat(challengeId).isNotBlank();
+        String code = mfaChallengeService.getExposedCodeForTesting(challengeId);
+        assertThat(code).isNotBlank();
+        return code;
     }
 
     private Result verifyMfa(String challengeId, String code) throws Exception {

@@ -11,7 +11,7 @@ public final class ValidationConstants {
     public static final String CASE_PRIORITY_ALLOWLIST =
             "^(LOW|MEDIUM|HIGH|CRITICAL)$";
     public static final String USER_ROLE_ALLOWLIST =
-            "^(ADMIN|ANALYST|AUDITOR|USER)$";
+            "^(ADMIN|ANALYST|AUDITOR)$";
     public static final String TRACKING_CODE_PATTERN =
             "^GR-[A-Za-z0-9_-]{20,64}$";
     public static final String USERNAME_PATTERN =

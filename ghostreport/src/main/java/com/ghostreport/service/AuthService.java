@@ -65,8 +65,7 @@ public class AuthService {
             return AuthResponse.mfaRequired(
                     user.getUsername(),
                     storedUser.getRole().name(),
-                    challenge.challengeId(),
-                    challenge.devCode()
+                    challenge.challengeId()
             );
         }
 

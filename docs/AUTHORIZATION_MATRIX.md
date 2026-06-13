@@ -59,4 +59,4 @@ Covered ASVS IDs:
 - Unassigned reports remain visible to analysts as queue entries so they can claim work, but sensitive description detail is redacted until assignment.
 - Admin is an oversight role and can access analyst/audit views by design.
 - Public report access is authorized with the report tracking code instead of a logged-in user identity.
-- `USER` is an authenticated basic role with no access to `/admin/**`, `/analyst/**` or `/audit/**`.
+- Reporters are anonymous and use tracking codes only; there is no authenticated reporter `USER` role.

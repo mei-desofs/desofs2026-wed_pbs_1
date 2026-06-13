@@ -49,7 +49,7 @@ Hibernate from attempting unsafe `NOT NULL` column additions over null data.
 | Password reset | `password_reset_tokens.token_hash VARCHAR(64) UNIQUE NOT NULL`, user FK, created/expires/used timestamps. |
 | Password history | `password_history` user FK, password hash and created timestamp. |
 | Attachments | Stored filename/reference/path, MIME type, size, hash and report FK. |
-| Users | Unique username/email, password hash, role check for `USER`, `ANALYST`, `AUDITOR`, `ADMIN`, active flag and created timestamp. |
+| Users | Unique username/email, password hash, role check for `ANALYST`, `AUDITOR`, `ADMIN`, active flag and created timestamp. Legacy `USER` rows must be remediated before enforcing the check; the application startup repair converts them to inactive `ANALYST` accounts. |
 
 ## Minimum PostgreSQL Checks
 

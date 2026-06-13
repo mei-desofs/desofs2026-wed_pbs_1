@@ -26,6 +26,7 @@ public class MfaChallengeService {
     private final Clock clock;
     private final SecureRandom secureRandom = new SecureRandom();
     private final Map<String, Challenge> challenges = new ConcurrentHashMap<>();
+    private final Map<String, String> exposedCodesForTesting = new ConcurrentHashMap<>();
 
     public MfaChallengeService(
             MfaProperties properties,
@@ -56,14 +57,17 @@ public class MfaChallengeService {
                 passwordEncoder.encode(challengeId + ":" + code),
                 expiresAt
         ));
+        if (properties.isExposeCode()) {
+            exposedCodesForTesting.put(challengeId, code);
+        }
 
         auditLogService.log("MFA_CHALLENGE_CREATED", "USER", user.getId(), "Admin MFA challenge created");
         logger.info("MFA challenge created for admin user id={}, expiresAt={}", user.getId(), expiresAt);
         if (properties.isExposeCode()) {
-            logger.info("Development MFA code for admin user id={} is {}", user.getId(), code);
+            logger.info("DEV MFA code for {}: {}", user.getEmail(), code);
         }
 
-        return new MfaChallenge(challengeId, properties.isExposeCode() ? code : null);
+        return new MfaChallenge(challengeId);
     }
 
     public String verifyChallenge(String challengeId, String code) {
@@ -75,6 +79,7 @@ public class MfaChallengeService {
 
         if (!challenge.expiresAt().isAfter(clock.instant())) {
             challenges.remove(challengeId);
+            exposedCodesForTesting.remove(challengeId);
             auditLogService.log("MFA_VERIFY_EXPIRED", "USER", challenge.userId(), "Expired MFA challenge");
             throw new IllegalArgumentException("Invalid or expired verification code");
         }
@@ -85,16 +90,30 @@ public class MfaChallengeService {
         }
 
         challenges.remove(challengeId);
+        exposedCodesForTesting.remove(challengeId);
         auditLogService.log("MFA_VERIFY_SUCCESS", "USER", challenge.userId(), "Admin MFA completed");
         return challenge.username();
     }
 
-    private void purgeExpired() {
-        Instant now = clock.instant();
-        challenges.entrySet().removeIf(entry -> !entry.getValue().expiresAt().isAfter(now));
+    public String getExposedCodeForTesting(String challengeId) {
+        if (!properties.isExposeCode()) {
+            throw new IllegalStateException("MFA codes are not exposed in this profile");
+        }
+        return exposedCodesForTesting.get(challengeId);
     }
 
-    public record MfaChallenge(String challengeId, String devCode) {
+    private void purgeExpired() {
+        Instant now = clock.instant();
+        challenges.entrySet().removeIf(entry -> {
+            boolean expired = !entry.getValue().expiresAt().isAfter(now);
+            if (expired) {
+                exposedCodesForTesting.remove(entry.getKey());
+            }
+            return expired;
+        });
+    }
+
+    public record MfaChallenge(String challengeId) {
     }
 
     private record Challenge(Long userId, String username, String codeHash, Instant expiresAt) {
