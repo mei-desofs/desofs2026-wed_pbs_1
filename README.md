@@ -96,25 +96,6 @@ tests, the Maven POM or the PIT workflow itself. Its expected final report entry
 point is `ghostreport/target/pit-reports/index.html` inside the
 `pit-mutation-testing-report` artifact.
 
-## Documentation
-
-- [Coding standards](docs/CODING_STANDARDS.md)
-- [Code review guidelines](docs/CODE_REVIEW_GUIDELINES.md)
-- [Branch protection rules](docs/BRANCH_PROTECTION_RULES.md)
-- [Contribution guide](CONTRIBUTING.md)
-- [Secure installation](docs/SECURE_INSTALLATION.md)
-- [Security configuration assessment](docs/SECURITY_CONFIGURATION_ASSESSMENT.md)
-- [Security assessment](docs/SECURITY_ASSESSMENT.md)
-- [IAST runtime security](docs/IAST_RUNTIME_SECURITY.md)
-- [IAST implementation](docs/IAST_IMPLEMENTATION.md)
-- [DevSecOps pipeline](docs/DEVSECOPS_PIPELINE.md)
-- [ASVS evidence mapping](docs/ASVS_EVIDENCE.md)
-- [ASVS Level 2 evidence](docs/ASVS_LEVEL2_EVIDENCE.md)
-- [Technology stack security review](docs/TECH_STACK_SECURITY_REVIEW.md)
-- [Final demo guide](docs/FINAL_DEMO_GUIDE.md)
-- [Final project review](docs/FINAL_PROJECT_REVIEW.md)
-- [Phase 2 evidence folder](Deliverables/Phase%202/Evidence/README.md)
-
 ## Authors
 
 - Alexandre Vieira
