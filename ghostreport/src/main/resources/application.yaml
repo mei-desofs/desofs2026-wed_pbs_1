@@ -46,6 +46,11 @@ ghostreport:
   password-reset:
     token-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:30}
     expose-token: false
+  mfa:
+    enabled: ${GHOSTREPORT_MFA_ENABLED:true}
+    admin-required: ${GHOSTREPORT_MFA_ADMIN_REQUIRED:true}
+    code-ttl-seconds: ${GHOSTREPORT_MFA_CODE_TTL_SECONDS:300}
+    expose-code: false
   seed-users:
     enabled: false
   backup-dir: backups

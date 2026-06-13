@@ -34,6 +34,11 @@ ghostreport:
     active-key-id: test-key
     previous-secrets:
     expiration-seconds: 3600
+  mfa:
+    enabled: false
+    admin-required: true
+    code-ttl-seconds: 300
+    expose-code: true
   seed-users:
     enabled: true
   backup-dir: target/test-backups/default

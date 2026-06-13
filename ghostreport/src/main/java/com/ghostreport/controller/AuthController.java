@@ -3,6 +3,7 @@ package com.ghostreport.controller;
 import com.ghostreport.dto.AuthResponse;
 import com.ghostreport.dto.ChangePasswordRequest;
 import com.ghostreport.dto.LoginRequest;
+import com.ghostreport.dto.MfaVerifyRequest;
 import com.ghostreport.dto.PasswordResetConfirmRequest;
 import com.ghostreport.dto.PasswordResetRequest;
 import com.ghostreport.dto.PasswordResetRequestResponse;
@@ -76,6 +77,15 @@ public class AuthController {
             auditLogService.log("LOGIN_FAILED", "AUTHENTICATION", null, "Login failed");
             throw ex;
         }
+    }
+
+    @PostMapping(
+            value = "/mfa/verify",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public AuthResponse verifyMfa(@Valid @RequestBody MfaVerifyRequest request) {
+        return authService.verifyMfa(request);
     }
 
     @PostMapping("/logout")

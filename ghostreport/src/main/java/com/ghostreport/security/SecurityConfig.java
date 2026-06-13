@@ -72,6 +72,7 @@ public class SecurityConfig {
                         .requestMatchers("/", "/index.html", "/submit.html", "/track.html", "/analyst.html", "/admin.html", "/auditor.html").permitAll()
                         .requestMatchers("/css/**", "/js/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/mfa/verify").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/password-reset/request").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/password-reset/confirm").permitAll()
 
