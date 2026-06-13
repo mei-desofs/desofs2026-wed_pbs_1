@@ -2,6 +2,7 @@ package com.ghostreport.security;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ghostreport.model.AuditLog;
 import com.ghostreport.model.User;
 import com.ghostreport.model.UserRole;
 import com.ghostreport.repository.AuditLogRepository;
@@ -108,7 +109,7 @@ class AdminMfaAuthenticationTest {
         mockMvc.perform(get("/admin/panel").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
 
-        assertThat(auditLogRepository.findAll().stream().map(log -> log.getAction()))
+        assertThat(auditLogRepository.findAll().stream().map(AuditLog::getAction))
                 .contains("MFA_CHALLENGE_CREATED", "MFA_VERIFY_SUCCESS", "LOGIN_SUCCESS");
     }
 
@@ -128,12 +129,13 @@ class AdminMfaAuthenticationTest {
                 .andExpect(jsonPath("$.error").value("Invalid credentials"));
 
         JsonNode expiredChallenge = login(adminUsername);
-        Thread.sleep(1_200);
-        verifyMfa(expiredChallenge.path("mfaChallengeId").asText(), mfaCode(expiredChallenge))
+        String expiredChallengeId = expiredChallenge.path("mfaChallengeId").asText();
+        mfaChallengeService.expireChallengeForTesting(expiredChallengeId);
+        verifyMfa(expiredChallengeId, mfaCode(expiredChallenge))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("Invalid credentials"));
 
-        assertThat(auditLogRepository.findAll().stream().map(log -> log.getAction()))
+        assertThat(auditLogRepository.findAll().stream().map(AuditLog::getAction))
                 .contains("MFA_VERIFY_REJECTED", "MFA_VERIFY_EXPIRED");
     }
 

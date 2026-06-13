@@ -22,20 +22,22 @@ class FrontendNavbarVisibilityTest {
         String auditorJs = Files.readString(STATIC_ROOT.resolve("js/auditor.js"));
 
         assertThat(style).contains(".hidden,\n[hidden] {\n    display: none !important;");
-        assertThat(admin).contains("id=\"adminNav\" class=\"admin-nav hidden\"");
-        assertThat(admin).contains("id=\"mfaSection\" class=\"hidden\"");
-        assertThat(admin).doesNotContain("mfaDevCode");
-        assertThat(admin).contains("id=\"editUserPage\"");
-        assertThat(admin).doesNotContain("value=\"USER\"");
+        assertThat(admin)
+                .contains("id=\"adminNav\" class=\"admin-nav hidden\"")
+                .contains("id=\"mfaSection\" class=\"hidden\"")
+                .contains("id=\"editUserPage\"")
+                .doesNotContain("mfaDevCode")
+                .doesNotContain("value=\"USER\"");
         assertThat(analyst).contains("id=\"analystNav\" class=\"analyst-nav hidden\"");
         assertThat(auditor).contains("id=\"auditorNav\" class=\"admin-nav hidden\"");
-        assertThat(adminJs).contains("classList.remove(\"hidden\")");
-        assertThat(adminJs).contains("classList.add(\"hidden\")");
-        assertThat(adminJs).contains("loginData.mfaRequired");
-        assertThat(adminJs).doesNotContain("devMfaCode");
-        assertThat(adminJs).contains("cancelAdminMfa");
-        assertThat(adminJs).contains("#/admin/users/");
-        assertThat(adminJs).doesNotContain("updateUser: () => updateUser");
+        assertThat(adminJs)
+                .contains("classList.remove(\"hidden\")")
+                .contains("classList.add(\"hidden\")")
+                .contains("loginData.mfaRequired")
+                .contains("cancelAdminMfa")
+                .contains("#/admin/users/")
+                .doesNotContain("devMfaCode")
+                .doesNotContain("updateUser: () => updateUser");
         assertThat(analystJs).contains("classList.remove(\"hidden\")");
         assertThat(auditorJs).contains("classList.remove(\"hidden\")");
     }

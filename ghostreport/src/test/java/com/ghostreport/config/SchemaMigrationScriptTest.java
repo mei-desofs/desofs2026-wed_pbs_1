@@ -17,12 +17,13 @@ class SchemaMigrationScriptTest {
     void auditAndAlertMetadataMigrationBackfillsBeforeNotNullConstraints() throws Exception {
         String sql = Files.readString(MIGRATION);
 
-        assertThat(sql).contains("ADD COLUMN IF NOT EXISTS correlation_id varchar(80)");
-        assertThat(sql).contains("ADD COLUMN IF NOT EXISTS integrity_hash varchar(64)");
-        assertThat(sql).contains("SET correlation_id = 'legacy-' || id");
-        assertThat(sql).contains("md5(concat_ws('|'");
-        assertThat(sql).contains("ALTER COLUMN correlation_id SET NOT NULL");
-        assertThat(sql).contains("ALTER COLUMN integrity_hash SET NOT NULL");
+        assertThat(sql)
+                .contains("ADD COLUMN IF NOT EXISTS correlation_id varchar(80)")
+                .contains("ADD COLUMN IF NOT EXISTS integrity_hash varchar(64)")
+                .contains("SET correlation_id = 'legacy-' || id")
+                .contains("md5(concat_ws('|'")
+                .contains("ALTER COLUMN correlation_id SET NOT NULL")
+                .contains("ALTER COLUMN integrity_hash SET NOT NULL");
 
         assertThat(sql.indexOf("ADD COLUMN IF NOT EXISTS correlation_id varchar(80)"))
                 .isLessThan(sql.indexOf("SET correlation_id = 'legacy-' || id"));

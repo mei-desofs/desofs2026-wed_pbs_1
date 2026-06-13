@@ -102,6 +102,18 @@ public class MfaChallengeService {
         return exposedCodesForTesting.get(challengeId);
     }
 
+    public void expireChallengeForTesting(String challengeId) {
+        if (!properties.isExposeCode()) {
+            throw new IllegalStateException("MFA challenge mutation is only available in test/dev exposure mode");
+        }
+        challenges.computeIfPresent(challengeId, (id, challenge) -> new Challenge(
+                challenge.userId(),
+                challenge.username(),
+                challenge.codeHash(),
+                clock.instant().minusSeconds(1)
+        ));
+    }
+
     private void purgeExpired() {
         Instant now = clock.instant();
         challenges.entrySet().removeIf(entry -> {
