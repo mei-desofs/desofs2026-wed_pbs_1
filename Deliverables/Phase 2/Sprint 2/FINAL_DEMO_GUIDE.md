@@ -1,115 +1,60 @@
-# Final Demo Guide
+# Guião de demonstração final
 
-This guide is the recommended Sprint 2 presentation path for GhostReport. It is
-focused on the professor's feedback: show the pipeline running, show concrete
-security evidence, explain Pull Request governance and connect the evidence to
-ASVS.
+## Preparação
 
-## 1. Pull Request and Governance
-
-Start in the Pull Request view and show:
-
-- the Pull Request template checklist;
-- at least one reviewer requirement;
-- branch protection rules;
-- required status checks;
-- conversation resolution before merge.
-
-Use `docs/BRANCH_PROTECTION_RULES.md`, `docs/CODE_REVIEW_GUIDELINES.md` and
-`docs/CODING_STANDARDS.md` as the governance evidence.
-
-## 2. Pipeline Timeline
-
-Open GitHub Actions and select the `dev` workflow. This workflow is the current
-security evidence pipeline and is defined in `.github/workflows/dev.yml`.
-
-Show the jobs in this order:
-
-1. `build-test / build-and-test`
-2. `security-secrets / secrets`
-3. `sast / SonarCloud SAST Scan`
-4. `dependency-scanning / Dependency Vulnerability Scanning`
-5. `dast-scan / dast-scan`
-
-Explain that `sast`, `dependency-scanning` and `dast-scan` depend on
-`build-test` and `security-secrets`, so the GitHub Actions graph gives a single
-timeline for the presentation.
-
-## 3. What Each Job Proves
-
-| Job | What to show | Artifact/evidence |
-| --- | --- | --- |
-| `build-test / build-and-test` | Compile, automated tests and JaCoCo coverage. | `ci-surefire-test-reports`, `ci-jacoco-coverage-report` |
-| `security-secrets / secrets` | Gitleaks scan and no confirmed repository secrets. | `secret-scan-gitleaks-json` |
-| `sast / SonarCloud SAST Scan` | SpotBugs, SonarCloud and CodeQL. | `sast-reports`, GitHub Code Scanning |
-| `dependency-scanning / Dependency Vulnerability Scanning` | Dependency-Check and CycloneDX SBOM. | `dependency-check-sca-reports`, `sbom-cyclonedx` |
-| `dast-scan / dast-scan` | Runtime security tests, IAST-like evidence and ZAP baseline. | `iast-runtime-security-evidence`, `dast-zap-baseline-reports` |
-
-## 4. Gate Policy To Explain
-
-- Blocking: Maven compile, tests, JaCoCo coverage, runtime security tests,
-  application startup for DAST and confirmed Gitleaks findings.
-- Evidence review: PIT mutation score/output, SpotBugs findings, CodeQL alerts,
-  SonarCloud quality findings, Dependency-Check findings, SBOM and ZAP baseline
-  alerts.
-- PIT evidence is shown from the separate `pit-mutation-testing` workflow.
-
-This wording is important. It shows that the pipeline is not "green by hiding
-security issues"; it separates hard build gates from findings that require
-manual security triage.
-
-## 5. ASVS Evidence
-
-Open the ASVS tracker and `docs/ASVS_EVIDENCE.md`. For each major area, connect
-one implementation file, one test or pipeline artifact and one residual risk:
-
-- Authentication and JWT: `JwtService`, `AuthService`, JWT tests and runtime
-  security evidence.
-- Authorization: `SecurityConfig`, RBAC/ownership tests and controller/service
-  rules.
-- Validation and sanitization: DTO validation, domain value objects and upload
-  tests.
-- File handling: `FileStorageService`, file validation tests and ZAP/runtime
-  evidence.
-- Configuration: profiles, environment variables, fail-fast validation and
-  Gitleaks/SCA evidence.
-- Logging and error handling: audit/security event services, error handler tests
-  and sanitized runtime evidence.
-
-## 6. Evidence Folder
-
-Explain that `Deliverables/Phase 2/Evidence` is a local archive, not a folder
-written by GitHub Actions. The correct process is:
-
-1. Run the `dev` workflow in GitHub Actions.
-2. Download the workflow artifacts.
-3. Extract them under `downloaded-artifacts/`.
-4. Run:
+A partir do módulo Spring Boot:
 
 ```powershell
-.\scripts\collect-evidence.ps1
+cd ghostreport
+.\mvnw.cmd test
+.\mvnw.cmd "-Dspring-boot.run.profiles=dev" spring-boot:run
 ```
 
-Then show the organized folders under `Deliverables/Phase 2/Evidence`.
+Abrir `http://localhost:8081`.
 
-## 7. Scope Boundaries
+Numa base de dados dev nova, usar as contas internas criadas pelo perfil `dev`.
+O login admin exige MFA; quando a exposição dev está activa, o código é escrito
+no log da aplicação apenas para demonstração local.
 
-Use precise wording in the demo:
+## Fluxo de demonstração
 
-- Runtime security and IAST-like evidence exists in every `dast-scan` run.
-- Full agent-based IAST is not claimed; the academic evidence is Spring Boot
-  runtime tests, endpoint checks, logs and ZAP baseline.
-- PIT is evidence review, not a blocking mutation threshold gate.
-- CodeQL's primary evidence is GitHub Code Scanning.
-- ZAP is baseline DAST against a live application, not authenticated deep DAST.
-- Production TLS, SIEM integration and advanced operational monitoring are
-  documented as future operational hardening.
+1. Abrir a página pública.
+2. Submeter uma denúncia anónima.
+3. Guardar o tracking code gerado.
+4. Usar a página de tracking para verificar a denúncia.
+5. Fazer upload de um ficheiro permitido.
+6. Tentar um upload proibido ou nome com padrão de traversal e mostrar rejeição.
+7. Fazer login como admin e completar MFA.
+8. Mostrar gestão de utilizadores e visibilidade de auditoria/segurança.
+9. Fazer login como analyst e mostrar lista de casos ou actualização permitida.
+10. Fazer login como auditor e mostrar evidência de auditoria/segurança.
+11. Mostrar verificação de backup ou pacote de evidência quando disponível.
+12. Abrir o índice do Sprint 2 e ligar a demo à evidência documental.
 
-## 8. Closing Message
+## Evidência a abrir
 
-Close by showing the artifacts page and saying:
+- [PHASE2_SPRINT2_REPORT.md](PHASE2_SPRINT2_REPORT.md)
+- [AUTHORIZATION_MATRIX.md](AUTHORIZATION_MATRIX.md)
+- [SECURITY_TESTING.md](SECURITY_TESTING.md)
+- [DEVSECOPS_PIPELINE.md](DEVSECOPS_PIPELINE.md)
+- [SCA_TRIAGE.md](SCA_TRIAGE.md)
+- [IAST_RUNTIME_SECURITY.md](IAST_RUNTIME_SECURITY.md)
+- [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md)
 
-> Sprint 1 failed mainly because the pipeline evidence was not demonstrated.
-> Sprint 2 now has a single visible workflow timeline, blocking quality gates,
-> security evidence artifacts and ASVS mapping that links implementation,
-> tests, pipeline output and residual risks.
+## Pontos de apresentação
+
+- Denúncia anónima continua pública; APIs internas exigem roles.
+- MFA admin é exigido antes da emissão de JWT admin.
+- Analyst e auditor têm responsabilidades e acessos distintos.
+- Upload controls mitigam ficheiros maliciosos e path traversal.
+- Auditoria, alertas e verificação de backups apoiam accountability.
+- A pipeline dá evidência de segurança, mas não elimina revisão nem hardening
+  operacional.
+
+## Não exagerar
+
+- Não descrever evidência runtime como IAST completo.
+- Não afirmar prontidão de produção sem TLS externo, secret management,
+  migrações, logs centralizados e monitorização operacional.
+- Não dizer que MFA protege todas as roles internas; actualmente protege login
+  admin.

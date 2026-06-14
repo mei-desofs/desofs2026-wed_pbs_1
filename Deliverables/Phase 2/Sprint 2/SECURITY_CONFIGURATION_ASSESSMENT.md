@@ -1,60 +1,40 @@
-# Security Configuration Assessment
+# Avaliação de configuração de segurança
 
-This assessment documents the configuration controls used by GhostReport across
-local development, automated tests and production-like execution.
+## Sumário
 
-## Configuration Evidence
+A configuração actual é adequada para validação académica local e baseline
+prod-like, desde que secrets e PostgreSQL sejam fornecidos externamente. Alguns
+controlos continuam a exigir hardening operacional antes de produção real.
 
-| Area | Evidence | Status |
+## Revisão de configuração
+
+| Área | Configuração actual | Avaliação |
 | --- | --- | --- |
-| Runtime profiles | `application.yaml`, `application-dev.yaml`, `application-test.yaml` | Implemented |
-| Production-like configuration | Default profile requires database and JWT environment variables | Implemented |
-| JWT secret validation | `SecurityConfigurationValidator`, `JwtService`, validator tests | Implemented |
-| Backup HMAC key validation | `SecurityConfigurationValidator`, `BackupService`, backup/config tests | Implemented |
-| Seed users | Disabled by default and controlled by profile/validator | Implemented |
-| Database configuration | PostgreSQL default/dev, H2 test profile, `ddl-auto=validate` in production-like config | Implemented |
-| H2 console | Disabled outside the test profile | Implemented |
-| Error output | `server.error.include-stacktrace=never` | Implemented |
-| Upload limits | Multipart limit and max files per request | Implemented |
-| Backup/upload separation | Validator rejects identical normalized directories | Implemented |
-| Docker hardening | Non-root user, read-only app container, named volumes and `no-new-privileges` | Implemented |
-| Secret scanning | `.gitleaks.toml` and Gitleaks workflow | Implemented |
+| Spring Security | Regras centralizadas, filtro JWT e headers de segurança. | Implementado. |
+| Autenticação | BCrypt, JWT e MFA admin. | Implementado; MFA é admin-only. |
+| Secrets | Esperados por ambiente/deployment secrets. | Implementado; secret manager é futuro. |
+| Base de dados | PostgreSQL em runtime, H2 em testes. | Implementado; migrações formais são futuro. |
+| Uploads | Tamanho/tipo/assinatura e nomes gerados. | Implementado. |
+| Backups | Manifesto HMAC e verificação. | Implementado; encriptação/retenção externa são futuro. |
+| Rate limiting | Em memória na aplicação. | Adequado ao âmbito; externo/distribuído é futuro. |
+| Logs/auditoria | Auditoria e alertas com metadados de integridade. | Implementado; SIEM/WORM é futuro. |
+| Dependências | Dependency-Check e CycloneDX. | Implementado. |
 
-## Fail-Fast Checks
+## Acções obrigatórias em produção
 
-The application validates configuration at startup:
+- Definir `JWT_SECRET` e secrets HMAC fortes.
+- Manter `GHOSTREPORT_MFA_EXPOSE_CODE` desligado.
+- Executar atrás de HTTPS.
+- Usar PostgreSQL com credenciais restritas.
+- Proteger directórios de uploads, evidência e backups ao nível do sistema
+  operativo.
+- Rever suppressions do Dependency-Check antes de release.
+- Arquivar artefactos da pipeline mais recente.
 
-- `JWT_SECRET` must be at least 32 characters.
-- `BACKUP_HMAC_SECRET` must be at least 32 characters.
-- `BACKUP_HMAC_SECRET` must be different from `JWT_SECRET`.
-- `BACKUP_HMAC_KEY_ID` must not be blank.
-- `JWT_EXPIRATION_SECONDS` must be positive.
-- Upload and backup directories must be configured and distinct.
-- Production-like profiles must not use dev/test JWT placeholders.
-- Production-like profiles must not use dev/test backup HMAC placeholders.
-- Production-like profiles must not enable seed users.
+## Riscos residuais
 
-Evidence: `SecurityConfigurationValidatorTest`.
-
-## Environment Variables
-
-| Variable | Purpose |
-| --- | --- |
-| `DB_URL` | PostgreSQL JDBC URL |
-| `DB_USERNAME` | Database username |
-| `DB_PASSWORD` | Database password |
-| `JWT_SECRET` | JWT HMAC signing secret |
-| `BACKUP_HMAC_SECRET` | Backup manifest HMAC signing secret |
-| `BACKUP_HMAC_KEY_ID` | Backup manifest HMAC key identifier |
-| `JWT_EXPIRATION_SECONDS` | Token lifetime |
-| `APP_UPLOAD_MAX_FILES_PER_REQUEST` | Upload abuse-control limit |
-
-Use `.env.example` as a local template. Real secrets are supplied through the
-runtime environment or GitHub Actions secrets.
-
-## Operational Notes
-
-- The default profile is production-like and expects external configuration.
-- The `dev` profile supports local iteration with PostgreSQL defaults.
-- The `test` profile uses isolated H2 databases and test storage paths.
-- Docker Compose is configured for local containerized execution.
+- Sem secret manager externo.
+- Sem rotação automática de chaves.
+- Sem framework formal de migrações.
+- Sem armazenamento imutável de auditoria/SIEM.
+- Rate limiting não distribuído.

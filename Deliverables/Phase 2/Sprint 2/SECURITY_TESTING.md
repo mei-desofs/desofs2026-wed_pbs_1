@@ -1,91 +1,60 @@
-# Security Testing Evidence
+# Testes de segurança
 
-GhostReport uses automated tests and pipeline tools as security evidence for
-Phase 2 Sprint 2.
+Este documento consolida a evidência de testes e validação do Sprint 2.
+Substitui as notas antigas da raiz sobre security testing e validation rules.
 
-| Test/tool | Purpose | Evidence | Gate mode |
-| --- | --- | --- | --- |
-| JUnit/MockMvc | Authentication, authorization, validation, error handling and file/backup flows | Surefire reports and `ghostreport/src/test/java` | Blocking |
-| JaCoCo | Coverage visibility and minimum coverage gate | `target/site/jacoco` and `ci-jacoco-coverage-report` | Blocking in `build-test / build-and-test` |
-| Runtime security tests | Focused tests for JWT, rate limiting, CSRF, headers and security events | `iast-runtime-security-evidence` | Blocking inside `dast-scan / dast-scan` |
-| OWASP ZAP | Baseline DAST against the running app | ZAP HTML/JSON/XML artifacts | Evidence review |
-| PIT | Mutation testing for test-quality evidence | `target/pit-reports` and CI artifact | Evidence review |
+## Resultado local mais recente
 
-## PIT Configuration
+Validação local da linha actual:
 
-PIT is configured for the GhostReport application subpackages:
-
-- `com.ghostreport.config.*`
-- `com.ghostreport.controller.*`
-- `com.ghostreport.domain.*`
-- `com.ghostreport.dto.*`
-- `com.ghostreport.exception.*`
-- `com.ghostreport.model.*`
-- `com.ghostreport.repository.*`
-- `com.ghostreport.security.*`
-- `com.ghostreport.service.*`
-- `com.ghostreport.validation.*`
-
-HTML and XML output are enabled, and `timestampedReports=false` keeps the final
-report at a predictable path:
-
-```text
-ghostreport/target/pit-reports/index.html
+```powershell
+cd ghostreport
+.\mvnw.cmd test
 ```
 
-Mutation testing remains evidence review, not a fast merge gate. It is separated
-from the main `dev` workflow into the dedicated `pit-mutation-testing` workflow
-so the main pipeline stays responsive while PIT can run long enough to generate
-the complete final report.
+Resultado: 180 testes executados, 0 falhas.
 
-## Current PIT Status
+## Áreas cobertas
 
-The dedicated workflow:
+| Área | Evidência |
+| --- | --- |
+| Autenticação | Login com sucesso/falha, utilizador inactivo, emissão de JWT e logout. |
+| MFA | Desafio admin, verificação, expiração/reutilização e emissão final de JWT. |
+| RBAC | Rotas admin, analyst e auditor com casos positivos e negativos. |
+| Propriedade de casos | Actualizações permitidas e negadas para analistas. |
+| Denúncias anónimas | Criação, tracking code e verificação pública. |
+| Uploads | Tamanho, extensão, MIME/assinatura, nomes gerados e rejeição de traversal. |
+| Auditoria/alertas | Operações críticas produzem evidência. |
+| Backups/evidência | Manifestos e verificações de integridade. |
+| Frontend | Comportamento seleccionado de navbar, tracking code e navegação por role. |
 
-- compiles tests/classes and archives `pit-target-classes.txt` for diagnostics;
-- runs `org.pitest:pitest-maven:mutationCoverage`;
-- uses the full Maven PIT scope from `ghostreport/pom.xml`;
-- validates that `target/pit-reports/index.html` exists;
-- uploads the complete `target/pit-reports/**` artifact;
-- writes `pit-evidence-summary.md` and `pit-mutation-summary.md` with the final
-  mutation percentages when `mutations.xml` is generated.
+## Matriz de validação
 
-Local execution on this workstation can still be unreliable with Java 23 because
-PIT has previously failed with `MINION_DIED` / `CoverageMinion` startup failure.
-The GitHub Actions workflow uses Java 17 and is the expected source of final PIT
-evidence.
-
-Latest local attempt on Java 23:
-
-- command: `.\mvnw.cmd test org.pitest:pitest-maven:mutationCoverage`;
-- Surefire completed first with `180` tests and `0` failures;
-- PIT failed during coverage generation with `Coverage generation minion exited
-  abnormally` and `Could not find or load main class
-  org.pitest.coverage.execute.CoverageMinion`;
-- no local `mutations.xml` was generated, so no survivor list was available for
-  safe targeted mutation-test work in this pass.
-
-The useful test hardening added in this pass focuses on real behavior rather
-than artificial mutant killing: deterministic MFA expiry/reuse checks and a live
-CSRF cookie attribute test.
-
-## Sonar Maintainability Review
-
-The final review pass resolved the Sonar maintainability findings for:
-
-- empty Jackson DTO constructors in `MfaVerifyRequest` and `UpdateUserRequest`,
-  now documented as required for request-body binding before Bean Validation;
-- duplicated `User not found` literals in `UserService`, now centralized in a
-  private constant;
-- chained AssertJ assertions in schema/frontend tests;
-- `AdminMfaAuthenticationTest` method references and removal of the real
-  `Thread.sleep()` expiry wait.
-
-## ZAP Alert Review
-
-| Alert | Decision | Rationale / evidence |
+| Fluxo | Regras principais | Objectivo de segurança |
 | --- | --- | --- |
-| `Cookie No HttpOnly Flag` on `XSRF-TOKEN` | Accepted by design | The static frontend reads `XSRF-TOKEN` in `js/api.js` and returns it in `X-XSRF-TOKEN`. It is a CSRF token, not a JWT/session/authentication cookie. Setting `HttpOnly=true` would break the current SPA-style CSRF flow. |
-| `Cookie without SameSite Attribute` on `XSRF-TOKEN` | Fixed | `SecurityConfig` customizes the CSRF cookie with `SameSite=Lax`. `CsrfCookieAttributesTest` verifies `XSRF-TOKEN` includes `SameSite=Lax` and remains readable by frontend JavaScript. |
-| `Non-Storable Content` | Accepted informational | `Cache-Control: no-store` is intentional for a whistleblowing/reporting app with authentication and sensitive report flows. It should not be weakened to satisfy an informational DAST item. |
-| `Session Management Response Identified` | Accepted informational | `XSRF-TOKEN` is not a session identifier and carries no authenticated session or JWT credential. Authentication remains via JWT in the `Authorization` header. |
+| `POST /auth/login` | Username/password obrigatórios, erros genéricos, rate limiting. | Reduzir brute force e enumeração. |
+| `POST /auth/mfa/verify` | Desafio/código obrigatórios, uso único, TTL curto. | Evitar bypass e replay de MFA admin. |
+| Password reset | Resposta genérica, validação de token e política de password. | Reduzir enumeração e passwords fracas. |
+| `POST /reports` | Título/descrição/categoria obrigatórios, limites de tamanho, DTOs. | Evitar dados malformados e mass assignment. |
+| `POST /reports/verify` | Formato e existência do tracking code. | Evitar enumeração ruidosa. |
+| Uploads | Allowlist de extensão, MIME/assinatura, tamanho, nomes gerados. | Reduzir ficheiros maliciosos e path traversal. |
+| Actualizações de analista | Estado/prioridade/notas e ownership. | Impedir alterações não autorizadas. |
+| Downloads/pacotes | Caminhos canónicos e protecção ZIP Slip. | Impedir fuga do filesystem. |
+
+## Evidência manual e pipeline
+
+| Check | Comando ou fonte |
+| --- | --- |
+| Testes unitários/integração | `.\mvnw.cmd test` |
+| JaCoCo | `.\mvnw.cmd test jacoco:report` |
+| SAST | Job `sast`: CodeQL, SonarCloud, SpotBugs. |
+| SCA | Job `dependency-scanning`: Dependency-Check e CycloneDX. |
+| DAST | Job `dast-scan`: runtime checks e ZAP baseline. |
+| Mutation testing | Workflow `pit-mutation-testing`. |
+
+## Limites
+
+- ZAP baseline não substitui teste de penetração completo.
+- MFA está implementado e testado para `ADMIN` apenas.
+- Rate limiting é em memória.
+- Evidência runtime é IAST-like; não há agente IAST completo.
