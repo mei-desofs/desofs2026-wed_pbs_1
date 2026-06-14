@@ -13,7 +13,7 @@ class FrontendNavbarVisibilityTest {
 
     @Test
     void authenticatedRoleNavsAreHiddenBeforeLogin() throws Exception {
-        String style = Files.readString(STATIC_ROOT.resolve("css/style.css"));
+        String style = Files.readString(STATIC_ROOT.resolve("css/style.css")).replace("\r\n", "\n");
         String admin = Files.readString(STATIC_ROOT.resolve("admin.html"));
         String analyst = Files.readString(STATIC_ROOT.resolve("analyst.html"));
         String auditor = Files.readString(STATIC_ROOT.resolve("auditor.html"));
