@@ -17,6 +17,9 @@ documentação perdida.
 | Testes automatizados, segurança e validação | [SECURITY_TESTING.md](SECURITY_TESTING.md) |
 | Pipeline DevSecOps, automações e artefactos | [DEVSECOPS_PIPELINE.md](DEVSECOPS_PIPELINE.md) |
 | Segurança em runtime e evidência IAST-like | [IAST_RUNTIME_SECURITY.md](IAST_RUNTIME_SECURITY.md) |
+| Artefacto runtime IAST-like gerado pela CI | [iast-runtime-evidence.md](iast-runtime-evidence.md) |
+| Probes live de endpoints runtime | [runtime-endpoints.md](runtime-endpoints.md) |
+| Sanitização de logs runtime | [runtime-log-sanitization.md](runtime-log-sanitization.md) |
 | SCA, SBOM e alertas de dependências | [SCA_TRIAGE.md](SCA_TRIAGE.md) |
 | SpotBugs/SAST | [SPOTBUGS_TRIAGE.md](SPOTBUGS_TRIAGE.md) |
 | Instalação segura | [SECURE_INSTALLATION.md](SECURE_INSTALLATION.md) |

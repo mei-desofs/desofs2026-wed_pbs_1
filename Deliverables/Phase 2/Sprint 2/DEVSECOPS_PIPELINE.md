@@ -93,7 +93,8 @@ Automacoes:
 - empacota a aplicacao;
 - arranca GhostReport em `localhost:8081`;
 - espera readiness;
-- exercita endpoints runtime;
+- exercita endpoints runtime para reports, tracking code, uploads, JWT invalido,
+  CSRF rejection e endpoints protegidos;
 - verifica logs para fuga de dados sensiveis;
 - corre OWASP ZAP baseline;
 - prepara sumario IAST-like/runtime;
@@ -103,6 +104,12 @@ Automacoes:
 
 O ZAP baseline e evidencia passiva/nao autenticada. A parte runtime cobre mais
 do que o ZAP sozinho, porque combina testes, app real, HTTP probes e logs.
+
+Artefactos documentados na entrega:
+
+- [iast-runtime-evidence.md](iast-runtime-evidence.md)
+- [runtime-endpoints.md](runtime-endpoints.md)
+- [runtime-log-sanitization.md](runtime-log-sanitization.md)
 
 ## 8. Workflow `pit-mutation-testing`
 

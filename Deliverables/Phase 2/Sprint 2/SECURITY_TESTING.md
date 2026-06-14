@@ -84,6 +84,17 @@ Na pipeline, alem de `./mvnw verify`, existe job `dast-scan` que:
 - corre ZAP baseline;
 - publica evidencia.
 
+Artefactos relacionados:
+
+- [iast-runtime-evidence.md](iast-runtime-evidence.md)
+- [runtime-endpoints.md](runtime-endpoints.md)
+- [runtime-log-sanitization.md](runtime-log-sanitization.md)
+
+O reforco runtime inclui probes live para `POST /reports`, tracking code,
+uploads e endpoints protegidos, e testes runtime-focused para MFA, RBAC por
+role, JWT invalido/expirado, backups, ZIP Slip, max upload size e error
+handling.
+
 ## 8. Limitacoes
 
 - Testes automatizados nao substituem pentest manual.

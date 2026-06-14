@@ -398,7 +398,29 @@ Nao existe agente IAST completo. A evidencia IAST-like combina:
 - correlacao com ZAP baseline.
 
 Esta distincao e importante para nao exagerar claims. O detalhe esta em
-[IAST_RUNTIME_SECURITY.md](IAST_RUNTIME_SECURITY.md).
+[IAST_RUNTIME_SECURITY.md](IAST_RUNTIME_SECURITY.md), com artefactos
+complementares em [iast-runtime-evidence.md](iast-runtime-evidence.md),
+[runtime-endpoints.md](runtime-endpoints.md) e
+[runtime-log-sanitization.md](runtime-log-sanitization.md).
+
+Na pipeline, os probes live exercitam:
+
+- criacao publica de denuncia valida;
+- denuncia invalida e campos obrigatorios;
+- caracteres perigosos tratados como dados;
+- tentativa de mass assignment;
+- tracking code valido, invalido e repetido;
+- upload permitido;
+- upload com extensao proibida;
+- upload com content-type/assinatura suspeita;
+- filename com tentativa de path traversal;
+- endpoint admin sem token;
+- endpoint admin com JWT invalido;
+- CSRF rejection em endpoint state-changing.
+
+MFA, RBAC com role correcta/errada, JWT expirado, backups, ZIP Slip e tamanho
+maximo de upload sao cobertos pela seleccao de testes Maven executada no mesmo
+job `dast-scan`.
 
 ## 17. Testes automatizados
 
