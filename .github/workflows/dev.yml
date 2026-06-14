@@ -437,7 +437,7 @@ jobs:
 
       - name: Exercise runtime security endpoints for evidence
         run: |
-          python .github/scripts/runtime_security_probe.py \
+          python ../.github/scripts/runtime_security_probe.py \
             --base-url http://localhost:8081 \
             --output-dir target/iast-evidence \
             --app-log target/ghostreport-dast-app.log
@@ -628,4 +628,3 @@ jobs:
           if [ -f target/ghostreport-dast-app.pid ]; then
             kill "$(cat target/ghostreport-dast-app.pid)" || true
           fi
-
