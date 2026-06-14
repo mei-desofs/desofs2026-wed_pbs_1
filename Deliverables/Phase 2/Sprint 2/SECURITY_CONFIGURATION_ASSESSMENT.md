@@ -11,7 +11,7 @@ controlos continuam a exigir hardening operacional antes de produção real.
 | Área | Configuração actual | Avaliação |
 | --- | --- | --- |
 | Spring Security | Regras centralizadas, filtro JWT e headers de segurança. | Implementado. |
-| Autenticação | BCrypt, JWT e MFA admin. | Implementado; MFA é admin-only. |
+| Autenticação | BCrypt, JWT e MFA para `ADMIN`, `ANALYST` e `AUDITOR`. | Implementado. |
 | Secrets | Esperados por ambiente/deployment secrets. | Implementado; secret manager é futuro. |
 | Base de dados | PostgreSQL em runtime, H2 em testes. | Implementado; migrações formais são futuro. |
 | Uploads | Tamanho/tipo/assinatura e nomes gerados. | Implementado. |

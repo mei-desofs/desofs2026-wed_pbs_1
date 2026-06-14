@@ -2,6 +2,7 @@ package com.ghostreport.service;
 
 import com.ghostreport.config.MfaProperties;
 import com.ghostreport.model.User;
+import com.ghostreport.model.UserRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -40,8 +41,8 @@ public class MfaChallengeService {
         this.clock = clock;
     }
 
-    public boolean isAdminMfaRequired() {
-        return properties.isEnabled() && properties.isAdminRequired();
+    public boolean isMfaRequiredFor(UserRole role) {
+        return properties.isEnabled() && properties.getRequiredRoles().contains(role);
     }
 
     public MfaChallenge createChallenge(User user) {
@@ -61,8 +62,8 @@ public class MfaChallengeService {
             exposedCodesForTesting.put(challengeId, code);
         }
 
-        auditLogService.log("MFA_CHALLENGE_CREATED", "USER", user.getId(), "Admin MFA challenge created");
-        logger.info("MFA challenge created for admin user id={}, expiresAt={}", user.getId(), expiresAt);
+        auditLogService.log("MFA_CHALLENGE_CREATED", "USER", user.getId(), "MFA challenge created");
+        logger.info("MFA challenge created for user id={}, role={}, expiresAt={}", user.getId(), user.getRole(), expiresAt);
         if (properties.isExposeCode()) {
             logger.info("DEV MFA code for {}: {}", user.getEmail(), code);
         }
@@ -91,7 +92,7 @@ public class MfaChallengeService {
 
         challenges.remove(challengeId);
         exposedCodesForTesting.remove(challengeId);
-        auditLogService.log("MFA_VERIFY_SUCCESS", "USER", challenge.userId(), "Admin MFA completed");
+        auditLogService.log("MFA_VERIFY_SUCCESS", "USER", challenge.userId(), "MFA completed");
         return challenge.username();
     }
 

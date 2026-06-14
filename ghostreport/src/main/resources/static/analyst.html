@@ -43,6 +43,23 @@
             <div id="loginError" class="error"></div>
         </div>
 
+        <div id="mfaSection" class="hidden">
+            <div class="mfa-panel">
+                <h2>Verificacao MFA</h2>
+                <p class="mfa-instructions">Introduza o codigo de 6 digitos enviado pelo canal configurado.</p>
+
+                <label for="mfaCode">Codigo MFA</label>
+                <input id="mfaCode" class="mfa-code-input" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code">
+
+                <div class="mfa-actions">
+                    <button type="button" data-action="verifyAnalystMfa">Verificar codigo</button>
+                    <button type="button" data-action="cancelAnalystMfa">Voltar ao login</button>
+                </div>
+
+                <div id="mfaError" class="error"></div>
+            </div>
+        </div>
+
         <div id="globalMessages" class="hidden">
             <div id="globalResult" class="result"></div>
             <div id="globalError" class="error"></div>

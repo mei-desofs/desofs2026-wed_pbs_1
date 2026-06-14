@@ -9,6 +9,7 @@ const {
 
 let auditorAuth = null;
 let auditorUsername = null;
+let auditorMfaChallengeId = null;
 
 function showElement(id, display = "block") {
     const node = document.getElementById(id);
@@ -62,7 +63,7 @@ async function auditorSafeFetch(url, options = {}) {
         ? csrfFetchOptions(options)
         : options;
     const response = await fetch(url, fetchOptions);
-    const authFlowRequest = String(url).includes("/auth/login");
+    const authFlowRequest = String(url).includes("/auth/login") || String(url).includes("/auth/mfa/verify");
 
     if (!authFlowRequest && (response.status === 401 || response.status === 403)) {
         auditorAuth = null;
@@ -103,6 +104,16 @@ async function auditorLogin() {
             body: JSON.stringify({ username, password })
         });
         const loginData = await auditorHandleJsonResponse(loginResponse);
+
+        if (loginData.mfaRequired) {
+            auditorAuth = null;
+            auditorUsername = loginData.username;
+            auditorMfaChallengeId = loginData.mfaChallengeId;
+            hideElement("loginSection");
+            showElement("mfaSection");
+            return;
+        }
+
         auditorAuth = `${loginData.tokenType} ${loginData.token}`;
 
         await validateAuditorSession();
@@ -116,9 +127,52 @@ async function auditorLogin() {
     }
 }
 
+async function verifyAuditorMfa() {
+    clearAuditorMessages();
+
+    const code = document.getElementById("mfaCode").value.trim();
+    if (!auditorMfaChallengeId || !code) {
+        setText("mfaError", "Introduz o codigo de verificacao.");
+        return;
+    }
+
+    try {
+        const response = await auditorSafeFetch(`${getApiBase()}/auth/mfa/verify`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                challengeId: auditorMfaChallengeId,
+                code
+            })
+        });
+        const data = await auditorHandleJsonResponse(response);
+        auditorAuth = `${data.tokenType} ${data.token}`;
+        auditorUsername = data.username;
+        auditorMfaChallengeId = null;
+        document.getElementById("mfaCode").value = "";
+
+        await validateAuditorSession();
+        showAuditorDashboard();
+    } catch (error) {
+        auditorAuth = null;
+        setText("mfaError", error.message || "Codigo invalido ou expirado.");
+    }
+}
+
+function cancelAuditorMfa() {
+    auditorMfaChallengeId = null;
+    auditorUsername = null;
+    document.getElementById("mfaCode").value = "";
+    hideElement("mfaSection");
+    showElement("loginSection");
+}
+
 function showAuditorDashboard() {
     hideElement("auditorLoginPanel");
     hideElement("loginSection");
+    hideElement("mfaSection");
     showElement("auditorDashboard");
 
     hideElement("publicNav");
@@ -135,6 +189,7 @@ async function auditorLogout(reload = true) {
 
     auditorAuth = null;
     auditorUsername = null;
+    auditorMfaChallengeId = null;
 
     if (reload) {
         location.reload();
@@ -142,6 +197,7 @@ async function auditorLogout(reload = true) {
         showElement("publicNav", "flex");
         hideElement("auditorNav");
         hideElement("auditorDashboard");
+        hideElement("mfaSection");
         showElement("auditorLoginPanel");
         showElement("loginSection", "flex");
     }
@@ -188,7 +244,7 @@ function showAuditorPage(pageId) {
 }
 
 function clearAuditorMessages() {
-    ["loginError"].forEach(id => setText(id, ""));
+    ["loginError", "mfaError"].forEach(id => setText(id, ""));
 }
 
 function safeClassToken(value) {
@@ -453,6 +509,8 @@ document.addEventListener("click", event => {
         showAuditorPage: () => showAuditorPage(button.dataset.page),
         auditorLogout: () => auditorLogout(),
         auditorLogin,
+        verifyAuditorMfa,
+        cancelAuditorMfa,
         loadAuditLogs,
         loadSecurityAlerts,
         loadClosedCases,

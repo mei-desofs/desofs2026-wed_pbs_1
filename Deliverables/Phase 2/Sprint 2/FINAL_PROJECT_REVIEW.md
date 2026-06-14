@@ -16,7 +16,7 @@
 
 | Claim | Redacção correcta |
 | --- | --- |
-| MFA | Implementado para `ADMIN` apenas. |
+| MFA | Implementado para `ADMIN`, `ANALYST` e `AUDITOR`. |
 | IAST | Evidência runtime/IAST-like; sem agente IAST completo. |
 | DAST | OWASP ZAP baseline, não teste de penetração autenticado completo. |
 | Produção | Há orientação prod-like, mas faltam controlos operacionais externos. |
@@ -24,8 +24,7 @@
 
 ## Limitações principais
 
-- MFA deve ser alargado ou delegado a um IdP para todas as roles internas antes
-  de produção.
+- MFA deve ser integrado com um canal/IdP de produção antes de uso real.
 - Migrações formais devem substituir evolução ad hoc de schema.
 - Secrets devem ser guardados e rodados por serviço gerido.
 - Auditoria e alertas devem ser exportados para armazenamento centralizado e

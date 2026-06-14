@@ -4,7 +4,6 @@ import com.ghostreport.dto.AuthResponse;
 import com.ghostreport.dto.LoginRequest;
 import com.ghostreport.dto.MfaVerifyRequest;
 import com.ghostreport.model.User;
-import com.ghostreport.model.UserRole;
 import com.ghostreport.repository.UserRepository;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -59,8 +58,7 @@ public class AuthService {
         UserDetails user = (UserDetails) authentication.getPrincipal();
 
         if (storedUser != null
-                && storedUser.getRole() == UserRole.ADMIN
-                && mfaChallengeService.isAdminMfaRequired()) {
+                && mfaChallengeService.isMfaRequiredFor(storedUser.getRole())) {
             MfaChallengeService.MfaChallenge challenge = mfaChallengeService.createChallenge(storedUser);
             return AuthResponse.mfaRequired(
                     user.getUsername(),
@@ -102,13 +100,13 @@ public class AuthService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 
-        if (!user.isActive() || user.getRole() != UserRole.ADMIN) {
+        if (!user.isActive() || !mfaChallengeService.isMfaRequiredFor(user.getRole())) {
             throw new BadCredentialsException("Invalid credentials");
         }
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         String token = jwtService.generateToken(userDetails);
-        auditLogService.log("LOGIN_SUCCESS", "USER", user.getId(), "Admin logged in after MFA");
+        auditLogService.log("LOGIN_SUCCESS", "USER", user.getId(), "User logged in after MFA");
 
         return new AuthResponse(
                 token,

@@ -39,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "app.upload-dir=target/test-uploads/admin-mfa-authentication",
         "ghostreport.backup-enabled=true",
         "ghostreport.mfa.enabled=true",
-        "ghostreport.mfa.admin-required=true",
+        "ghostreport.mfa.required-roles=ADMIN,ANALYST,AUDITOR",
         "ghostreport.mfa.code-ttl-seconds=1",
         "ghostreport.mfa.expose-code=true"
 })
@@ -140,9 +140,17 @@ class AdminMfaAuthenticationTest {
     }
 
     @Test
-    void nonAdminRolesLoginWithoutMfaAndCannotUseWrongRoleRoutes() throws Exception {
-        JsonNode analystLogin = login(analystUsername);
-        assertThat(analystLogin.path("mfaRequired").asBoolean()).isFalse();
+    void analystAndAuditorPasswordLoginsRequireMfaAndCannotUseWrongRoleRoutes() throws Exception {
+        JsonNode analystChallenge = login(analystUsername);
+        assertThat(analystChallenge.path("mfaRequired").asBoolean()).isTrue();
+        assertThat(analystChallenge.path("token").isNull()).isTrue();
+        mockMvc.perform(get("/analyst/panel"))
+                .andExpect(status().isUnauthorized());
+
+        JsonNode analystLogin = verifyMfa(analystChallenge.path("mfaChallengeId").asText(), mfaCode(analystChallenge))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("ANALYST"))
+                .andReturnJson();
         mockMvc.perform(get("/analyst/panel")
                         .header("Authorization", "Bearer " + analystLogin.path("token").asText()))
                 .andExpect(status().isOk());
@@ -150,8 +158,16 @@ class AdminMfaAuthenticationTest {
                         .header("Authorization", "Bearer " + analystLogin.path("token").asText()))
                 .andExpect(status().isForbidden());
 
-        JsonNode auditorLogin = login(auditorUsername);
-        assertThat(auditorLogin.path("mfaRequired").asBoolean()).isFalse();
+        JsonNode auditorChallenge = login(auditorUsername);
+        assertThat(auditorChallenge.path("mfaRequired").asBoolean()).isTrue();
+        assertThat(auditorChallenge.path("token").isNull()).isTrue();
+        mockMvc.perform(get("/audit/logs"))
+                .andExpect(status().isUnauthorized());
+
+        JsonNode auditorLogin = verifyMfa(auditorChallenge.path("mfaChallengeId").asText(), mfaCode(auditorChallenge))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("AUDITOR"))
+                .andReturnJson();
         mockMvc.perform(get("/audit/logs")
                         .header("Authorization", "Bearer " + auditorLogin.path("token").asText()))
                 .andExpect(status().isOk());

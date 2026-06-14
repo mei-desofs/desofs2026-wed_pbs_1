@@ -11,7 +11,9 @@ nos serviços.
 | Denunciante anónimo | Utilizador público sem JWT. Pode submeter e acompanhar denúncias por código de tracking. |
 | `ANALYST` | Responsável interno por análise de casos. Pode consultar casos elegíveis e actualizar casos atribuídos. |
 | `AUDITOR` | Revisor interno de evidência. Pode consultar auditoria, alertas, casos fechados e integridade de backups. |
-| `ADMIN` | Utilizador administrativo. Pode gerir utilizadores, consultar evidência e gerir backups. Login admin requer MFA antes da emissão do JWT. |
+| `ADMIN` | Utilizador administrativo. Pode gerir utilizadores, consultar evidência e gerir backups. |
+
+As três roles internas exigem MFA antes da emissão do JWT.
 
 Não existe role `USER` activa no modelo protegido actual.
 
@@ -21,7 +23,7 @@ Não existe role `USER` activa no modelo protegido actual.
 | --- | --- | --- |
 | `GET /`, HTML/CSS/JS estáticos | Público | Serve a interface. Páginas estáticas não concedem acesso a APIs. |
 | `POST /auth/login` | Público | Emite JWT para não-admin depois de password válida; devolve desafio MFA para admin. |
-| `POST /auth/mfa/verify` | Público com desafio | Completa MFA admin e emite JWT. |
+| `POST /auth/mfa/verify` | Público com desafio | Completa MFA para a role interna e emite JWT. |
 | `POST /auth/password-reset/request` | Público | Resposta genérica para evitar enumeração. |
 | `POST /auth/password-reset/confirm` | Público | Valida token e política de password. |
 | `POST /reports` | Público | Criação de denúncia anónima. |
@@ -57,4 +59,4 @@ Não existe role `USER` activa no modelo protegido actual.
   autorização por rota.
 - Páginas estáticas são públicas, mas dados protegidos só chegam por APIs
   autenticadas.
-- MFA admin é um controlo de autenticação, não substitui RBAC.
+- MFA é um controlo de autenticação, não substitui RBAC.

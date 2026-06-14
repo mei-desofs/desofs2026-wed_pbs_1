@@ -42,7 +42,7 @@ consolidadas aqui.
 
 | Área | Pergunta |
 | --- | --- |
-| Autenticação | JWT, logout e MFA admin continuam correctos? |
+| Autenticação | JWT, logout e MFA para roles internas continuam correctos? |
 | Autorização | Roles estão alinhadas com `SecurityConfig` e serviços? |
 | Validação | DTOs e Bean Validation são usados? |
 | Filesystem | Caminhos são canónicos e nomes de ficheiro são gerados? |

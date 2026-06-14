@@ -33,7 +33,7 @@ Resultado: 180 testes executados, 0 falhas.
 | Fluxo | Regras principais | Objectivo de segurança |
 | --- | --- | --- |
 | `POST /auth/login` | Username/password obrigatórios, erros genéricos, rate limiting. | Reduzir brute force e enumeração. |
-| `POST /auth/mfa/verify` | Desafio/código obrigatórios, uso único, TTL curto. | Evitar bypass e replay de MFA admin. |
+| `POST /auth/mfa/verify` | Desafio/código obrigatórios, uso único, TTL curto. | Evitar bypass e replay de MFA nas roles internas. |
 | Password reset | Resposta genérica, validação de token e política de password. | Reduzir enumeração e passwords fracas. |
 | `POST /reports` | Título/descrição/categoria obrigatórios, limites de tamanho, DTOs. | Evitar dados malformados e mass assignment. |
 | `POST /reports/verify` | Formato e existência do tracking code. | Evitar enumeração ruidosa. |
@@ -55,6 +55,6 @@ Resultado: 180 testes executados, 0 falhas.
 ## Limites
 
 - ZAP baseline não substitui teste de penetração completo.
-- MFA está implementado e testado para `ADMIN` apenas.
+- MFA está implementado e testado para `ADMIN`, `ANALYST` e `AUDITOR`.
 - Rate limiting é em memória.
 - Evidência runtime é IAST-like; não há agente IAST completo.

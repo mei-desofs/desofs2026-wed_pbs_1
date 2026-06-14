@@ -13,8 +13,8 @@ cd ghostreport
 Abrir `http://localhost:8081`.
 
 Numa base de dados dev nova, usar as contas internas criadas pelo perfil `dev`.
-O login admin exige MFA; quando a exposição dev está activa, o código é escrito
-no log da aplicação apenas para demonstração local.
+O login de `ADMIN`, `ANALYST` e `AUDITOR` exige MFA; quando a exposição dev está
+activa, o código é escrito no log da aplicação apenas para demonstração local.
 
 ## Fluxo de demonstração
 
@@ -44,7 +44,7 @@ no log da aplicação apenas para demonstração local.
 ## Pontos de apresentação
 
 - Denúncia anónima continua pública; APIs internas exigem roles.
-- MFA admin é exigido antes da emissão de JWT admin.
+- MFA é exigido antes da emissão de JWT para admin, analyst e auditor.
 - Analyst e auditor têm responsabilidades e acessos distintos.
 - Upload controls mitigam ficheiros maliciosos e path traversal.
 - Auditoria, alertas e verificação de backups apoiam accountability.
@@ -56,5 +56,4 @@ no log da aplicação apenas para demonstração local.
 - Não descrever evidência runtime como IAST completo.
 - Não afirmar prontidão de produção sem TLS externo, secret management,
   migrações, logs centralizados e monitorização operacional.
-- Não dizer que MFA protege todas as roles internas; actualmente protege login
-  admin.
+- Não apresentar o MFA como produção-ready sem canal/IdP real de entrega de códigos.

@@ -26,7 +26,7 @@ O projecto evita, por isso, afirmar cobertura IAST completa.
 
 - endpoints protegidos exigem roles esperadas;
 - fluxos anónimos continuam públicos;
-- MFA admin é exigido antes de JWT admin;
+- MFA é exigido antes da emissão de JWT para roles internas configuradas;
 - upload e validação de caminhos são exercitados;
 - headers e respostas genéricas são avaliados por requests runtime e ZAP;
 - logs são revistos para reduzir fuga de evidência sensível.

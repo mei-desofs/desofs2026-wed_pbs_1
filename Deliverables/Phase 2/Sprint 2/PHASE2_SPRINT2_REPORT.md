@@ -34,7 +34,7 @@ GhostReport suporta:
 - upload de evidência com extensões permitidas, validação MIME/assinatura e
   protecção contra path traversal;
 - autenticação JWT para utilizadores internos;
-- MFA baseado em código para `ADMIN` antes da emissão de JWT;
+- MFA baseado em código para `ADMIN`, `ANALYST` e `AUDITOR` antes da emissão de JWT;
 - RBAC para `ADMIN`, `ANALYST` e `AUDITOR`;
 - verificações de propriedade para actualizações de casos por analistas;
 - logs de auditoria e alertas de segurança;
@@ -75,11 +75,11 @@ anteriormente pelo dependency scanning.
 A autenticação interna usa credenciais username/password, BCrypt e JWT
 stateless. Utilizadores inactivos são bloqueados no login.
 
-O MFA de admin é uma segunda etapa antes da emissão do JWT. Após password válida
-de admin, é criado um desafio MFA curto e de utilização única; o JWT final só é
-emitido depois da verificação do código. Este controlo está implementado apenas
-para `ADMIN`. Estender MFA a todas as roles internas ou integrar TOTP/IdP fica
-como hardening futuro.
+O MFA é uma segunda etapa antes da emissão do JWT para as roles internas
+configuradas. Após password válida, é criado um desafio MFA curto e de
+utilização única; o JWT final só é emitido depois da verificação do código. Por
+omissão, `ADMIN`, `ANALYST` e `AUDITOR` exigem MFA. Integrar TOTP/IdP ou canal
+de entrega de produção fica como hardening futuro.
 
 O logout revoga tokens JWT no servidor através do fluxo de revogação
 implementado.
@@ -109,7 +109,7 @@ A evidência está consolidada em [SECURITY_TESTING.md](SECURITY_TESTING.md).
 
 ## 9. Auditoria, alertas e integridade
 
-O sistema regista eventos críticos: falhas de login, conclusão de MFA admin,
+O sistema regista eventos críticos: falhas de login, conclusão de MFA,
 alterações a utilizadores, acesso a denúncias, actualizações de casos, geração
 de pacotes de evidência e operações de backup. Registos de auditoria e alertas
 incluem dados de correlação e integridade para apoiar verificação posterior.
@@ -189,7 +189,7 @@ uploads, auditabilidade, scanning de dependências e validação runtime.
 
 ## 17. Limitações e trabalho futuro
 
-- MFA está implementado apenas para `ADMIN`.
+- MFA depende do canal configurado; em desenvolvimento o código pode ser exposto no log apenas para testes.
 - A evidência runtime é IAST-like; não há agente IAST completo.
 - ZAP baseline não substitui um teste de penetração autenticado.
 - Rate limiting é em memória e deve ser externalizado em produção multi-nó.

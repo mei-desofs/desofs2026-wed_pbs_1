@@ -10,7 +10,7 @@ não existe, nesta branch, uma spreadsheet específica do Sprint 2.
 | --- | --- | --- |
 | Arquitectura e threat modelling | Relatório Phase 1, DDD, trust boundaries e relatório Sprint 2. | Implementado/documentado |
 | Autenticação | JWT, BCrypt, bloqueio de utilizadores inactivos e logout. | Implementado |
-| MFA | Desafio MFA antes de JWT admin. | Parcial: apenas admin |
+| MFA | Desafio MFA antes de JWT para `ADMIN`, `ANALYST` e `AUDITOR`. | Implementado |
 | Autorização | Regras de rota e ownership nos serviços. | Implementado |
 | Validação | DTOs, Bean Validation, uploads e tracking code. | Implementado |
 | Ficheiros | Nomes gerados, path checks e protecção ZIP Slip. | Implementado |
@@ -39,7 +39,7 @@ não existe, nesta branch, uma spreadsheet específica do Sprint 2.
 Suportado por evidência:
 
 - estado de autenticação validado por filtros JWT;
-- login admin com segundo factor antes do token;
+- login interno com segundo factor antes do token;
 - controlo de acesso deny-by-default em APIs protegidas;
 - acesso directo a objectos restringido por serviços quando necessário;
 - validação de input com DTOs e Bean Validation;
@@ -49,7 +49,7 @@ Suportado por evidência:
 
 Parcial:
 
-- MFA não é obrigatório para todas as roles internas;
+- MFA usa canal de desenvolvimento/log em ambiente local; canal de produção é futuro;
 - secrets são externalizados, mas sem secret manager dedicado;
 - integridade de backups existe, mas encriptação e retenção imutável são futuras;
 - evidência runtime é IAST-like, não IAST agent-based.

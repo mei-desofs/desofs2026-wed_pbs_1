@@ -16,7 +16,7 @@ principal do repositório académico.
 | --- | --- | --- |
 | Denúncia anónima | Implementado | Fluxos públicos de submissão e tracking code. |
 | Autenticação | Implementado | JWT, BCrypt, logout e testes. |
-| MFA | Parcial | Implementado para `ADMIN`; não implementado para `ANALYST`/`AUDITOR`. |
+| MFA | Implementado | Implementado para `ADMIN`, `ANALYST` e `AUDITOR`. |
 | Autorização | Implementado | [AUTHORIZATION_MATRIX.md](AUTHORIZATION_MATRIX.md), testes RBAC e ownership. |
 | Validação | Implementado | DTOs, Bean Validation e testes. |
 | Uploads | Implementado | Extensão, MIME/assinatura, tamanho e path checks. |
@@ -32,7 +32,7 @@ principal do repositório académico.
 
 | Ameaça | Mitigação actual |
 | --- | --- |
-| Acesso admin não autorizado | RBAC, MFA admin, JWT e utilizadores inactivos bloqueados. |
+| Acesso interno não autorizado | RBAC, MFA para roles internas, JWT e utilizadores inactivos bloqueados. |
 | Escalada de analista | Regras de rota e ownership nos serviços. |
 | Abuso de tracking code | Validação de formato, erros genéricos e rate limiting. |
 | Upload malicioso | Allowlists, assinatura, tamanho e nomes seguros. |
@@ -42,7 +42,7 @@ principal do repositório académico.
 
 ## Riscos residuais
 
-- MFA é admin-only.
+- MFA é obrigatório para as roles internas configuradas (`ADMIN`, `ANALYST`, `AUDITOR` por omissão).
 - Não existe agente IAST completo.
 - ZAP é baseline e não DAST autenticado completo.
 - Rate limiting é em memória.

@@ -11,7 +11,7 @@ software.
 - Upload de evidência com validação de ficheiros, nomes gerados e armazenamento
   seguro.
 - Autenticação JWT para utilizadores internos.
-- MFA baseado em código antes da emissão de JWT para contas `ADMIN`.
+- MFA baseado em código antes da emissão de JWT para `ADMIN`, `ANALYST` e `AUDITOR`.
 - Controlo de acesso por roles `ADMIN`, `ANALYST` e `AUDITOR`.
 - Controlo de propriedade de casos para analistas.
 - Logs de auditoria, alertas de segurança e hashes de integridade para registos
@@ -27,7 +27,7 @@ software.
 | Denunciante anónimo | Submeter denúncias, verificar códigos de tracking, enviar evidência e descarregar uma cópia da denúncia por código. |
 | Analyst | Consultar casos elegíveis, assumir/actualizar casos atribuídos e gerar pacotes de evidência para casos fechados. |
 | Auditor | Consultar evidência de auditoria/segurança e verificar pacotes de evidência e backups. |
-| Admin | Criar, listar, editar, activar e desactivar utilizadores, consultar informação de auditoria/segurança, usar MFA de admin e gerir backups. |
+| Admin | Criar, listar, editar, activar e desactivar utilizadores, consultar informação de auditoria/segurança e gerir backups. |
 
 As roles internas activas são `ADMIN`, `ANALYST` e `AUDITOR`. Linhas legadas
 `USER` são tratadas como dados históricos e não fazem parte do modelo de acesso
@@ -53,8 +53,8 @@ com perfil explícito é:
 ```
 
 O perfil `dev` cria contas `admin`, `analyst` e `auditor` numa base de dados
-nova. O login de admin exige MFA; com `GHOSTREPORT_MFA_EXPOSE_CODE=true`, o
-código MFA de desenvolvimento é escrito no log da aplicação apenas para testes
+nova. O login destas roles internas exige MFA; com `GHOSTREPORT_MFA_EXPOSE_CODE=true`,
+o código MFA de desenvolvimento é escrito no log da aplicação apenas para testes
 locais.
 
 Para execução local com Docker e PostgreSQL:
