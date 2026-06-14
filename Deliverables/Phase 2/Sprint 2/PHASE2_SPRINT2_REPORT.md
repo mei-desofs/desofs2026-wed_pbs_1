@@ -416,11 +416,12 @@ Na pipeline, os probes live exercitam:
 - filename com tentativa de path traversal;
 - endpoint admin sem token;
 - endpoint admin com JWT invalido;
+- login real de admin, analyst e auditor com MFA;
+- acesso autorizado e negado com tokens reais por role;
 - CSRF rejection em endpoint state-changing.
 
-MFA, RBAC com role correcta/errada, JWT expirado, backups, ZIP Slip e tamanho
-maximo de upload sao cobertos pela seleccao de testes Maven executada no mesmo
-job `dast-scan`.
+JWT expirado, backups, ZIP Slip e tamanho maximo de upload sao cobertos pela
+seleccao de testes Maven executada no mesmo job `dast-scan`.
 
 ## 17. Testes automatizados
 

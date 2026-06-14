@@ -12,8 +12,8 @@ sensor or source-to-sink telemetry. The correct claim is:
 > IAST-like academic runtime security evidence / runtime security testing evidence.
 
 The evidence combines automated Spring Boot security tests, a packaged
-application running on `localhost:8081`, live HTTP probes, application log
-sanitization and OWASP ZAP baseline output.
+application running on `localhost:8081`, live HTTP probes, real MFA-backed role
+logins, application log sanitization and OWASP ZAP baseline output.
 
 ## Runtime tests executed in CI
 
@@ -42,9 +42,9 @@ application:
 | Public reports | Valid report creation, invalid input, required fields, dangerous characters, mass-assignment attempt and response data minimisation. |
 | Tracking code | Valid tracking verification, invalid tracking verification and repeated invalid attempts. |
 | Uploads | Allowed upload, blocked extension, suspicious content/signature, path traversal filename, max-size tests and ZIP Slip coverage through backup/package tests. |
-| Authenticated endpoints | Correct role, wrong role, missing token, invalid JWT and expired JWT coverage through runtime-focused tests. |
-| RBAC | Admin, analyst and auditor access boundaries through `RbacAuthorizationMatrixTest` and `AuditorAuthorizationTest`. |
-| MFA | Login without final MFA cannot access protected routes; invalid, expired and reused MFA codes are rejected; valid MFA issues JWT. |
+| Authenticated endpoints | Live token-backed probes for admin, analyst and auditor, plus missing token, invalid JWT and expired JWT coverage. |
+| RBAC | Live role probes for `/admin/**`, `/analyst/**` and `/audit/**`, plus `RbacAuthorizationMatrixTest` and `AuditorAuthorizationTest`. |
+| MFA | Live dev-profile MFA login for admin, analyst and auditor by reading the dev MFA code from the runtime log; invalid MFA code rejection and valid MFA JWT issuance are probed. |
 | Audit and alerts | Failed login, brute force, admin actions, denied access and sensitive-log redaction. |
 | Backups | Creation, manifest/hash verification, tampering detection and invalid path rejection. |
 | Error handling | Generic validation errors, generic unauthorized/forbidden responses and no stack traces in expected error bodies. |
@@ -57,6 +57,7 @@ application:
 | `target/iast-evidence/iast-runtime-evidence.md` | Main CI-generated runtime evidence summary. |
 | `target/iast-evidence/runtime-endpoints.md` | Live endpoint/probe status table. |
 | `target/iast-evidence/runtime-log-sanitization.md` | Runtime log sensitive-pattern scan. |
+| `target/iast-evidence/runtime-probe-summary.json` | Redacted machine-readable summary from `.github/scripts/runtime_security_probe.py`. |
 | `target/ghostreport-dast-app.log` | Application log from the DAST/runtime run. |
 | `target/zap-reports/zap-baseline.*` | ZAP baseline HTML/XML/JSON output. |
 | `target/surefire-reports` | Maven test reports for the runtime-focused test set. |
@@ -66,5 +67,7 @@ application:
 - No full IAST agent is attached.
 - ZAP is baseline/passive and unauthenticated.
 - Authenticated ZAP contexts for admin/analyst/auditor are future work.
+- The live MFA probe relies on dev-profile MFA code exposure in CI logs; this is
+  valid academic evidence, not a production MFA delivery model.
 - The evidence must be read together with SAST, SCA, SBOM, unit/integration tests
   and manual review.

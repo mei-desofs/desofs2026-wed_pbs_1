@@ -12,7 +12,7 @@ execução.
 | --- | --- |
 | Testes runtime | O job `dast-scan` executa testes de segurança antes de empacotar a aplicação, incluindo report flow, uploads, RBAC, MFA, auditoria e backups. |
 | Aplicação em execução | A CI inicia o GhostReport em `localhost:8081` e exercita endpoints reais. |
-| Probes live | A CI cria denúncia, valida tracking code, tenta inputs inválidos/perigosos, testa uploads e endpoints protegidos. |
+| Probes live | A CI cria denúncia, valida tracking code, tenta inputs inválidos/perigosos, testa uploads, completa MFA dev e valida endpoints protegidos com tokens reais por role. |
 | Revisão de logs | O workflow verifica logs para evitar fuga de passwords, bearer tokens, secrets e stack traces. |
 | ZAP baseline | OWASP ZAP gera artefactos HTML/XML/JSON em modo baseline/passivo. |
 | Sumário | O workflow publica `iast-runtime-security-evidence` e evidência DAST. |
@@ -46,7 +46,9 @@ O job cobre, por testes e probes:
 - `POST /reports/verify` com tracking code válido, inválido e tentativas repetidas;
 - uploads permitidos, extensão proibida, conteúdo suspeito e filename com traversal;
 - endpoint admin sem token e com JWT inválido;
-- MFA, RBAC por role, JWT expirado, backups, ZIP Slip e tamanho máximo através da suite runtime-focused.
+- login real com MFA para admin, analyst e auditor usando o código dev exposto no log da CI;
+- RBAC live com tokens reais para `/admin/**`, `/analyst/**` e `/audit/**`;
+- JWT expirado, backups, ZIP Slip e tamanho máximo através da suite runtime-focused.
 
 ## Trabalho futuro
 
