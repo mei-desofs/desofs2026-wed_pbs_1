@@ -1,62 +1,131 @@
-# Matriz de autorização
+# Matriz completa de autorizacao e endpoints
 
-Esta matriz documenta o modelo de acesso actual do GhostReport. Reflecte os
-grupos de rotas configurados no Spring Security e as verificações de propriedade
-nos serviços.
+Este documento e o anexo tecnico de endpoints. Complementa o relatorio principal
+com uma visao exacta das rotas expostas pelo backend e dos controlos de acesso
+aplicados.
 
-## Roles
+## 1. Modelo de acesso
 
-| Actor | Descrição |
-| --- | --- |
-| Denunciante anónimo | Utilizador público sem JWT. Pode submeter e acompanhar denúncias por código de tracking. |
-| `ANALYST` | Responsável interno por análise de casos. Pode consultar casos elegíveis e actualizar casos atribuídos. |
-| `AUDITOR` | Revisor interno de evidência. Pode consultar auditoria, alertas, casos fechados e integridade de backups. |
-| `ADMIN` | Utilizador administrativo. Pode gerir utilizadores, consultar evidência e gerir backups. |
-
-As três roles internas exigem MFA antes da emissão do JWT.
-
-Não existe role `USER` activa no modelo protegido actual.
-
-## Endpoints públicos
-
-| Grupo de endpoints | Acesso | Notas |
+| Actor | Autenticacao | Permissoes principais |
 | --- | --- | --- |
-| `GET /`, HTML/CSS/JS estáticos | Público | Serve a interface. Páginas estáticas não concedem acesso a APIs. |
-| `POST /auth/login` | Público | Emite JWT para não-admin depois de password válida; devolve desafio MFA para admin. |
-| `POST /auth/mfa/verify` | Público com desafio | Completa MFA para a role interna e emite JWT. |
-| `POST /auth/password-reset/request` | Público | Resposta genérica para evitar enumeração. |
-| `POST /auth/password-reset/confirm` | Público | Valida token e política de password. |
-| `POST /reports` | Público | Criação de denúncia anónima. |
-| `POST /reports/verify` | Público | Verificação por tracking code. |
-| `POST /reports/{id}/attachments` | Público com contexto de denúncia | Upload de evidência validada. |
-| `POST /reports/{id}/attachments/list` | Público com contexto de denúncia | Lista metadados de anexos. |
-| `POST /reports/download` | Público com tracking code | Gera download da denúncia. |
+| Denunciante anonimo | Sem conta/JWT | Submeter denuncia, verificar tracking code, enviar/listar/descarregar anexos autorizados por tracking code. |
+| `ANALYST` | Password + MFA + JWT | Trabalhar casos elegiveis/atribuidos, actualizar estado/prioridade/notas, consultar anexos internos e gerar pacotes. |
+| `AUDITOR` | Password + MFA + JWT | Consultar auditoria, alertas, casos fechados, verificar packages e backups. |
+| `ADMIN` | Password + MFA + JWT | Gerir utilizadores, consultar auditoria/alertas, oversight de analyst routes, gerir backups. |
 
-## Endpoints internos
+Nao existe role `USER` activa. A base de dados pode conter dados legados, mas a
+constraint e a aplicacao usam apenas `ADMIN`, `ANALYST` e `AUDITOR`.
 
-| Grupo | `ADMIN` | `ANALYST` | `AUDITOR` | Notas |
-| --- | --- | --- | --- | --- |
-| `/admin/**` | Permitido | Negado | Negado | Gestão de utilizadores, painel admin, auditoria/segurança e backups. |
-| `/analyst/**` | Permitido | Permitido | Negado | Workbench de analista; serviços aplicam regras de propriedade. |
-| `/audit/**` | Permitido | Negado | Permitido | Logs, alertas, evidência de casos fechados e verificação de backups. |
-| `/auth/logout` | Permitido | Permitido | Permitido | Revoga o JWT actual. |
-| `/auth/password/change` | Permitido | Permitido | Permitido | Requer JWT autenticado. |
+## 2. Regras Spring Security
 
-## Verificações nos serviços
-
-| Fluxo | Controlo |
+| Grupo | Regra |
 | --- | --- |
-| Actualizações por analista | O analista deve estar atribuído ou autorizado pelas regras do serviço. |
-| Pacotes de evidência | Limitados a fluxos internos e condições de caso fechado. |
-| Criar/repor/descarregar backups | Rotas admin-only. |
-| Verificar backups | Rotas de admin e auditor. |
-| Auditoria/alertas | Grupos admin e auditor. |
+| Static pages/assets | Permitidos publicamente. |
+| `POST /auth/login` | Publico. |
+| `POST /auth/mfa/verify` | Publico com challenge valido. |
+| `POST /auth/password-reset/request` | Publico com resposta generica. |
+| `POST /auth/password-reset/confirm` | Publico com token valido. |
+| `POST /reports/**` publico | Permitido, mas validado por tracking code/rate limit quando aplicavel. |
+| `/admin/**` | `hasRole("ADMIN")`. |
+| `/analyst/**` | `hasAnyRole("ANALYST", "ADMIN")`. |
+| `/audit/**` | `hasAnyRole("AUDITOR", "ADMIN")`. |
+| Outros endpoints | Autenticacao exigida. |
 
-## Notas de segurança
+## 3. Endpoints de autenticacao
 
-- A protecção de rotas é centralizada em `SecurityConfig`.
-- DTOs, validação e regras de serviço continuam necessários depois da
-  autorização por rota.
-- Páginas estáticas são públicas, mas dados protegidos só chegam por APIs
-  autenticadas.
-- MFA é um controlo de autenticação, não substitui RBAC.
+| Metodo | Endpoint | Request | Acesso | Controlos |
+| --- | --- | --- | --- | --- |
+| POST | `/auth/login` | `LoginRequest` JSON | Publico | Rate limit por username/IP, password via AuthenticationManager, bloqueio de inactive user, audit log de falha. |
+| POST | `/auth/mfa/verify` | `MfaVerifyRequest` JSON | Publico com challenge | Challenge de uso unico, TTL curto, role ainda activa, JWT so depois de MFA. |
+| POST | `/auth/logout` | Bearer JWT | Interno | Revoga token e regista audit log. |
+| POST | `/auth/password/change` | `ChangePasswordRequest` JSON | Interno | Exige password actual e nova password valida. |
+| POST | `/auth/password-reset/request` | `PasswordResetRequest` JSON | Publico | Resposta generica para evitar enumeracao. |
+| POST | `/auth/password-reset/confirm` | `PasswordResetConfirmRequest` JSON | Publico | Token valido, nao expirado/reutilizado, password policy. |
+
+## 4. Endpoints publicos de denuncia
+
+| Metodo | Endpoint | Request | Acesso | Controlos |
+| --- | --- | --- | --- | --- |
+| POST | `/reports` | `CreateReportRequest` JSON | Publico | Bean Validation, DTO, criacao de tracking code, nao exige identidade. |
+| POST | `/reports/verify` | `VerifyTrackingCodeRequest` JSON | Publico | Rate limit de tracking, formato de codigo, erro controlado. |
+| POST | `/reports/{id}/attachments` | Multipart `files`, `trackingCode` | Publico com tracking code | Rate limit de upload, max files, extensao/MIME/magic bytes, nome gerado, scanner/quarentena. |
+| POST | `/reports/{id}/attachments/list` | `VerifyTrackingCodeRequest` JSON | Publico com tracking code | Rate limit e verificacao de posse por tracking code. |
+| POST | `/reports/download` | `DownloadRequest` JSON | Publico com tracking code | Rate limit, attachmentId positivo, tracking code, path canonical. |
+
+## 5. Endpoints de analista
+
+| Metodo | Endpoint | Roles | Finalidade | Controlos adicionais |
+| --- | --- | --- | --- | --- |
+| GET | `/analyst/panel` | `ANALYST`, `ADMIN` | Health/access check do painel. | JWT valido. |
+| GET | `/analyst/reports` | `ANALYST`, `ADMIN` | Listar denuncias elegiveis. | Redaccao/ownership para analistas. |
+| POST | `/analyst/reports/{id}/assign` | `ANALYST`, `ADMIN` | Assumir caso. | Impede assumir caso ja atribuido indevidamente. |
+| PATCH | `/analyst/reports/{id}/status` | `ANALYST`, `ADMIN` | Alterar estado. | Validacao enum, workflow, ownership, optimistic locking. |
+| PATCH | `/analyst/reports/{id}/priority` | `ANALYST`, `ADMIN` | Alterar prioridade. | Validacao enum e ownership. |
+| PATCH | `/analyst/reports/{id}/notes` | `ANALYST`, `ADMIN` | Alterar notas internas. | Limites/DTO e ownership. |
+| GET | `/analyst/reports/{id}/case-review` | `ANALYST`, `ADMIN` | Consultar review. | Analista nao ve caso de outro analista. |
+| GET | `/analyst/my-cases` | `ANALYST`, `ADMIN` | Listar casos atribuidos. | Escopo por utilizador autenticado. |
+| GET | `/analyst/reports/{id}/attachments` | `ANALYST`, `ADMIN` | Listar anexos internos. | Ownership. |
+| GET | `/analyst/attachments/{attachmentId}/download` | `ANALYST`, `ADMIN` | Descarregar anexo. | Ownership e path canonical. |
+| POST | `/analyst/reports/{id}/case-package` | `ANALYST`, `ADMIN` | Gerar pacote de evidencia. | Caso fechado/autorizacao; admin tem oversight. |
+
+## 6. Endpoints de auditor
+
+| Metodo | Endpoint | Roles | Finalidade | Controlos adicionais |
+| --- | --- | --- | --- | --- |
+| GET | `/audit/logs` | `AUDITOR`, `ADMIN` | Consultar audit logs. | DTO sem segredos. |
+| GET | `/audit/security-alerts` | `AUDITOR`, `ADMIN` | Consultar alertas. | DTO sem tokens/passwords. |
+| GET | `/audit/cases/closed` | `AUDITOR`, `ADMIN` | Historico de casos fechados. | Apenas metadados relevantes. |
+| GET | `/audit/cases/{reportId}/evidence-package/verify` | `AUDITOR`, `ADMIN` | Verificar package. | Sem expor paths/nomes sensiveis. |
+| GET | `/audit/backups` | `AUDITOR`, `ADMIN` | Listar backups. | Read-only para auditor. |
+| GET | `/audit/backups/{filename}/verify` | `AUDITOR`, `ADMIN` | Verificar backup. | Rejeita traversal/tampering. |
+| GET | `/audit/backups/{filename}/manifest` | `AUDITOR`, `ADMIN` | Consultar manifesto. | Read-only. |
+
+## 7. Endpoints de admin
+
+| Metodo | Endpoint | Roles | Finalidade | Controlos adicionais |
+| --- | --- | --- | --- | --- |
+| GET | `/admin/panel` | `ADMIN` | Health/access check. | JWT + MFA previa. |
+| GET | `/admin/users` | `ADMIN` | Listar utilizadores. | DTO sem password hash. |
+| POST | `/admin/users` | `ADMIN` | Criar utilizador. | Role allowlist, password policy, active flag controlado. |
+| PUT | `/admin/users/{id}` | `ADMIN` | Editar utilizador. | Impede remover/demover ultimo admin activo. |
+| PATCH | `/admin/users/{id}/activate` | `ADMIN` | Activar utilizador. | Audit log. |
+| PATCH | `/admin/users/{id}/deactivate` | `ADMIN` | Desactivar utilizador. | Proteccao ultimo admin activo. |
+| DELETE | `/admin/users/{id}` | `ADMIN` | Remocao logica. | Desactivacao em vez de delete fisico. |
+| GET | `/admin/audit-logs` | `ADMIN` | Consultar logs. | DTO com integrity hash. |
+| GET | `/admin/security-alerts` | `ADMIN` | Consultar alertas. | DTO com integrity hash. |
+
+## 8. Endpoints de backups admin
+
+| Metodo | Endpoint | Roles | Finalidade | Controlos adicionais |
+| --- | --- | --- | --- | --- |
+| POST | `/admin/backups` | `ADMIN` | Criar backup. | Manifesto, hashes, HMAC. |
+| GET | `/admin/backups` | `ADMIN` | Listar backups. | Apenas ficheiros validos no directorio base. |
+| GET | `/admin/backups/{filename}/download` | `ADMIN` | Descarregar backup. | Content-Disposition seguro e path canonical. |
+| POST | `/admin/backups/{filename}/verify` | `ADMIN` | Verificar backup. | Detecta tampering/manifest mismatch. |
+| POST | `/admin/backups/{filename}/restore` | `ADMIN` | Repor backup. | Validacao antes de restore. |
+
+## 9. Matriz resumida por role
+
+| Funcionalidade | Publico | Analyst | Auditor | Admin |
+| --- | --- | --- | --- | --- |
+| Submeter denuncia | Sim | Sim, como publico | Sim, como publico | Sim, como publico |
+| Verificar tracking code | Sim | Sim, como publico | Sim, como publico | Sim, como publico |
+| Login password + MFA | N/A | Sim | Sim | Sim |
+| Painel analista | Nao | Sim | Nao | Sim |
+| Actualizar casos | Nao | Sim, com ownership | Nao | Sim |
+| Gerar package | Nao | Sim, se autorizado | Nao | Sim |
+| Ver auditoria | Nao | Nao | Sim | Sim |
+| Verificar backup | Nao | Nao | Sim | Sim |
+| Criar/restaurar backup | Nao | Nao | Nao | Sim |
+| Gerir utilizadores | Nao | Nao | Nao | Sim |
+
+## 10. Testes que suportam a matriz
+
+- `RbacAuthorizationMatrixTest`
+- `AdminMfaAuthenticationTest`
+- `AuditorAuthorizationTest`
+- `AnalystCaseOwnershipTest`
+- `AdminAuthorizationTest`
+- `AdminUserManagementSecurityTest`
+- `AuthenticationSecurityIntegrationTest`
+- `AdminBackupControllerSecurityTest`

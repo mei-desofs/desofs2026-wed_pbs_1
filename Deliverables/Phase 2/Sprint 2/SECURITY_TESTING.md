@@ -1,60 +1,92 @@
-# Testes de segurança
+# Testes de seguranca e validacao
 
-Este documento consolida a evidência de testes e validação do Sprint 2.
-Substitui as notas antigas da raiz sobre security testing e validation rules.
+## 1. Resultado local
 
-## Resultado local mais recente
-
-Validação local da linha actual:
+Comando executado na linha actual:
 
 ```powershell
 cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado: 180 testes executados, 0 falhas.
+Resultado: 180 testes, 0 falhas, 0 erros, 0 skipped.
 
-## Áreas cobertas
+## 2. Estrategia
 
-| Área | Evidência |
-| --- | --- |
-| Autenticação | Login com sucesso/falha, utilizador inactivo, emissão de JWT e logout. |
-| MFA | Desafio admin, verificação, expiração/reutilização e emissão final de JWT. |
-| RBAC | Rotas admin, analyst e auditor com casos positivos e negativos. |
-| Propriedade de casos | Actualizações permitidas e negadas para analistas. |
-| Denúncias anónimas | Criação, tracking code e verificação pública. |
-| Uploads | Tamanho, extensão, MIME/assinatura, nomes gerados e rejeição de traversal. |
-| Auditoria/alertas | Operações críticas produzem evidência. |
-| Backups/evidência | Manifestos e verificações de integridade. |
-| Frontend | Comportamento seleccionado de navbar, tracking code e navegação por role. |
+Os testes do GhostReport foram organizados para validar nao so "happy paths",
+mas tambem abuso, autorizacao negativa, erros genericos, integridade e limites
+operacionais. Isto segue a linha da Phase 1: cada ameaca STRIDE deve ter pelo
+menos uma mitigacao implementada e, sempre que possivel, um teste que a prove.
 
-## Matriz de validação
+## 3. Categorias de testes
 
-| Fluxo | Regras principais | Objectivo de segurança |
+| Categoria | Testes/classes | O que validam |
 | --- | --- | --- |
-| `POST /auth/login` | Username/password obrigatórios, erros genéricos, rate limiting. | Reduzir brute force e enumeração. |
-| `POST /auth/mfa/verify` | Desafio/código obrigatórios, uso único, TTL curto. | Evitar bypass e replay de MFA nas roles internas. |
-| Password reset | Resposta genérica, validação de token e política de password. | Reduzir enumeração e passwords fracas. |
-| `POST /reports` | Título/descrição/categoria obrigatórios, limites de tamanho, DTOs. | Evitar dados malformados e mass assignment. |
-| `POST /reports/verify` | Formato e existência do tracking code. | Evitar enumeração ruidosa. |
-| Uploads | Allowlist de extensão, MIME/assinatura, tamanho, nomes gerados. | Reduzir ficheiros maliciosos e path traversal. |
-| Actualizações de analista | Estado/prioridade/notas e ownership. | Impedir alterações não autorizadas. |
-| Downloads/pacotes | Caminhos canónicos e protecção ZIP Slip. | Impedir fuga do filesystem. |
+| Contexto/config | `GhostreportApplicationTests`, `SecurityConfigurationValidatorTest`, `DataInitializerDisabledTest`, `SchemaMigrationScriptTest` | Arranque, secrets fracos, seed users, schema metadata. |
+| Autenticacao/MFA/JWT | `AdminMfaAuthenticationTest`, `AuthenticationSecurityIntegrationTest`, `JwtServiceSecurityTest`, `JwtRevocationPersistenceIntegrationTest` | Password login, MFA para roles internas, token claims, revogacao, expiracao, kid, issuer/audience. |
+| Password reset/policy | `PasswordPolicyAndResetSecurityTest` | Password comprometida, reutilizacao, token expirado/reutilizado. |
+| RBAC | `RbacAuthorizationMatrixTest`, `AdminAuthorizationTest`, `AuditorAuthorizationTest` | Endpoints permitidos/negados por role. |
+| Admin lifecycle | `AdminUserManagementSecurityTest` | Activar/desactivar, editar roles, ultimo admin activo, audit logs. |
+| Analyst ownership | `AnalystCaseOwnershipTest`, `BusinessLogicWorkflowSecurityTest` | Ownership, casos de outro analista, transitions, optimistic locking. |
+| Public reports | `PublicReportFlowIntegrationTest`, `TrackingCodeEnumerationTest` | Criacao anonima, tracking code, erros seguros, enumeracao. |
+| Uploads/files | `ReportControllerAttachmentUploadTest`, `FileStorageServiceTest`, `SafeFilenameSecurityTest`, `SafeFilenameTest` | MIME, magic bytes, traversal, malware/quarantine, limites, paths. |
+| Auditoria/logging | `AuditLogSecurityTest`, `AnonymousDataLoggingTest`, `RuntimeSecurityEventLoggingTest` | Nao guardar passwords/tokens/tracking code, alertas e correlationId. |
+| Backups/packages | `BackupServiceIntegrationTest`, `AdminBackupControllerSecurityTest`, `CasePackageServiceIntegrationTest` | Manifestos, tampering, restore, traversal, packages. |
+| Frontend | `FrontendXssDataExposureTest`, `FrontendNavbarVisibilityTest`, `CsrfCookieAttributesTest` | XSS sinks, tokens em storage, tracking code em URL, navs escondidas, CSRF cookie. |
+| Headers/erros | `SecurityHeadersTest`, `ErrorHandlingSecurityTest`, `ApiValidationContractTest` | Headers, JSON errors genericos, validacao de contratos. |
+| Rate limiting | `RateLimiterServiceTest`, `LoginRateLimitSecurityTest` | Limites, reset de janela, brute force alert. |
 
-## Evidência manual e pipeline
+## 4. Matriz de validacao de endpoints
 
-| Check | Comando ou fonte |
+| Fluxo | Validacoes | Testes |
+| --- | --- | --- |
+| `/auth/login` | Campos obrigatorios, rate limit, inactive user, erros genericos. | `AuthenticationSecurityIntegrationTest`, `LoginRateLimitSecurityTest`. |
+| `/auth/mfa/verify` | Challenge obrigatorio, codigo de 6 digitos, TTL, uso unico, role activa. | `AdminMfaAuthenticationTest`. |
+| `/auth/password-reset/*` | Resposta generica, token expirado/reutilizado, password policy. | `PasswordPolicyAndResetSecurityTest`. |
+| `/reports` | Titulo/descricao/categoria, DTO, resposta sem hash interno. | `PublicReportFlowIntegrationTest`, `ApiValidationContractTest`. |
+| `/reports/verify` | Tracking code format, erro seguro, rate limit/enumeracao. | `TrackingCodeEnumerationTest`, `PublicReportFlowIntegrationTest`. |
+| `/reports/{id}/attachments` | Max files, size, MIME, magic bytes, filename, tracking code. | `ReportControllerAttachmentUploadTest`, `FileStorageServiceTest`. |
+| `/analyst/**` | Role, ownership, workflow, status/priority/notes. | `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`, `BusinessLogicWorkflowSecurityTest`. |
+| `/audit/**` | Auditor/admin read-only, sem paths/filenames sensiveis. | `AuditorAuthorizationTest`. |
+| `/admin/users/**` | Role allowlist, password policy, ultimo admin activo. | `AdminUserManagementSecurityTest`. |
+| `/admin/backups/**` | Admin-only, path traversal, verify before restore. | `AdminBackupControllerSecurityTest`, `BackupServiceIntegrationTest`. |
+
+## 5. STRIDE e testes
+
+| STRIDE | Testes associados |
 | --- | --- |
-| Testes unitários/integração | `.\mvnw.cmd test` |
-| JaCoCo | `.\mvnw.cmd test jacoco:report` |
-| SAST | Job `sast`: CodeQL, SonarCloud, SpotBugs. |
-| SCA | Job `dependency-scanning`: Dependency-Check e CycloneDX. |
-| DAST | Job `dast-scan`: runtime checks e ZAP baseline. |
-| Mutation testing | Workflow `pit-mutation-testing`. |
+| Spoofing | `AdminMfaAuthenticationTest`, `JwtServiceSecurityTest`, `LoginRateLimitSecurityTest`. |
+| Tampering | `BackupServiceIntegrationTest`, `CasePackageServiceIntegrationTest`, `JwtServiceSecurityTest`. |
+| Repudiation | `AuditLogSecurityTest`, `RuntimeSecurityEventLoggingTest`. |
+| Information Disclosure | `AnonymousDataLoggingTest`, `FrontendXssDataExposureTest`, `ErrorHandlingSecurityTest`. |
+| Denial of Service | `RateLimiterServiceTest`, upload size/max files tests. |
+| Elevation of Privilege | `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`, `AdminUserManagementSecurityTest`. |
 
-## Limites
+## 6. Testes frontend
 
-- ZAP baseline não substitui teste de penetração completo.
-- MFA está implementado e testado para `ADMIN`, `ANALYST` e `AUDITOR`.
-- Rate limiting é em memória.
-- Evidência runtime é IAST-like; não há agente IAST completo.
+O frontend e estatico, mas tambem foi validado:
+
+- nao usa `innerHTML`/sinks perigosos para dados externos;
+- renderiza dados atraves de text nodes/helpers;
+- nao guarda bearer tokens em `localStorage`/`sessionStorage`;
+- nao coloca tracking code em URLs;
+- navs autenticadas começam escondidas;
+- MFA existe em admin, analyst e auditor.
+
+## 7. Testes de seguranca runtime/pipeline
+
+Na pipeline, alem de `./mvnw verify`, existe job `dast-scan` que:
+
+- corre testes runtime seleccionados;
+- arranca a aplicacao em `localhost:8081`;
+- faz probes HTTP;
+- verifica logs para fuga de dados sensiveis;
+- corre ZAP baseline;
+- publica evidencia.
+
+## 8. Limitacoes
+
+- Testes automatizados nao substituem pentest manual.
+- ZAP baseline e passivo e nao autenticado.
+- IAST e evidencia runtime/IAST-like, nao agent-based.
+- Rate limiting e em memoria; ambiente multi-no exigiria mecanismo externo.
