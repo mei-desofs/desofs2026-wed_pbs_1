@@ -9,7 +9,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 269 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 272 testes, 0 falhas, 0 erros, 0 skipped.
 
 ## 2. Estrategia
 
@@ -61,7 +61,7 @@ menos uma mitigacao implementada e, sempre que possivel, um teste que a prove.
 | Tampering | `BackupServiceIntegrationTest`, `CasePackageServiceIntegrationTest`, `JwtServiceSecurityTest`. |
 | Repudiation | `AuditLogSecurityTest`, `RuntimeSecurityEventLoggingTest`. |
 | Information Disclosure | `AnonymousDataLoggingTest`, `FrontendXssDataExposureTest`, `ErrorHandlingSecurityTest`. |
-| Denial of Service | `RateLimiterServiceTest`, upload size/max files tests. |
+| Denial of Service | `RateLimiterServiceTest`, upload size/max files/quota tests. |
 | Elevation of Privilege | `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`, `AdminUserManagementSecurityTest`. |
 
 ## 6. Testes frontend
@@ -87,6 +87,17 @@ O frontend e estatico, mas tambem foi validado:
 - `reverse-proxy` com `server.forward-headers-strategy` e trusted proxy;
 - PostgreSQL apenas com `sslmode=verify-ca` ou `sslmode=verify-full`;
 - limites positivos para Hikari pool e Tomcat conexoes/threads/backlog.
+
+## 6.2 Testes ASVS adicionais
+
+A revisao ASVS final adicionou evidencias directas para:
+
+- quota acumulada de anexos por denuncia em
+  `ReportControllerAttachmentUploadTest`;
+- rejeicao de HTTP parameter pollution por parametros escalares duplicados em
+  `SecurityHeadersTest`;
+- geracao de 2.000 tracking codes com `SecureRandom` sem colisoes em
+  `TrackingCodeTest`.
 
 ## 7. Testes de seguranca runtime/pipeline
 

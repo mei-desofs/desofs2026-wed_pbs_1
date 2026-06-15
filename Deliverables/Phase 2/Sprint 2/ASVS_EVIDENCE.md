@@ -13,7 +13,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 
 | Evidencia | Resultado confirmado |
 | --- | --- |
-| Testes Maven | `269` testes, `0` falhas, `0` erros, `0` skipped. |
+| Testes Maven | `272` testes, `0` falhas, `0` erros, `0` skipped. |
 | Runtime probes locais | `101` probes, `101` passed, `0` failed, `0` skipped. |
 | Spring Security | `6.5.11` via Spring Boot `3.5.15`. |
 | SCA CVEs remediados | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003. |
@@ -29,7 +29,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 | Autorizacao | Regras de rota em `SecurityConfig`, RBAC e ownership nos servicos. | Implementado |
 | Denunciante anonimo/tracking | Sem conta de reporter; tracking code controla verificacao/listagem/download. | Implementado |
 | Validacao | DTOs, Bean Validation, enums/allowlists, tracking code e contratos API. | Implementado |
-| Ficheiros/uploads | Extensao/MIME/magic bytes, tamanho, nomes gerados, path checks e ZIP Slip em backups/packages. | Implementado |
+| Ficheiros/uploads | Extensao/MIME/magic bytes, tamanho, quota por request/denuncia, nomes gerados, path checks e ZIP Slip em backups/packages. | Implementado |
 | Erros e logging | Erros genericos, correlation id, audit logs, security alerts e sanitizacao. | Implementado |
 | Backups/evidencia | ZIPs com hashes, HMAC, manifesto, verificacao e restore para staging. | Implementado |
 | SCA/SAST/DAST/runtime | Dependency-Check, CycloneDX, CodeQL, SpotBugs, SonarCloud, Gitleaks, ZAP baseline e runtime evidence. | Implementado como evidencia |
@@ -57,6 +57,12 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
   positivos de pool/conexoes/threads.
 - `RateLimiterService` passou a ter limite especifico para `POST /reports`,
   reduzindo abuso automatizado da submissao publica anonima.
+- `ReportService` passou a aplicar quota acumulada de anexos por denuncia,
+  alem do limite de ficheiros por pedido.
+- `SecurityConfig` passou a rejeitar parametros escalares duplicados fora de
+  multipart, mitigando HTTP parameter pollution antes dos controllers.
+- `TrackingCodeTest` passou a validar 2.000 tracking codes gerados por
+  `SecureRandom` sem colisoes em carga academica moderada.
 
 ## Melhorias L2 adicionais
 
@@ -88,6 +94,19 @@ real ou que puderam ser reforcados sem alterar radicalmente a aplicacao:
   sensiveis de auth, reports, admin, analyst, audit e security.
 - `V1.2.10` foi reclassificado como `Not Applicable`, porque nao existe export
   CSV/XLSX/ODS no GhostReport actual.
+- `V5.2.4` passou a `Compliant` com limite de tamanho, limite por request e
+  quota acumulada por denuncia.
+- `V11.3.1`, `V11.3.2` e `V11.5.2` foram actualizados com evidencia de
+  algoritmos aprovados, ausencia de ECB/PKCS#1 v1.5 e teste de `SecureRandom`
+  sob carga moderada.
+- `V15.3.7` passou a `Compliant` com rejeicao explicita de HTTP parameter
+  pollution por parametros escalares duplicados.
+- `V6.3.2` e `V7.4.2` foram corrigidos com base em seed users desactivados em
+  prod-like e rejeicao de JWTs quando a conta interna fica inactiva.
+
+Capitulos fora do escopo implementado, como OAuth/OIDC e WebRTC, permanecem
+`Not Applicable`; nao foram convertidos em `Compliant` para evitar claims
+enganosos.
 
 ## Limitacoes ASVS registadas
 

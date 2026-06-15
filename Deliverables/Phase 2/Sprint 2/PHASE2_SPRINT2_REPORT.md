@@ -273,10 +273,12 @@ As validacoes principais incluem:
 - password policy no servico, incluindo comprimento, complexidade, passwords
   comprometidas, reutilizacao e palavras contextuais;
 - `attachmentId` positivo e tracking code valido em downloads;
-- content type esperado em endpoints JSON.
+- content type esperado em endpoints JSON;
 - rejeicao de `TRACE`, headers com caracteres de controlo e `Authorization`
   excessivamente grande antes de chegar aos controllers;
-- validacao Fetch Metadata/Origin para bloquear pedidos unsafe cross-site.
+- rejeicao de parametros escalares duplicados para mitigar HTTP parameter
+  pollution fora de multipart;
+- validacao Fetch Metadata/Origin para bloquear pedidos unsafe cross-site;
 - CSP `report-uri /security/csp-report` para receber relatorios de violacao
   do browser sem expor tokens ou tracking codes em respostas.
 
@@ -284,6 +286,7 @@ Uploads sao uma superficie critica. Mitigacoes:
 
 - limite de tamanho;
 - limite de ficheiros por pedido;
+- quota acumulada de ficheiros por denuncia;
 - extensoes permitidas;
 - validacao MIME e magic bytes;
 - rejeicao de executaveis renomeados;
@@ -506,7 +509,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 269 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 272 testes, 0 falhas, 0 erros, 0 skipped.
 
 Categorias cobertas:
 
@@ -517,7 +520,9 @@ Categorias cobertas:
 - CSRF e security headers;
 - CSP/HSTS/COOP/COEP/CORP, CSP reporting, Fetch Metadata e request-boundary checks;
 - uploads, MIME, magic bytes, malware/quarantine e traversal;
+- quotas de anexos por pedido e por denuncia;
 - tracking code e enumeracao;
+- tracking codes gerados por `SecureRandom` sob carga academica moderada;
 - rate limit de submissao publica anonima;
 - analista ownership e workflow de casos;
 - auditor read-only;
@@ -571,8 +576,13 @@ resource limits, data protection/no-store, producao minima e logging.
 Na revisao L3 adicional foram reforcados ou corrigidos controlos com evidencia
 real: CSP violation reporting, HSTS preload, validacao de utilizador activo em
 JWT, comparacao constante de assinatura JWT, superficie estatica limitada,
-no-store em endpoints sensiveis e reclassificacao de CSV/spreadsheet injection
-como nao aplicavel por ausencia de exports CSV/XLSX/ODS.
+no-store em endpoints sensiveis, quota acumulada de uploads, defesa contra HTTP
+parameter pollution, teste de `SecureRandom` sob carga, algoritmos
+criptograficos aprovados e reclassificacao de CSV/spreadsheet injection como
+nao aplicavel por ausencia de exports CSV/XLSX/ODS.
+
+Os capitulos fora do desenho implementado, como OAuth/OIDC e WebRTC, continuam
+marcados como `Not Applicable` no tracker em vez de `Compliant`.
 
 Pontos parciais ou dependentes de operacao:
 

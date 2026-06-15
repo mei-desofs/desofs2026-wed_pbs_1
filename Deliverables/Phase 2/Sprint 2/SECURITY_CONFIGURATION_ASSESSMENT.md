@@ -17,7 +17,8 @@ producao real.
 | Base de dados | PostgreSQL em runtime, H2 em testes; prod-like exige `sslmode=verify-ca` ou `sslmode=verify-full`. | Implementado; migracoes formais sao futuro. |
 | Transporte TLS | `application-prod.yaml` define modo TLS, TLS 1.2/1.3, cifras modernas e reverse proxy trusted mode. | Implementado/configurado; certificado publico e operacional. |
 | Limites de recursos | Hikari pool, timeouts, Tomcat connections/threads/backlog e header size configurados. | Implementado e validado em prod-like. |
-| Uploads | Tamanho/tipo/assinatura e nomes gerados. | Implementado. |
+| Uploads | Tamanho/tipo/assinatura, quota por pedido/denuncia e nomes gerados. | Implementado. |
+| HTTP request boundary | Headers anormais, `TRACE`, Authorization excessivo e parametros escalares duplicados sao rejeitados antes dos controllers. | Implementado. |
 | Backups | Manifesto HMAC e verificacao. | Implementado; encriptacao/retencao externa sao futuro. |
 | Rate limiting | Em memoria na aplicacao para login, tracking, report submission, upload e download. | Adequado ao ambito; externo/distribuido e futuro. |
 | Logs/auditoria | Auditoria e alertas com metadados de integridade. | Implementado; SIEM/WORM e futuro. |
