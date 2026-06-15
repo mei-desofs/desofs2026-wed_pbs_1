@@ -13,7 +13,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 
 | Evidencia | Resultado confirmado |
 | --- | --- |
-| Testes Maven | `267` testes, `0` falhas, `0` erros, `0` skipped. |
+| Testes Maven | `269` testes, `0` falhas, `0` erros, `0` skipped. |
 | Runtime probes locais | `101` probes, `101` passed, `0` failed, `0` skipped. |
 | Spring Security | `6.5.11` via Spring Boot `3.5.15`. |
 | SCA CVEs remediados | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003. |
@@ -34,7 +34,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 | Backups/evidencia | ZIPs com hashes, HMAC, manifesto, verificacao e restore para staging. | Implementado |
 | SCA/SAST/DAST/runtime | Dependency-Check, CycloneDX, CodeQL, SpotBugs, SonarCloud, Gitleaks, ZAP baseline e runtime evidence. | Implementado como evidencia |
 | Configuracao | Secrets por ambiente, PostgreSQL fora de testes, validacao de configuracao e guia seguro. | Implementado/documentado |
-| Headers/browser security | CSP restritiva, HSTS, COOP/COEP/CORP, Fetch Metadata/Origin validation e bloqueio de headers anormais. | Implementado |
+| Headers/browser security | CSP restritiva com `report-uri`, endpoint `/security/csp-report`, HSTS preload, COOP/COEP/CORP, Fetch Metadata/Origin validation e bloqueio de headers anormais. | Implementado |
 | Comunicacao segura | Perfil prod-like com modo TLS explicito, TLS 1.2/1.3, cifras modernas e PostgreSQL com `sslmode=verify-ca`/`verify-full`. | Implementado/configurado; certificado publico e operacional |
 | L2 aplicavel | Rate limit de submissao de denuncias, malware scanner local, JWT audience, MFA one-time, no-store, resource limits e logging estruturado. | Reavaliado no XLSX |
 
@@ -66,6 +66,28 @@ documentacao: business limits, malware scanner local/EICAR, password policy,
 MFA one-time/hashed challenge, JWT `iss`/`aud`/`jti`, crypto key rotation hooks,
 no-store em dados sensiveis, limites de recursos, configuracao prod-like,
 logging estruturado e tratamento de erros inesperados.
+
+## Melhorias L3 adicionais
+
+O tracker XLSX tambem foi revisto para controlos L3 que ja tinham evidencia
+real ou que puderam ser reforcados sem alterar radicalmente a aplicacao:
+
+- `V3.4.7` passou a `Compliant` com CSP `report-uri /security/csp-report`,
+  endpoint publico para relatorios CSP, alerta `CSP_VIOLATION` e sanitizacao de
+  JWT/tracking codes antes de persistir o alerta.
+- `V3.1.1` e `V3.7.4` foram actualizados com base nos headers ja testados:
+  CSP, HSTS `includeSubDomains`/`preload`, COOP, CORP, COEP,
+  Permissions-Policy e no-store para respostas sensiveis.
+- `V8.3.2` foi actualizado porque a validacao JWT consulta o estado actual do
+  utilizador e rejeita imediatamente users desactivados.
+- `V11.2.4` foi actualizado porque `JwtService` valida HMAC SHA-256 com
+  comparacao constante via `MessageDigest.isEqual`.
+- `V13.4.7` foi actualizado porque uploads ficam fora dos recursos estaticos e
+  o web tier permite apenas paginas publicas explicitas, `/css/**` e `/js/**`.
+- `V14.2.5` foi actualizado pela cobertura `no-store/no-cache` em respostas
+  sensiveis de auth, reports, admin, analyst, audit e security.
+- `V1.2.10` foi reclassificado como `Not Applicable`, porque nao existe export
+  CSV/XLSX/ODS no GhostReport actual.
 
 ## Limitacoes ASVS registadas
 

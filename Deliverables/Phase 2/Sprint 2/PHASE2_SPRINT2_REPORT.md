@@ -277,6 +277,8 @@ As validacoes principais incluem:
 - rejeicao de `TRACE`, headers com caracteres de controlo e `Authorization`
   excessivamente grande antes de chegar aos controllers;
 - validacao Fetch Metadata/Origin para bloquear pedidos unsafe cross-site.
+- CSP `report-uri /security/csp-report` para receber relatorios de violacao
+  do browser sem expor tokens ou tracking codes em respostas.
 
 Uploads sao uma superficie critica. Mitigacoes:
 
@@ -304,6 +306,7 @@ accountability. Eventos cobertos:
 - ownership violations;
 - uploads rejeitados;
 - tracking code enumeration;
+- CSP violations reportadas pelo browser;
 - operacoes de backup;
 - geracao/verificacao de pacotes de evidencia.
 
@@ -503,7 +506,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 267 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 269 testes, 0 falhas, 0 erros, 0 skipped.
 
 Categorias cobertas:
 
@@ -512,7 +515,7 @@ Categorias cobertas:
 - autenticacao, JWT, MFA e password reset;
 - RBAC e endpoint matrix;
 - CSRF e security headers;
-- CSP/HSTS/COOP/COEP/CORP, Fetch Metadata e request-boundary checks;
+- CSP/HSTS/COOP/COEP/CORP, CSP reporting, Fetch Metadata e request-boundary checks;
 - uploads, MIME, magic bytes, malware/quarantine e traversal;
 - tracking code e enumeracao;
 - rate limit de submissao publica anonima;
@@ -564,6 +567,12 @@ Na revisao L2 adicional foram melhorados ou reclassificados com evidencia
 verificavel controlos de business limits, anti-automation, malware scanning,
 password policy, MFA, JWT audience, tokens self-contained, crypto integrity,
 resource limits, data protection/no-store, producao minima e logging.
+
+Na revisao L3 adicional foram reforcados ou corrigidos controlos com evidencia
+real: CSP violation reporting, HSTS preload, validacao de utilizador activo em
+JWT, comparacao constante de assinatura JWT, superficie estatica limitada,
+no-store em endpoints sensiveis e reclassificacao de CSV/spreadsheet injection
+como nao aplicavel por ausencia de exports CSV/XLSX/ODS.
 
 Pontos parciais ou dependentes de operacao:
 

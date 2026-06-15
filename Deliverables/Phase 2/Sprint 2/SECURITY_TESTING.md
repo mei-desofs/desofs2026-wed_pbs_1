@@ -9,7 +9,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 267 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 269 testes, 0 falhas, 0 erros, 0 skipped.
 
 ## 2. Estrategia
 
@@ -33,7 +33,7 @@ menos uma mitigacao implementada e, sempre que possivel, um teste que a prove.
 | Auditoria/logging | `AuditLogSecurityTest`, `AnonymousDataLoggingTest`, `RuntimeSecurityEventLoggingTest` | Nao guardar passwords/tokens/tracking code, alertas e correlationId. |
 | Backups/packages | `BackupServiceIntegrationTest`, `AdminBackupControllerSecurityTest`, `CasePackageServiceIntegrationTest` | Manifestos, tampering, restore, traversal, packages. |
 | Frontend | `FrontendXssDataExposureTest`, `FrontendNavbarVisibilityTest`, `CsrfCookieAttributesTest` | XSS sinks, scripts inline, tokens em storage, tracking code em URL, navs escondidas, CSRF cookie. |
-| Headers/erros | `SecurityHeadersTest`, `ErrorHandlingSecurityTest`, `ApiValidationContractTest` | CSP/HSTS/COOP/COEP/CORP, Fetch Metadata, headers anormais, JSON errors genericos, validacao de contratos. |
+| Headers/erros | `SecurityHeadersTest`, `SecurityMonitoringServiceTest`, `ErrorHandlingSecurityTest`, `ApiValidationContractTest` | CSP/HSTS/COOP/COEP/CORP, CSP report endpoint, Fetch Metadata, headers anormais, JSON errors genericos, validacao de contratos e alerta sanitizado. |
 | Rate limiting | `RateLimiterServiceTest`, `LoginRateLimitSecurityTest` | Limites, reset de janela, brute force alert. |
 
 ## 4. Matriz de validacao de endpoints
@@ -51,6 +51,7 @@ menos uma mitigacao implementada e, sempre que possivel, um teste que a prove.
 | `/audit/**` | Auditor/admin read-only, sem paths/filenames sensiveis. | `AuditorAuthorizationTest`. |
 | `/admin/users/**` | Role allowlist, password policy, ultimo admin activo. | `AdminUserManagementSecurityTest`. |
 | `/admin/backups/**` | Admin-only, path traversal, verify before restore. | `AdminBackupControllerSecurityTest`, `BackupServiceIntegrationTest`. |
+| `/security/csp-report` | Recepcao publica/sem CSRF de CSP reports, resposta generica e alerta sanitizado sem JWT/tracking code. | `SecurityHeadersTest`, `SecurityMonitoringServiceTest`. |
 
 ## 5. STRIDE e testes
 
