@@ -8,6 +8,8 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.List;
 
@@ -33,37 +35,23 @@ class PasswordPolicyServiceTest {
     private final PasswordPolicyService service =
             new PasswordPolicyService(passwordHistoryRepository, passwordEncoder);
 
-    @Test
-    void rejectsNullPassword() {
+    @ParameterizedTest
+    @CsvSource(
+            nullValues = "NULL",
+            value = {
+                    "NULL, Password is required",
+                    "'   ', Password is required",
+                    "P@SSW0RD1234!, Password is compromised"
+            }
+    )
+    void rejectsInvalidPasswordValues(String password, String expectedReason) {
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.validateNewPassword(null, null)
+                () -> service.validateNewPassword(null, password)
         );
 
         assertEquals(400, exception.getStatusCode().value());
-        assertEquals("Password is required", exception.getReason());
-    }
-
-    @Test
-    void rejectsBlankPassword() {
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
-                () -> service.validateNewPassword(null, "   ")
-        );
-
-        assertEquals(400, exception.getStatusCode().value());
-        assertEquals("Password is required", exception.getReason());
-    }
-
-    @Test
-    void rejectsCompromisedPasswordCaseInsensitively() {
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
-                () -> service.validateNewPassword(null, "P@SSW0RD1234!")
-        );
-
-        assertEquals(400, exception.getStatusCode().value());
-        assertEquals("Password is compromised", exception.getReason());
+        assertEquals(expectedReason, exception.getReason());
     }
 
     @Test

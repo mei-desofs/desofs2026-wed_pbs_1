@@ -66,9 +66,11 @@ class ReportDescriptionTest {
     @Test
     void descriptionAboveMaximumLengthThrows() {
 
+        String tooLongDescription = "a".repeat(3001);
+
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new ReportDescription("a".repeat(3001))
+                () -> new ReportDescription(tooLongDescription)
         );
     }
 }
