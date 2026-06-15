@@ -268,6 +268,20 @@ class AdminUserManagementSecurityTest {
                 .andExpect(jsonPath("$[?(@.severity == 'HIGH')]").exists());
     }
 
+    @Test
+    void adminCanInitiatePasswordResetWithoutChoosingPassword() throws Exception {
+        mockMvc.perform(post("/admin/users/{id}/password-reset", analystId)
+                        .with(csrf())
+                        .header("Authorization", bearerToken(adminUsername, PASSWORD)))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.message").value("If the account is active, a password reset token has been issued"))
+                .andExpect(jsonPath("$.resetToken").doesNotExist());
+
+        assertThat(auditLogRepository.findAll().stream().map(AuditLog::getAction))
+                .contains("PASSWORD_RESET_ADMIN_INITIATED")
+                .doesNotContain("PASSWORD_RESET_COMPLETED");
+    }
+
     private User createUser(UserRole role, boolean active) {
         String username = role.name().toLowerCase() + "_" + UUID.randomUUID();
         User user = new User();

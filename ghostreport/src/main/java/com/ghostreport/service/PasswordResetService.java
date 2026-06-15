@@ -79,6 +79,28 @@ public class PasswordResetService {
     }
 
     @Transactional
+    public PasswordResetRequestResponse requestResetForUserId(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        String rawToken = null;
+
+        if (user.isActive()) {
+            rawToken = createResetToken(user);
+            auditLogService.log(
+                    "PASSWORD_RESET_ADMIN_INITIATED",
+                    "USER",
+                    user.getId(),
+                    "Password reset token issued by administrator"
+            );
+        }
+
+        return new PasswordResetRequestResponse(
+                "If the account is active, a password reset token has been issued",
+                exposeResetToken ? rawToken : null
+        );
+    }
+
+    @Transactional
     public void resetPassword(String rawToken, String newPassword) {
         PasswordResetToken token = tokenRepository.findByTokenHash(hashToken(rawToken))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired reset token"));
