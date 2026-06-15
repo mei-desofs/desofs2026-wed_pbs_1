@@ -103,6 +103,82 @@ public class SecurityConfigurationValidator implements ApplicationRunner {
         if (seedUsersEnabled) {
             throw new IllegalStateException("Seed users must be disabled in production-like profiles");
         }
+
+        validateProductionTransportSecurity();
+        validateProductionResourceLimits();
+    }
+
+    private void validateProductionTransportSecurity() {
+        String tlsMode = environment.getProperty("ghostreport.transport.tls-mode", "");
+        if (!"direct".equals(tlsMode) && !"reverse-proxy".equals(tlsMode)) {
+            throw new IllegalStateException("Production-like profiles must set ghostreport.transport.tls-mode to direct or reverse-proxy");
+        }
+
+        if ("direct".equals(tlsMode)) {
+            boolean sslEnabled = environment.getProperty("server.ssl.enabled", Boolean.class, false);
+            String keyStore = environment.getProperty("server.ssl.key-store", "");
+            if (!sslEnabled || isBlank(keyStore)) {
+                throw new IllegalStateException("Direct TLS mode requires server.ssl.enabled=true and server.ssl.key-store");
+            }
+            String enabledProtocols = environment.getProperty("server.ssl.enabled-protocols", "");
+            if (!usesModernTlsProtocols(enabledProtocols)) {
+                throw new IllegalStateException("Direct TLS mode requires server.ssl.enabled-protocols limited to TLSv1.2 or TLSv1.3");
+            }
+        }
+
+        if ("reverse-proxy".equals(tlsMode)) {
+            String strategy = environment.getProperty("server.forward-headers-strategy", "");
+            boolean trustedProxy = environment.getProperty("ghostreport.transport.trusted-proxy-enabled", Boolean.class, false);
+            if (!("framework".equals(strategy) || "native".equals(strategy)) || !trustedProxy) {
+                throw new IllegalStateException("Reverse proxy TLS mode requires trusted proxy forwarding headers");
+            }
+        }
+
+        String datasourceUrl = environment.getProperty("spring.datasource.url", "");
+        if (datasourceUrl.startsWith("jdbc:postgresql:") && !usesVerifiedPostgresTls(datasourceUrl)) {
+            throw new IllegalStateException("Production PostgreSQL connections must validate TLS certificates with sslmode=verify-ca or verify-full");
+        }
+    }
+
+    private boolean usesVerifiedPostgresTls(String datasourceUrl) {
+        String lower = datasourceUrl.toLowerCase(java.util.Locale.ROOT);
+        return lower.contains("sslmode=verify-ca")
+                || lower.contains("sslmode=verify-full");
+    }
+
+    private boolean usesModernTlsProtocols(String enabledProtocols) {
+        if (isBlank(enabledProtocols)) {
+            return false;
+        }
+
+        return Arrays.stream(enabledProtocols.split(","))
+                .map(String::trim)
+                .allMatch(protocol -> "TLSv1.2".equals(protocol) || "TLSv1.3".equals(protocol));
+    }
+
+    private void validateProductionResourceLimits() {
+        requirePositiveInt("spring.datasource.hikari.maximum-pool-size");
+        requirePositiveInt("spring.datasource.hikari.minimum-idle");
+        requirePositiveLong("spring.datasource.hikari.connection-timeout");
+        requirePositiveLong("spring.datasource.hikari.validation-timeout");
+        requirePositiveInt("server.tomcat.max-connections");
+        requirePositiveInt("server.tomcat.accept-count");
+        requirePositiveInt("server.tomcat.threads.max");
+        requirePositiveInt("server.tomcat.threads.min-spare");
+    }
+
+    private void requirePositiveInt(String propertyName) {
+        Integer value = environment.getProperty(propertyName, Integer.class);
+        if (value == null || value < 1) {
+            throw new IllegalStateException("Production-like profiles must configure positive " + propertyName);
+        }
+    }
+
+    private void requirePositiveLong(String propertyName) {
+        Long value = environment.getProperty(propertyName, Long.class);
+        if (value == null || value < 1) {
+            throw new IllegalStateException("Production-like profiles must configure positive " + propertyName);
+        }
     }
 
     private boolean isProductionLikeProfile() {

@@ -27,6 +27,7 @@ import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -54,10 +55,11 @@ public class SecurityConfig {
                         .frameOptions(frameOptions -> frameOptions.deny())
                         .httpStrictTransportSecurity(hsts -> hsts
                                 .includeSubDomains(true)
+                                .preload(true)
                                 .maxAgeInSeconds(31_536_000)
                         )
                         .contentSecurityPolicy(csp -> csp
-                                .policyDirectives("default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+                                .policyDirectives("default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; upgrade-insecure-requests")
                         )
                         .referrerPolicy(referrer -> referrer
                                 .policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)
@@ -105,6 +107,8 @@ public class SecurityConfig {
                         })
                 )
                 .httpBasic(httpBasic -> httpBasic.disable())
+                .addFilterBefore(new HttpRequestBoundaryFilter(), CsrfFilter.class)
+                .addFilterBefore(new FetchMetadataFilter(), CsrfFilter.class)
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
                 .addFilterAfter(new SensitiveResponseCacheControlFilter(), CsrfCookieFilter.class)
                 .addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class)
@@ -166,11 +170,125 @@ public class SecurityConfig {
         }
     }
 
+    private static final class FetchMetadataFilter extends OncePerRequestFilter {
+
+        @Override
+        protected void doFilterInternal(
+                HttpServletRequest request,
+                HttpServletResponse response,
+                FilterChain filterChain
+        ) throws ServletException, IOException {
+            if (isUnsafeMethod(request.getMethod()) && isCrossSite(request)) {
+                writeFilterError(response, 403, "Cross-site request rejected");
+                return;
+            }
+            filterChain.doFilter(request, response);
+        }
+
+        private boolean isCrossSite(HttpServletRequest request) {
+            String secFetchSite = request.getHeader("Sec-Fetch-Site");
+            if ("cross-site".equalsIgnoreCase(secFetchSite)) {
+                return true;
+            }
+
+            String origin = request.getHeader(HttpHeaders.ORIGIN);
+            if (origin == null || origin.isBlank()) {
+                return false;
+            }
+            return !isSameOrigin(request, origin);
+        }
+
+        private boolean isSameOrigin(HttpServletRequest request, String origin) {
+            String expected = request.getScheme() + "://" + request.getServerName();
+            int port = request.getServerPort();
+            if (!isDefaultPort(request.getScheme(), port)) {
+                expected += ":" + port;
+            }
+            return expected.equalsIgnoreCase(origin);
+        }
+
+        private boolean isDefaultPort(String scheme, int port) {
+            return ("http".equalsIgnoreCase(scheme) && port == 80)
+                    || ("https".equalsIgnoreCase(scheme) && port == 443);
+        }
+    }
+
+    private static final class HttpRequestBoundaryFilter extends OncePerRequestFilter {
+
+        private static final int MAX_AUTHORIZATION_HEADER_LENGTH = 8192;
+        private static final int MAX_HEADER_VALUE_LENGTH = 8192;
+
+        @Override
+        protected void doFilterInternal(
+                HttpServletRequest request,
+                HttpServletResponse response,
+                FilterChain filterChain
+        ) throws ServletException, IOException {
+            if ("TRACE".equalsIgnoreCase(request.getMethod())) {
+                writeFilterError(response, 405, "Method not allowed");
+                return;
+            }
+
+            if (hasUnsafeHeader(request)) {
+                writeFilterError(response, 400, "Invalid request headers");
+                return;
+            }
+
+            filterChain.doFilter(request, response);
+        }
+
+        private boolean hasUnsafeHeader(HttpServletRequest request) {
+            Enumeration<String> names = request.getHeaderNames();
+            while (names != null && names.hasMoreElements()) {
+                String name = names.nextElement();
+                if (containsControlCharacters(name)) {
+                    return true;
+                }
+                Enumeration<String> values = request.getHeaders(name);
+                while (values != null && values.hasMoreElements()) {
+                    String value = values.nextElement();
+                    if (containsControlCharacters(value) || value.length() > MAX_HEADER_VALUE_LENGTH) {
+                        return true;
+                    }
+                    if (HttpHeaders.AUTHORIZATION.equalsIgnoreCase(name)
+                            && value.length() > MAX_AUTHORIZATION_HEADER_LENGTH) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private boolean containsControlCharacters(String value) {
+            if (value == null) {
+                return false;
+            }
+            return value.chars().anyMatch(ch -> (ch < 32 && ch != '\t') || ch == 127);
+        }
+    }
+
+    private static boolean isUnsafeMethod(String method) {
+        return !("GET".equalsIgnoreCase(method)
+                || "HEAD".equalsIgnoreCase(method)
+                || "OPTIONS".equalsIgnoreCase(method)
+                || "TRACE".equalsIgnoreCase(method));
+    }
+
     private void writeSecurityError(
             jakarta.servlet.http.HttpServletResponse response,
             int status,
             String error
     ) throws IOException {
+        response.setStatus(status);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", status);
+        body.put("error", error);
+        body.put("correlationId", CorrelationId.current());
+        OBJECT_MAPPER.writeValue(response.getWriter(), body);
+    }
+
+    private static void writeFilterError(HttpServletResponse response, int status, String error) throws IOException {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         Map<String, Object> body = new LinkedHashMap<>();

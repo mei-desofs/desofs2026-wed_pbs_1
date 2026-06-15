@@ -1,0 +1,32 @@
+server:
+  forward-headers-strategy: ${SERVER_FORWARD_HEADERS_STRATEGY:framework}
+  max-http-request-header-size: ${SERVER_MAX_HTTP_REQUEST_HEADER_SIZE:8KB}
+  tomcat:
+    connection-timeout: ${SERVER_CONNECTION_TIMEOUT:30s}
+    max-connections: ${SERVER_MAX_CONNECTIONS:200}
+    accept-count: ${SERVER_ACCEPT_COUNT:100}
+    threads:
+      max: ${SERVER_TOMCAT_THREADS_MAX:50}
+      min-spare: ${SERVER_TOMCAT_THREADS_MIN_SPARE:5}
+  ssl:
+    enabled: ${SERVER_SSL_ENABLED:false}
+    enabled-protocols: ${SERVER_SSL_ENABLED_PROTOCOLS:TLSv1.3,TLSv1.2}
+    ciphers: ${SERVER_SSL_CIPHERS:TLS_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}
+    key-store: ${SERVER_SSL_KEY_STORE:}
+    key-store-password: ${SERVER_SSL_KEY_STORE_PASSWORD:}
+    key-store-type: ${SERVER_SSL_KEY_STORE_TYPE:PKCS12}
+
+ghostreport:
+  transport:
+    tls-mode: ${GHOSTREPORT_TRANSPORT_TLS_MODE:reverse-proxy}
+    trusted-proxy-enabled: ${GHOSTREPORT_TRUSTED_PROXY_ENABLED:false}
+
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:30000}
+      validation-timeout: ${DB_VALIDATION_TIMEOUT_MS:5000}
+      idle-timeout: ${DB_IDLE_TIMEOUT_MS:600000}
+      max-lifetime: ${DB_MAX_LIFETIME_MS:1800000}

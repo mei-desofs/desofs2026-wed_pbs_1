@@ -299,7 +299,226 @@ class SecurityConfigurationValidatorTest {
                 .hasMessageContaining("cannot be the same");
     }
 
+    @Test
+    void productionLikeConfigurationRejectsMissingTlsMode() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("spring.datasource.url", "jdbc:postgresql://db:5432/ghostreport?sslmode=verify-full");
+
+        SecurityConfigurationValidator validator = rawValidator(
+                environment,
+                VALID_TEST_VALUE,
+                VALID_BACKUP_SECRET,
+                3600,
+                false,
+                "uploads",
+                "backups"
+        );
+
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("ghostreport.transport.tls-mode");
+    }
+
+    @Test
+    void directTlsModeRequiresSslKeyStore() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("ghostreport.transport.tls-mode", "direct")
+                .withProperty("server.ssl.enabled", "false")
+                .withProperty("server.ssl.enabled-protocols", "TLSv1.3,TLSv1.2")
+                .withProperty("spring.datasource.url", "jdbc:postgresql://db:5432/ghostreport?sslmode=verify-full");
+
+        SecurityConfigurationValidator validator = rawValidator(
+                environment,
+                VALID_TEST_VALUE,
+                VALID_BACKUP_SECRET,
+                3600,
+                false,
+                "uploads",
+                "backups"
+        );
+
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Direct TLS mode");
+    }
+
+    @Test
+    void directTlsModeRejectsLegacyTlsProtocols() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("ghostreport.transport.tls-mode", "direct")
+                .withProperty("server.ssl.enabled", "true")
+                .withProperty("server.ssl.key-store", "file:/run/secrets/ghostreport.p12")
+                .withProperty("server.ssl.enabled-protocols", "TLSv1,TLSv1.2")
+                .withProperty("spring.datasource.url", "jdbc:postgresql://db:5432/ghostreport?sslmode=verify-full");
+
+        SecurityConfigurationValidator validator = rawValidator(
+                environment,
+                VALID_TEST_VALUE,
+                VALID_BACKUP_SECRET,
+                3600,
+                false,
+                "uploads",
+                "backups"
+        );
+
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("TLSv1.2 or TLSv1.3");
+    }
+
+    @Test
+    void directTlsModeAcceptsModernTlsProtocols() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("ghostreport.transport.tls-mode", "direct")
+                .withProperty("server.ssl.enabled", "true")
+                .withProperty("server.ssl.key-store", "file:/run/secrets/ghostreport.p12")
+                .withProperty("server.ssl.enabled-protocols", "TLSv1.3,TLSv1.2")
+                .withProperty("spring.datasource.url", "jdbc:postgresql://db:5432/ghostreport?sslmode=verify-full");
+        withResourceLimits(environment);
+
+        SecurityConfigurationValidator validator = rawValidator(
+                environment,
+                VALID_TEST_VALUE,
+                VALID_BACKUP_SECRET,
+                3600,
+                false,
+                "uploads",
+                "backups"
+        );
+
+        assertThatCode(validator::validate).doesNotThrowAnyException();
+    }
+
+    @Test
+    void reverseProxyTlsModeRequiresTrustedForwardedHeaders() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("ghostreport.transport.tls-mode", "reverse-proxy")
+                .withProperty("server.forward-headers-strategy", "none")
+                .withProperty("ghostreport.transport.trusted-proxy-enabled", "false")
+                .withProperty("spring.datasource.url", "jdbc:postgresql://db:5432/ghostreport?sslmode=verify-full");
+
+        SecurityConfigurationValidator validator = rawValidator(
+                environment,
+                VALID_TEST_VALUE,
+                VALID_BACKUP_SECRET,
+                3600,
+                false,
+                "uploads",
+                "backups"
+        );
+
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Reverse proxy TLS mode");
+    }
+
+    @Test
+    void productionPostgresRequiresTlsSslMode() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("ghostreport.transport.tls-mode", "reverse-proxy")
+                .withProperty("server.forward-headers-strategy", "framework")
+                .withProperty("ghostreport.transport.trusted-proxy-enabled", "true")
+                .withProperty("spring.datasource.url", "jdbc:postgresql://db:5432/ghostreport");
+
+        SecurityConfigurationValidator validator = rawValidator(
+                environment,
+                VALID_TEST_VALUE,
+                VALID_BACKUP_SECRET,
+                3600,
+                false,
+                "uploads",
+                "backups"
+        );
+
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("PostgreSQL connections must validate TLS certificates");
+    }
+
+    @Test
+    void productionPostgresRejectsEncryptedButUnverifiedTlsMode() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("ghostreport.transport.tls-mode", "reverse-proxy")
+                .withProperty("server.forward-headers-strategy", "framework")
+                .withProperty("ghostreport.transport.trusted-proxy-enabled", "true")
+                .withProperty("spring.datasource.url", "jdbc:postgresql://db:5432/ghostreport?sslmode=require");
+        withResourceLimits(environment);
+
+        SecurityConfigurationValidator validator = rawValidator(
+                environment,
+                VALID_TEST_VALUE,
+                VALID_BACKUP_SECRET,
+                3600,
+                false,
+                "uploads",
+                "backups"
+        );
+
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("PostgreSQL connections must validate TLS certificates");
+    }
+
+    @Test
+    void productionLikeConfigurationRejectsMissingResourceLimits() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("ghostreport.transport.tls-mode", "reverse-proxy")
+                .withProperty("server.forward-headers-strategy", "framework")
+                .withProperty("ghostreport.transport.trusted-proxy-enabled", "true")
+                .withProperty("spring.datasource.url", "jdbc:postgresql://db:5432/ghostreport?sslmode=verify-full");
+
+        SecurityConfigurationValidator validator = rawValidator(
+                environment,
+                VALID_TEST_VALUE,
+                VALID_BACKUP_SECRET,
+                3600,
+                false,
+                "uploads",
+                "backups"
+        );
+
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("spring.datasource.hikari.maximum-pool-size");
+    }
+
     private SecurityConfigurationValidator validator(
+            MockEnvironment environment,
+            String jwtSecret,
+            String backupHmacSecret,
+            long expirationSeconds,
+            boolean seedUsersEnabled,
+            String uploadDir,
+            String backupDir
+    ) {
+        if (environment.getProperty("ghostreport.transport.tls-mode") == null) {
+            environment
+                    .withProperty("ghostreport.transport.tls-mode", "reverse-proxy")
+                    .withProperty("server.forward-headers-strategy", "framework")
+                    .withProperty("ghostreport.transport.trusted-proxy-enabled", "true");
+        }
+        if (environment.getProperty("spring.datasource.url") == null) {
+            environment.withProperty("spring.datasource.url", "jdbc:postgresql://db:5432/ghostreport?sslmode=verify-full");
+        }
+        if (environment.getProperty("spring.datasource.hikari.maximum-pool-size") == null) {
+            withResourceLimits(environment);
+        }
+        return rawValidator(environment, jwtSecret, backupHmacSecret, expirationSeconds, seedUsersEnabled, uploadDir, backupDir);
+    }
+
+    private void withResourceLimits(MockEnvironment environment) {
+        environment
+                .withProperty("spring.datasource.hikari.maximum-pool-size", "10")
+                .withProperty("spring.datasource.hikari.minimum-idle", "2")
+                .withProperty("spring.datasource.hikari.connection-timeout", "30000")
+                .withProperty("spring.datasource.hikari.validation-timeout", "5000")
+                .withProperty("server.tomcat.max-connections", "200")
+                .withProperty("server.tomcat.accept-count", "100")
+                .withProperty("server.tomcat.threads.max", "50")
+                .withProperty("server.tomcat.threads.min-spare", "5");
+    }
+
+    private SecurityConfigurationValidator rawValidator(
             MockEnvironment environment,
             String jwtSecret,
             String backupHmacSecret,

@@ -18,6 +18,8 @@ class FrontendXssDataExposureTest {
 
     private static final Pattern DANGEROUS_DOM_SINK = Pattern.compile(
             "\\b(?:innerHTML|outerHTML|insertAdjacentHTML)\\b|document\\.write\\s*\\(");
+    private static final Pattern INLINE_SCRIPT_OR_HANDLER = Pattern.compile(
+            "(?is)<script(?![^>]+\\bsrc=)[^>]*>|\\son[a-z]+\\s*=");
     private static final Pattern PERSISTENT_BROWSER_STORAGE = Pattern.compile("\\b(?:localStorage|sessionStorage)\\b");
     private static final Pattern TRACKING_CODE_QUERY = Pattern.compile(
             "(?:/track\\.html\\?|[?&](?:code|trackingCode)=|URLSearchParams\\s*\\(|trackingCode[^\\n;]*window\\.location|window\\.location[^\\n;]*trackingCode)");
@@ -84,6 +86,20 @@ class FrontendXssDataExposureTest {
                 .doesNotContain("escapeHtml(")
                 .doesNotContain("replaceAll(\"<\"")
                 .doesNotContain("&#039;");
+    }
+
+    @Test
+    void frontendDoesNotUseInlineScriptsOrEventHandlers() throws IOException {
+        Map<Path, String> sources = readStaticFiles(".html");
+
+        List<String> offenders = sources.entrySet().stream()
+                .filter(entry -> INLINE_SCRIPT_OR_HANDLER.matcher(entry.getValue()).find())
+                .map(entry -> relativeStaticPath(entry.getKey()))
+                .toList();
+
+        assertThat(offenders)
+                .as("CSP without unsafe-inline requires external scripts and addEventListener/data-action handlers")
+                .isEmpty();
     }
 
     private static Map<Path, String> readStaticFiles(String... extensions) throws IOException {
