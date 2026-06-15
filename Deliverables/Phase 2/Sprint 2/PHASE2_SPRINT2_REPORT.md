@@ -27,7 +27,6 @@ Os documentos complementares desta pasta funcionam como anexos tecnicos:
 - [SECURITY_CONFIGURATION_ASSESSMENT.md](SECURITY_CONFIGURATION_ASSESSMENT.md)
 - [SECURITY_ASSESSMENT.md](SECURITY_ASSESSMENT.md)
 - [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md)
-- [FINAL_PROJECT_REVIEW.md](FINAL_PROJECT_REVIEW.md)
 - [FINAL_DEMO_GUIDE.md](FINAL_DEMO_GUIDE.md)
 
 ## 2. Relacao com Phase 1 e Sprint 1
@@ -335,7 +334,54 @@ quando autorizados.
 | Denial of Service | Abuso de login, tracking, upload/download ou ficheiros grandes. | Rate limiting por fluxo, limites de upload, max files per request, rejeicao antecipada. | `RateLimiterServiceTest`, upload tests. |
 | Elevation of Privilege | Analyst tenta agir como admin/auditor ou aceder a caso de outro analyst. | RBAC central, service-level ownership, tests para forbidden routes, proteccao do ultimo admin activo. | `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`, `AdminUserManagementSecurityTest`. |
 
-## 14. Pipeline DevSecOps e automacoes
+## 14. Code review e controlo antes de merge
+
+O processo de revisao usado no projecto e baseado em branches curtas, pull
+requests e validacao automatica. O objectivo nao e apenas rever estilo: cada PR
+deve confirmar que a alteracao continua alinhada com o modelo de seguranca do
+GhostReport.
+
+Fluxo esperado:
+
+1. O developer cria uma branch com ambito claro.
+2. Implementa a alteracao e corre localmente os testes relevantes; para backend,
+   o comando base e `.\mvnw.cmd test`.
+3. Abre pull request com resumo, motivacao, impacto de seguranca e evidencia.
+4. A equipa revê codigo, endpoints, DTOs, validacao, autorizacao, logs e erros.
+5. A pipeline executa build, testes, JaCoCo, SAST, SCA, Gitleaks, SBOM e, quando
+   aplicavel, DAST/runtime evidence.
+6. Findings criticos ou confirmados sao corrigidos antes de merge.
+7. Findings nao exploraveis no ambito academico podem ser aceites apenas com
+   justificacao documentada em triagem ou limitacoes.
+
+Critérios usados na revisao:
+
+| Area | Validacao |
+| --- | --- |
+| Branch/PR | Scope pequeno, descricao clara e impacto de seguranca indicado. |
+| Autorizacao | Novas rotas alinhadas com `SecurityConfig` e, quando necessario, ownership em service. |
+| Inputs/DTOs | Sem binding directo de entidades; Bean Validation, allowlists e limites revistos. |
+| Erros/logs | Sem stack traces, paths internos, passwords, JWTs, secrets ou tracking codes em logs/respostas. |
+| Dependencias | Dependency-Check, SBOM e suppressions revistos quando `pom.xml` muda. |
+| Testes | Testes unitarios/integracao actualizados; JaCoCo e PIT usados como evidencia de qualidade. |
+| Scanners | CodeQL, SpotBugs, SonarCloud, Gitleaks, ZAP e Dependency-Check avaliados de acordo com severidade e explorabilidade. |
+| Documentacao | Claims de seguranca actualizados em `PHASE2_SPRINT2_REPORT.md`, anexos e ASVS quando mudam. |
+
+Os checks mais bloqueantes no codigo actual sao build/testes/JaCoCo, falhas de
+Gitleaks confirmadas e falhas tecnicas dos jobs necessarios para gerar
+evidencia. SAST, SCA, DAST baseline e IAST-like tambem entram na decisao, mas
+alguns resultados sao tratados como triagem: um falso positivo ou risco fora do
+ambito pode ser aceite se ficar justificado em [SCA_TRIAGE.md](SCA_TRIAGE.md),
+[SPOTBUGS_TRIAGE.md](SPOTBUGS_TRIAGE.md), [DEVSECOPS_PIPELINE.md](DEVSECOPS_PIPELINE.md)
+ou nas limitacoes finais.
+
+Esta disciplina evita merge de codigo inseguro porque combina revisao humana,
+testes negativos, gates automaticos, evidencias arquivadas e documentacao de
+risco residual. Nao substitui branch protection configurada no GitHub nem
+aprovacoes obrigatorias formais; essas configuracoes sao operacionais e devem
+ser confirmadas no repositorio remoto.
+
+## 15. Pipeline DevSecOps e automacoes
 
 O workflow principal `dev` corre em `push`, `pull_request` e `workflow_dispatch`.
 Tem `concurrency` para cancelar execucoes antigas da mesma ref. As automacoes
@@ -355,7 +401,7 @@ relevantes em `main`. Gera `target/pit-reports/index.html` e artefacto
 
 A pipeline esta descrita em detalhe em [DEVSECOPS_PIPELINE.md](DEVSECOPS_PIPELINE.md).
 
-## 15. SCA e dependencia Spring Security
+## 16. SCA e dependencia Spring Security
 
 O GitHub Security/Code scanning reportou alertas do OWASP Dependency-Check para
 Spring Security `6.5.10`:
@@ -371,7 +417,7 @@ Spring Security. A decisao evita misturar versoes de `spring-security-core`,
 
 Documentacao de triagem: [SCA_TRIAGE.md](SCA_TRIAGE.md).
 
-## 16. SAST, DAST e IAST-like
+## 17. SAST, DAST e IAST-like
 
 ### SAST
 
@@ -423,7 +469,7 @@ Na pipeline, os probes live exercitam:
 JWT expirado, backups, ZIP Slip e tamanho maximo de upload sao cobertos pela
 seleccao de testes Maven executada no mesmo job `dast-scan`.
 
-## 17. Testes automatizados
+## 18. Testes automatizados
 
 A suite local mais recente correu:
 
@@ -451,7 +497,7 @@ Categorias cobertas:
 
 Resumo detalhado: [SECURITY_TESTING.md](SECURITY_TESTING.md).
 
-## 18. Instalacao e configuracao segura
+## 19. Instalacao e configuracao segura
 
 Secrets devem vir do ambiente:
 
@@ -470,7 +516,7 @@ Guias:
 - [SECURE_INSTALLATION.md](SECURE_INSTALLATION.md)
 - [SECURITY_CONFIGURATION_ASSESSMENT.md](SECURITY_CONFIGURATION_ASSESSMENT.md)
 
-## 19. ASVS e rastreabilidade
+## 20. ASVS e rastreabilidade
 
 O mapeamento ASVS esta em [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md). O projecto cobre
 de forma implementada ou documentada areas como autenticacao, autorizacao,
@@ -486,7 +532,7 @@ Pontos parciais ou dependentes de operacao:
 - IAST agent-based;
 - DAST autenticado completo.
 
-## 20. Avaliacao final
+## 21. Avaliacao final
 
 GhostReport cumpre o objectivo de prototipo academico seguro com evidencia
 tecnica. O sistema nao e apresentado como produto production-ready; e uma base
@@ -504,6 +550,16 @@ Pontos fortes:
 - pipeline com varios tipos de scanning;
 - documentacao organizada e rastreavel.
 
+Claims finais correctamente delimitados:
+
+| Claim | Redaccao correcta para a entrega |
+| --- | --- |
+| MFA | Implementado para `ADMIN`, `ANALYST` e `AUDITOR`; em dev/test o codigo pode ser exposto em logs para demonstracao. |
+| DAST | OWASP ZAP baseline/passivo e probes runtime; nao e pentest autenticado completo. |
+| IAST | Evidencia runtime/IAST-like; nao existe agente IAST com taint tracking. |
+| Producao | Existe guia prod-like, mas faltam controlos operacionais externos como secret manager, SIEM/WORM e canal MFA real. |
+| ASVS | Mapeamento Sprint 2 em Markdown; spreadsheet Sprint 1 permanece historica. |
+
 Limitacoes:
 
 - MFA precisa de canal/IdP real em producao;
@@ -513,7 +569,7 @@ Limitacoes:
 - falta Flyway/Liquibase;
 - falta SIEM/WORM/secret manager externo.
 
-## 21. Conclusao
+## 22. Conclusao
 
 A Phase 2 Sprint 2 fecha o GhostReport como uma entrega final robusta para
 avaliacao: a aplicacao implementa os fluxos principais, os riscos da Phase 1
