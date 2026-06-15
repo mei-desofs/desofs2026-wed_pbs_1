@@ -25,6 +25,7 @@ producao real.
 | Logs/auditoria | Auditoria e alertas com metadados de integridade. | Implementado; SIEM/WORM e futuro. |
 | CSP reporting | Endpoint publico `/security/csp-report` guarda alerta sanitizado para violacoes CSP do browser. | Implementado. |
 | Dependencias | Dependency-Check e CycloneDX. | Implementado. |
+| Inventario criptografico | `CRYPTOGRAPHIC_INVENTORY.md` documenta BCrypt, SecureRandom, HMAC-SHA-256, SHA-256 e JWT; `CryptographicInventoryTest` valida a rastreabilidade. | Implementado. |
 
 ## Accoes obrigatorias em producao
 
@@ -40,6 +41,7 @@ producao real.
 - Proteger directorios de uploads, evidencia e backups ao nivel do sistema
   operativo.
 - Rever suppressions do Dependency-Check antes de release.
+- Rever [CRYPTOGRAPHIC_INVENTORY.md](CRYPTOGRAPHIC_INVENTORY.md) sempre que forem adicionados novos usos criptograficos.
 - Arquivar artefactos da pipeline mais recente.
 
 ## Riscos residuais

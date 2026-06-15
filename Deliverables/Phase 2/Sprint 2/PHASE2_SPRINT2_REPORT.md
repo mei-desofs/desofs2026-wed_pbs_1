@@ -270,8 +270,9 @@ As validacoes principais incluem:
 - formato de tracking code;
 - status e priority por enum/allowlist;
 - roles apenas `ADMIN`, `ANALYST`, `AUDITOR`;
-- password policy no servico, incluindo comprimento, complexidade, passwords
-  comprometidas, reutilizacao e palavras contextuais;
+- password policy no servico, incluindo comprimento, passwords
+  comprometidas, reutilizacao e palavras contextuais, sem impor classes
+  obrigatorias de caracteres;
 - `attachmentId` positivo e tracking code valido em downloads;
 - content type esperado em endpoints JSON;
 - rejeicao de `TRACE`, headers com caracteres de controlo e `Authorization`
@@ -285,6 +286,8 @@ As validacoes principais incluem:
   do browser sem expor tokens ou tracking codes em respostas.
 - fallback frontend para browsers que nao suportem features esperadas como
   `fetch`, `crypto.getRandomValues`, `TextEncoder` e APIs DOM seguras.
+- bloqueio explicito de caminhos `/.git` e `/.svn` para impedir exposicao de
+  metadados de controlo de versao.
 
 Uploads sao uma superficie critica. Mitigacoes:
 
@@ -513,7 +516,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 274 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 281 testes, 0 falhas, 0 erros, 0 skipped.
 
 Categorias cobertas:
 
@@ -533,6 +536,8 @@ Categorias cobertas:
 - admin user lifecycle;
 - backups, restore e integridade;
 - frontend: XSS sinks, scripts inline, tokens em storage, tracking code em URL, navs escondidas.
+- inventario criptografico: rastreabilidade de BCrypt, SecureRandom,
+  HMAC-SHA-256, SHA-256, JWT e backups.
 
 Resumo detalhado: [SECURITY_TESTING.md](SECURITY_TESTING.md).
 
@@ -586,6 +591,10 @@ criptograficos aprovados, parsing consistente, fallback para browsers sem
 features de seguranca esperadas, rejeicao de headers connection-specific em
 HTTP/2/HTTP/3 e reclassificacao de CSV/spreadsheet injection como nao
 aplicavel por ausencia de exports CSV/XLSX/ODS.
+Depois da revisao adicional nesta branch, o tracker tambem passou a reflectir
+passwords sem regras de composicao obrigatoria (`V6.2.5`), bloqueio de
+metadados `.git`/`.svn` (`V13.4.1`) e inventario criptografico verificavel
+(`V11.1.1`, `V11.1.3`, `V11.1.4`).
 
 Os capitulos fora do desenho implementado, como OAuth/OIDC e WebRTC, continuam
 marcados como `Not Applicable` no tracker em vez de `Compliant`.

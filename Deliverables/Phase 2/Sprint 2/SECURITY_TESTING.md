@@ -9,7 +9,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 274 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 281 testes, 0 falhas, 0 erros, 0 skipped.
 
 ## 2. Estrategia
 
@@ -24,7 +24,7 @@ menos uma mitigacao implementada e, sempre que possivel, um teste que a prove.
 | --- | --- | --- |
 | Contexto/config | `GhostreportApplicationTests`, `SecurityConfigurationValidatorTest`, `DataInitializerDisabledTest`, `SchemaMigrationScriptTest` | Arranque, secrets fracos, seed users, schema metadata, TLS/proxy/PostgreSQL TLS e limites de recursos prod-like. |
 | Autenticacao/MFA/JWT | `AdminMfaAuthenticationTest`, `AuthenticationSecurityIntegrationTest`, `JwtServiceSecurityTest`, `JwtRevocationPersistenceIntegrationTest` | Password login, MFA para roles internas, token claims, revogacao, expiracao, kid, issuer/audience e bloqueio de challenge apos tentativas MFA invalidas. |
-| Password reset/policy | `PasswordPolicyAndResetSecurityTest`, `PasswordPolicyServiceTest` | Password comprometida, reutilizacao, comprimento, complexidade, palavras contextuais e token expirado/reutilizado. |
+| Password reset/policy | `PasswordPolicyAndResetSecurityTest`, `PasswordPolicyServiceTest` | Password comprometida, reutilizacao, comprimento, ausencia de composicao obrigatoria, palavras contextuais e token expirado/reutilizado. |
 | RBAC | `RbacAuthorizationMatrixTest`, `AdminAuthorizationTest`, `AuditorAuthorizationTest` | Endpoints permitidos/negados por role. |
 | Admin lifecycle | `AdminUserManagementSecurityTest` | Activar/desactivar, editar roles, ultimo admin activo, audit logs. |
 | Analyst ownership | `AnalystCaseOwnershipTest`, `BusinessLogicWorkflowSecurityTest` | Ownership, casos de outro analista, transitions, optimistic locking. |
@@ -33,7 +33,8 @@ menos uma mitigacao implementada e, sempre que possivel, um teste que a prove.
 | Auditoria/logging | `AuditLogSecurityTest`, `AnonymousDataLoggingTest`, `RuntimeSecurityEventLoggingTest` | Nao guardar passwords/tokens/tracking code, alertas e correlationId. |
 | Backups/packages | `BackupServiceIntegrationTest`, `AdminBackupControllerSecurityTest`, `CasePackageServiceIntegrationTest` | Manifestos, tampering, restore, traversal, packages. |
 | Frontend | `FrontendXssDataExposureTest`, `FrontendNavbarVisibilityTest`, `CsrfCookieAttributesTest` | XSS sinks, scripts inline, tokens em storage, tracking code em URL, navs escondidas, CSRF cookie. |
-| Headers/erros | `SecurityHeadersTest`, `SecurityMonitoringServiceTest`, `ErrorHandlingSecurityTest`, `ApiValidationContractTest` | CSP/HSTS/COOP/COEP/CORP, CSP report endpoint, Fetch Metadata, headers anormais, JSON errors genericos, validacao de contratos e alerta sanitizado. |
+| Headers/erros | `SecurityHeadersTest`, `SecurityMonitoringServiceTest`, `ErrorHandlingSecurityTest`, `ApiValidationContractTest` | CSP/HSTS/COOP/COEP/CORP, CSP report endpoint, Fetch Metadata, headers anormais, metadata `.git`/`.svn`, JSON errors genericos, validacao de contratos e alerta sanitizado. |
+| Criptografia | `CryptographicInventoryTest`, `JwtServiceSecurityTest`, `TrackingCodeTest`, `BackupServiceIntegrationTest` | Inventario criptografico, algoritmos aprovados, ausencia de algoritmos obsoletos, JWT HMAC, SecureRandom e integridade de backups. |
 | Rate limiting | `RateLimiterServiceTest`, `LoginRateLimitSecurityTest` | Limites, reset de janela, brute force alert. |
 
 ## 4. Matriz de validacao de endpoints
@@ -100,6 +101,10 @@ A revisao ASVS final adicionou evidencias directas para:
   `SecurityHeadersTest`;
 - fallback de browser sem features de seguranca/runtime esperadas em
   `FrontendXssDataExposureTest`;
+- password policy sem requisitos de composicao de caracteres, mas mantendo
+  comprimento, denylist, contexto e historico em `PasswordPolicyServiceTest`;
+- bloqueio explicito de paths `/.git` e `/.svn` em `SecurityHeadersTest`;
+- inventario criptografico e deteccao estatica em `CryptographicInventoryTest`;
 - geracao de 2.000 tracking codes com `SecureRandom` sem colisoes em
   `TrackingCodeTest`.
 

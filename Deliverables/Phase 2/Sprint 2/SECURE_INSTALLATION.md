@@ -87,6 +87,21 @@ jdbc:postgresql://db.example:5432/ghostreport?sslmode=verify-full
 `sslmode=require` cifra a ligacao, mas nao e aceite pelo validator porque nao
 valida suficientemente a identidade do servidor.
 
+## Gestao criptografica
+
+O inventario dos usos criptograficos esta em
+[CRYPTOGRAPHIC_INVENTORY.md](CRYPTOGRAPHIC_INVENTORY.md). Em resumo:
+
+- `JWT_SECRET` e `BACKUP_HMAC_SECRET` devem ter pelo menos 32 bytes e ser
+  diferentes entre si;
+- `ghostreport.jwt.active-key-id` identifica a chave JWT activa e
+  `ghostreport.jwt.previous-secrets` permite aceitar segredos anteriores em
+  formato `kid:secret` durante rotacao;
+- `BACKUP_HMAC_KEY_ID` identifica a chave HMAC usada em manifestos de backup;
+- novos usos de `Mac`, `MessageDigest`, `SecureRandom`, `Cipher`,
+  `Signature`, `BCryptPasswordEncoder` ou `PasswordEncoder` devem actualizar o
+  inventario e os testes relacionados.
+
 ## Limites de recursos
 
 Os perfis configuram limites de pool e servidor para reduzir risco de exaustao:

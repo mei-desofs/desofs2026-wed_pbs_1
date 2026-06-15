@@ -13,7 +13,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 
 | Evidencia | Resultado confirmado |
 | --- | --- |
-| Testes Maven | `274` testes, `0` falhas, `0` erros, `0` skipped. |
+| Testes Maven | `281` testes, `0` falhas, `0` erros, `0` skipped. |
 | Runtime probes locais | `101` probes, `101` passed, `0` failed, `0` skipped. |
 | Spring Security | `6.5.11` via Spring Boot `3.5.15`. |
 | SCA CVEs remediados | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003. |
@@ -35,6 +35,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 | SCA/SAST/DAST/runtime | Dependency-Check, CycloneDX, CodeQL, SpotBugs, SonarCloud, Gitleaks, ZAP baseline e runtime evidence. | Implementado como evidencia |
 | Configuracao | Secrets por ambiente, PostgreSQL fora de testes, validacao de configuracao e guia seguro. | Implementado/documentado |
 | Headers/browser security | CSP restritiva com `report-uri`, endpoint `/security/csp-report`, HSTS preload, COOP/COEP/CORP, Fetch Metadata/Origin validation, fallback para browsers sem features esperadas e bloqueio de headers anormais. | Implementado |
+| Criptografia | [CRYPTOGRAPHIC_INVENTORY.md](CRYPTOGRAPHIC_INVENTORY.md) mapeia BCrypt, SecureRandom, HMAC-SHA-256, SHA-256, JWT, backups e hashes de integridade; `CryptographicInventoryTest` verifica o inventario. | Implementado |
 | Comunicacao segura | Perfil prod-like com modo TLS explicito, TLS 1.2/1.3, cifras modernas e PostgreSQL com `sslmode=verify-ca`/`verify-full`. | Implementado/configurado; certificado publico e operacional |
 | L2 aplicavel | Rate limit de submissao de denuncias, malware scanner local, JWT audience, MFA one-time, no-store, resource limits e logging estruturado. | Reavaliado no XLSX |
 
@@ -42,9 +43,9 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 
 - `MfaChallengeService` passou a invalidar desafios MFA apos o limite
   configurado de codigos invalidos, com evento `MFA_VERIFY_LOCKED`.
-- `PasswordPolicyService` passou a impor comprimento, complexidade, lista de
-  passwords comprometidas, reutilizacao e palavras contextuais no servico, nao
-  apenas nos DTOs.
+- `PasswordPolicyService` passou a alinhar com ASVS V6.2.5: aceita qualquer
+  composicao de caracteres e mantem comprimento, lista de passwords
+  comprometidas, reutilizacao e palavras contextuais no servico.
 - `SecurityConfig` passou a aplicar `Cache-Control: no-store, no-cache`,
   `Pragma: no-cache` e `Expires` a respostas sensiveis de auth, reports,
   admin, analyst e audit.
@@ -69,6 +70,12 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
   desactiva controlos interactivos.
 - `TrackingCodeTest` passou a validar 2.000 tracking codes gerados por
   `SecureRandom` sem colisoes em carga academica moderada.
+- `SecurityConfig` passou a bloquear explicitamente paths `/.git` e `/.svn`
+  com resposta controlada, reforcando a proteccao contra exposicao de metadados
+  de controlo de versao.
+- `CRYPTOGRAPHIC_INVENTORY.md` e `CryptographicInventoryTest` passaram a
+  manter evidencia de inventario criptografico e deteccao estatica de usos
+  esperados de criptografia no codigo.
 
 ## Melhorias L2 adicionais
 
@@ -118,6 +125,12 @@ real ou que puderam ser reforcados sem alterar radicalmente a aplicacao:
   esperadas.
 - `V4.2.3` passou a `Compliant` com rejeicao de headers connection-specific em
   pedidos HTTP/2 e HTTP/3.
+- `V6.2.5` passou a `Compliant` porque a aplicacao deixou de exigir classes
+  especificas de caracteres nas passwords.
+- `V13.4.1` passou a `Compliant` com bloqueio explicito de `/.git` e `/.svn`.
+- `V11.1.1`, `V11.1.3` e `V11.1.4` passaram a `Compliant` com inventario
+  criptografico documentado, politica de alteracao e teste estatico que garante
+  que os mecanismos criptograficos principais continuam mapeados.
 
 Capitulos fora do escopo implementado, como OAuth/OIDC e WebRTC, permanecem
 `Not Applicable`; nao foram convertidos em `Compliant` para evitar claims
@@ -141,5 +154,6 @@ enganosos.
 - [SECURITY_TESTING.md](SECURITY_TESTING.md)
 - [DEVSECOPS_PIPELINE.md](DEVSECOPS_PIPELINE.md)
 - [SCA_TRIAGE.md](SCA_TRIAGE.md)
+- [CRYPTOGRAPHIC_INVENTORY.md](CRYPTOGRAPHIC_INVENTORY.md)
 - [IAST_RUNTIME_SECURITY.md](IAST_RUNTIME_SECURITY.md)
 - [SECURITY_ASSESSMENT.md](SECURITY_ASSESSMENT.md)
