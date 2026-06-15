@@ -163,7 +163,8 @@ O fluxo de autenticacao tem duas fases para roles internas:
 1. `POST /auth/login` valida username/password, aplica rate limiting por
    utilizador/IP e, se a role exigir MFA, devolve `mfaRequired=true` e um
    `mfaChallengeId` sem emitir JWT.
-2. `POST /auth/mfa/verify` valida o codigo de utilizacao unica e curta duracao.
+2. `POST /auth/mfa/verify` valida o codigo de utilizacao unica e curta duracao,
+   com invalidacao do challenge apos tentativas invalidas repetidas.
    So depois da verificacao e emitido o JWT.
 
 Controlos implementados:
@@ -269,7 +270,8 @@ As validacoes principais incluem:
 - formato de tracking code;
 - status e priority por enum/allowlist;
 - roles apenas `ADMIN`, `ANALYST`, `AUDITOR`;
-- password policy e bloqueio de passwords comprometidas/reutilizadas;
+- password policy no servico, incluindo comprimento, complexidade, passwords
+  comprometidas, reutilizacao e palavras contextuais;
 - `attachmentId` positivo e tracking code valido em downloads;
 - content type esperado em endpoints JSON.
 
@@ -498,7 +500,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 250 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 255 testes, 0 falhas, 0 erros, 0 skipped.
 
 Categorias cobertas:
 

@@ -9,7 +9,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 250 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 255 testes, 0 falhas, 0 erros, 0 skipped.
 
 ## 2. Estrategia
 
@@ -23,8 +23,8 @@ menos uma mitigacao implementada e, sempre que possivel, um teste que a prove.
 | Categoria | Testes/classes | O que validam |
 | --- | --- | --- |
 | Contexto/config | `GhostreportApplicationTests`, `SecurityConfigurationValidatorTest`, `DataInitializerDisabledTest`, `SchemaMigrationScriptTest` | Arranque, secrets fracos, seed users, schema metadata. |
-| Autenticacao/MFA/JWT | `AdminMfaAuthenticationTest`, `AuthenticationSecurityIntegrationTest`, `JwtServiceSecurityTest`, `JwtRevocationPersistenceIntegrationTest` | Password login, MFA para roles internas, token claims, revogacao, expiracao, kid, issuer/audience. |
-| Password reset/policy | `PasswordPolicyAndResetSecurityTest` | Password comprometida, reutilizacao, token expirado/reutilizado. |
+| Autenticacao/MFA/JWT | `AdminMfaAuthenticationTest`, `AuthenticationSecurityIntegrationTest`, `JwtServiceSecurityTest`, `JwtRevocationPersistenceIntegrationTest` | Password login, MFA para roles internas, token claims, revogacao, expiracao, kid, issuer/audience e bloqueio de challenge apos tentativas MFA invalidas. |
+| Password reset/policy | `PasswordPolicyAndResetSecurityTest`, `PasswordPolicyServiceTest` | Password comprometida, reutilizacao, comprimento, complexidade, palavras contextuais e token expirado/reutilizado. |
 | RBAC | `RbacAuthorizationMatrixTest`, `AdminAuthorizationTest`, `AuditorAuthorizationTest` | Endpoints permitidos/negados por role. |
 | Admin lifecycle | `AdminUserManagementSecurityTest` | Activar/desactivar, editar roles, ultimo admin activo, audit logs. |
 | Analyst ownership | `AnalystCaseOwnershipTest`, `BusinessLogicWorkflowSecurityTest` | Ownership, casos de outro analista, transitions, optimistic locking. |
@@ -41,7 +41,7 @@ menos uma mitigacao implementada e, sempre que possivel, um teste que a prove.
 | Fluxo | Validacoes | Testes |
 | --- | --- | --- |
 | `/auth/login` | Campos obrigatorios, rate limit, inactive user, erros genericos. | `AuthenticationSecurityIntegrationTest`, `LoginRateLimitSecurityTest`. |
-| `/auth/mfa/verify` | Challenge obrigatorio, codigo de 6 digitos, TTL, uso unico, role activa. | `AdminMfaAuthenticationTest`. |
+| `/auth/mfa/verify` | Challenge obrigatorio, codigo de 6 digitos, TTL, uso unico, limite de tentativas invalidas e role activa. | `AdminMfaAuthenticationTest`. |
 | `/auth/password-reset/*` | Resposta generica, token expirado/reutilizado, password policy. | `PasswordPolicyAndResetSecurityTest`. |
 | `/reports` | Titulo/descricao/categoria, DTO, resposta sem hash interno. | `PublicReportFlowIntegrationTest`, `ApiValidationContractTest`. |
 | `/reports/verify` | Tracking code format, erro seguro, rate limit/enumeracao. | `TrackingCodeEnumerationTest`, `PublicReportFlowIntegrationTest`. |

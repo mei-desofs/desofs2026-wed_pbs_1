@@ -13,7 +13,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 
 | Evidencia | Resultado confirmado |
 | --- | --- |
-| Testes Maven | `250` testes, `0` falhas, `0` erros, `0` skipped. |
+| Testes Maven | `255` testes, `0` falhas, `0` erros, `0` skipped. |
 | Runtime probes locais | `101` probes, `101` passed, `0` failed, `0` skipped. |
 | Spring Security | `6.5.11` via Spring Boot `3.5.15`. |
 | SCA CVEs remediados | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003. |
@@ -25,7 +25,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 | --- | --- | --- |
 | Arquitectura e threat modelling | Relatorio Phase 1, DDD, trust boundaries e relatorio Sprint 2. | Implementado/documentado |
 | Autenticacao | BCrypt, login interno, JWT, bloqueio de utilizadores inactivos e logout/revogacao. | Implementado |
-| MFA | Desafio MFA antes de JWT para `ADMIN`, `ANALYST` e `AUDITOR`. | Implementado; canal de producao e futuro |
+| MFA | Desafio MFA antes de JWT para `ADMIN`, `ANALYST` e `AUDITOR`, uso unico, TTL e bloqueio do challenge apos tentativas invalidas. | Implementado; canal de producao e futuro |
 | Autorizacao | Regras de rota em `SecurityConfig`, RBAC e ownership nos servicos. | Implementado |
 | Denunciante anonimo/tracking | Sem conta de reporter; tracking code controla verificacao/listagem/download. | Implementado |
 | Validacao | DTOs, Bean Validation, enums/allowlists, tracking code e contratos API. | Implementado |
@@ -34,6 +34,17 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 | Backups/evidencia | ZIPs com hashes, HMAC, manifesto, verificacao e restore para staging. | Implementado |
 | SCA/SAST/DAST/runtime | Dependency-Check, CycloneDX, CodeQL, SpotBugs, SonarCloud, Gitleaks, ZAP baseline e runtime evidence. | Implementado como evidencia |
 | Configuracao | Secrets por ambiente, PostgreSQL fora de testes, validacao de configuracao e guia seguro. | Implementado/documentado |
+
+## Melhorias de codigo apos revisao L1/L2
+
+- `MfaChallengeService` passou a invalidar desafios MFA apos o limite
+  configurado de codigos invalidos, com evento `MFA_VERIFY_LOCKED`.
+- `PasswordPolicyService` passou a impor comprimento, complexidade, lista de
+  passwords comprometidas, reutilizacao e palavras contextuais no servico, nao
+  apenas nos DTOs.
+- `SecurityConfig` passou a aplicar `Cache-Control: no-store, no-cache`,
+  `Pragma: no-cache` e `Expires` a respostas sensiveis de auth, reports,
+  admin, analyst e audit.
 
 ## Limitacoes ASVS registadas
 
