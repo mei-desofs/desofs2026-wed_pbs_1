@@ -9,7 +9,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado: 180 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 250 testes, 0 falhas, 0 erros, 0 skipped.
 
 ## 2. Estrategia
 
@@ -84,16 +84,36 @@ Na pipeline, alem de `./mvnw verify`, existe job `dast-scan` que:
 - corre ZAP baseline;
 - publica evidencia.
 
+Validacao local do probe expandido, executado contra a aplicacao em
+`http://localhost:8081` com perfil `test` e MFA activo para demonstracao:
+
+| Metrica | Resultado |
+| --- | --- |
+| Total de probes runtime | 101 |
+| Passed | 99 |
+| Failed | 0 |
+| Skipped | 2 |
+| Probes publicos | 22 |
+| Probes admin | 21 |
+| Probes analyst | 17 |
+| Probes auditor | 13 |
+| Casos negativos | 6 |
+
+Skipped documentados: `GET /login.html`, porque nao existe pagina publica
+separada de login, e restore de backup, porque a operacao nao e exercitada de
+forma destrutiva pelo probe.
+
 Artefactos relacionados:
 
 - [iast-runtime-evidence.md](iast-runtime-evidence.md)
 - [runtime-endpoints.md](runtime-endpoints.md)
 - [runtime-log-sanitization.md](runtime-log-sanitization.md)
 
-O reforco runtime inclui probes live para `POST /reports`, tracking code,
-uploads e endpoints protegidos, e testes runtime-focused para MFA, RBAC por
-role, JWT invalido/expirado, backups, ZIP Slip, max upload size e error
-handling.
+O reforco runtime inclui paginas publicas, `POST /reports`, tracking code,
+upload/list/download de anexos, login/MFA/logout/password reset, endpoints
+`/admin/**`, `/analyst/**`, `/audit/**` e casos negativos para metodo errado,
+JSON malformado, content type errado, Authorization malformado, JWT invalido,
+role errada e token ausente.
 
 ## 8. Limitacoes
 

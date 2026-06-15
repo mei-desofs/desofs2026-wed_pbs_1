@@ -34,11 +34,13 @@ Resultado observado:
 O code scanning reportava alertas Dependency-Check para
 `org.springframework.security` `6.5.10`.
 
-| CVE | Descricao resumida | Componentes/funcionalidade afectada | Aplicabilidade ao GhostReport | Decisao |
-| --- | --- | --- | --- | --- |
-| CVE-2026-40988 | Possivel denial of service por inflacao sem limite de payload SAML comprimido no service provider SAML2 com Redirect binding. | Spring Security SAML2 service provider em versoes incluindo `6.5.0` a `6.5.10`. | GhostReport nao usa SAML2, mas dependia de Spring Security `6.5.10` via BOM. | Remediado por actualizacao para Spring Security `6.5.11`. |
-| CVE-2026-41694 | Payloads SAML podiam ser descriptografados sem assinatura valida, criando risco de decryption oracle. | Spring Security SAML. | GhostReport nao implementa SAML nem IdP/SP SAML. | Remediado por actualizacao para `6.5.11`; risco directo baixo no desenho actual. |
-| CVE-2026-41003 | Saida HTML nao codificada em forms gerados por filtros Spring Security podia permitir XSS quando valores de `RelyingPartyRegistration` fossem influenciaveis. | Spring Security SAML/FormPost related flows. | GhostReport nao configura `RelyingPartyRegistration` nem SAML login; frontend e estatico. | Remediado por actualizacao para `6.5.11`; manter monitorizacao SCA. |
+| Componente | Versao vulneravel | CVE | Severidade | Origem | Impacto | Estado | Decisao |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `org.springframework.security:spring-security-web` / stack Spring Security | `6.5.10` | CVE-2026-40988 | High | Dependency-Check / GitHub Code Scanning; advisory Spring/NVD | DoS em SAML2 service provider com Redirect binding por inflacao DEFLATE sem limite. GhostReport nao usa SAML2, mas a versao estava na arvore. | Corrigido | Actualizado via Spring Boot BOM `3.5.15`; Spring Security resolvido para `6.5.11`. |
+| `org.springframework.security:spring-security-web` / stack Spring Security | `6.5.10` | CVE-2026-41694 | Low/Medium conforme fonte | Dependency-Check / GitHub Code Scanning; advisory Spring/NVD | Possivel decryption oracle em payloads SAML sem assinatura valida. Nao aplicavel directamente porque GhostReport nao configura SAML. | Corrigido | Actualizado para `6.5.11`; sem suppression. |
+| `org.springframework.security:spring-security-web` / stack Spring Security | `6.5.10` | CVE-2026-41003 | High | Dependency-Check / GitHub Code Scanning; advisory Spring/NVD | XSS em HTML gerado por filtros Spring Security quando `RelyingPartyRegistration` e influenciavel. GhostReport nao usa SAML/OIDC relying party, mas a versao era afectada. | Corrigido | Actualizado para `6.5.11`; frontend continua coberto por testes XSS. |
+| `org.hibernate.validator:hibernate-validator` | `8.0.3.Final` reportado | CVE-2025-15104 | Reportado por SCA; nao aplicavel ao componente usado | Dependency-Check local/configurado | O CVE refere The Nu Html Checker, nao Hibernate Validator. | Suprimido | Suppression especifica por package URL e CVE ate 2026-09-30; rever antes de producao. |
+| `org.eclipse.angus:angus-activation` | `2.0.3` reportado | CVE-2025-7962 | Reportado por SCA; nao aplicavel ao componente usado | Dependency-Check local/configurado | O CVE refere SMTP injection em Jakarta Mail/Angus SMTP; GhostReport nao usa SMTP nem `org.eclipse.angus:smtp`. | Suprimido | Suppression especifica por package URL e CVE ate 2026-09-30; manter monitorizacao. |
 
 A remediacao foi actualizar o BOM do Spring Boot para `3.5.15`, em vez de fixar
 manualmente modulos Spring Security individuais. Isto mantem `spring-security-core`,
@@ -73,6 +75,21 @@ A validacao local mais recente confirmou que `spring-security-core`,
 `spring-security-web`, `spring-security-config`, `spring-security-crypto` e
 `spring-security-test` resolvem para `6.5.11` e que `6.5.10` ja nao surge na
 arvore de dependencias.
+
+O Dependency-Check local executado em 2026-06-15 terminou com build success e
+gerou HTML/XML/JSON/SARIF em `target/dependency-check-report`. O JSON confirmou
+0 vulnerabilidades nao suprimidas e 2 vulnerabilidades suprimidas
+documentadas abaixo.
+
+O comando `.\mvnw.cmd dependency:tree` tambem confirmou:
+
+- `org.hibernate.validator:hibernate-validator:8.0.3.Final` como dependencia de
+  `spring-boot-starter-validation`;
+- `org.eclipse.angus:angus-activation:2.0.3` como dependencia transitiva via
+  `org.glassfish.jaxb:jaxb-core`;
+- `org.postgresql:postgresql:42.7.11`;
+- `org.apache.tomcat.embed:tomcat-embed-core:10.1.55`;
+- `org.springframework:spring-webmvc:6.2.19`.
 
 ## Processo de triagem SCA
 
@@ -117,5 +134,6 @@ Artefactos esperados:
 | Spring Security `6.5.10` | Remediado. |
 | Spring Security `6.5.11` | Versao resolvida actualmente. |
 | CVEs Spring Security listados acima | Sem risco residual conhecido no codigo actual apos upgrade. |
+| Dependency-Check 2026-06-15 | 0 vulnerabilidades nao suprimidas; 2 suppressions documentadas. |
 | Suppressions activas | Mantidas apenas para falso positivo/componente nao usado, com expiracao. |
 | Accao futura | Reexecutar Dependency-Check antes da submissao final e apos qualquer alteracao em `pom.xml`. |
