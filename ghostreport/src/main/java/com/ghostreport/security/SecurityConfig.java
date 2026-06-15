@@ -239,6 +239,11 @@ public class SecurityConfig {
                 return;
             }
 
+            if (requestsSourceControlMetadata(request)) {
+                writeFilterError(response, 404, "Not found");
+                return;
+            }
+
             if (hasUnsafeHeader(request)) {
                 writeFilterError(response, 400, "Invalid request headers");
                 return;
@@ -250,6 +255,15 @@ public class SecurityConfig {
             }
 
             filterChain.doFilter(request, response);
+        }
+
+        private boolean requestsSourceControlMetadata(HttpServletRequest request) {
+            String uri = request.getRequestURI();
+            return uri != null
+                    && (uri.equals("/.git")
+                    || uri.startsWith("/.git/")
+                    || uri.equals("/.svn")
+                    || uri.startsWith("/.svn/"));
         }
 
         private boolean hasUnsafeHeader(HttpServletRequest request) {

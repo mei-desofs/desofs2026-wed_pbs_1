@@ -122,4 +122,15 @@ class SecurityHeadersTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Invalid request headers"));
     }
+
+    @Test
+    void sourceControlMetadataPathsAreNotExposed() throws Exception {
+        mockMvc.perform(get("/.git/config"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Not found"));
+
+        mockMvc.perform(get("/.svn/entries"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Not found"));
+    }
 }
