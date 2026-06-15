@@ -28,8 +28,12 @@ class FrontendNavbarVisibilityTest {
                 .contains("id=\"editUserPage\"")
                 .doesNotContain("mfaDevCode")
                 .doesNotContain("value=\"USER\"");
-        assertThat(analyst).contains("id=\"analystNav\" class=\"analyst-nav hidden\"");
-        assertThat(auditor).contains("id=\"auditorNav\" class=\"admin-nav hidden\"");
+        assertThat(analyst)
+                .contains("id=\"analystNav\" class=\"analyst-nav hidden\"")
+                .contains("id=\"mfaSection\" class=\"hidden\"");
+        assertThat(auditor)
+                .contains("id=\"auditorNav\" class=\"admin-nav hidden\"")
+                .contains("id=\"mfaSection\" class=\"hidden\"");
         assertThat(adminJs)
                 .contains("classList.remove(\"hidden\")")
                 .contains("classList.add(\"hidden\")")
@@ -38,8 +42,16 @@ class FrontendNavbarVisibilityTest {
                 .contains("#/admin/users/")
                 .doesNotContain("devMfaCode")
                 .doesNotContain("updateUser: () => updateUser");
-        assertThat(analystJs).contains("classList.remove(\"hidden\")");
-        assertThat(auditorJs).contains("classList.remove(\"hidden\")");
+        assertThat(analystJs)
+                .contains("classList.remove(\"hidden\")")
+                .contains("loginData.mfaRequired")
+                .contains("verifyAnalystMfa")
+                .doesNotContain("devMfaCode");
+        assertThat(auditorJs)
+                .contains("classList.remove(\"hidden\")")
+                .contains("loginData.mfaRequired")
+                .contains("verifyAuditorMfa")
+                .doesNotContain("devMfaCode");
     }
 
     @Test

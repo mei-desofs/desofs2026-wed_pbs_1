@@ -1,95 +1,88 @@
-# Contributing to GhostReport
+# Contribuição no GhostReport
 
-This guide defines the working rules for project delivery. The goal
-is to keep the code, documentation, ASVS evidence and report coherent while
-three people work in parallel.
+Este guia mantém código, documentação, evidência ASVS e relatórios de entrega
+alinhados enquanto várias pessoas trabalham em paralelo.
 
 ## Branches
 
-Use short feature branches with a clear scope:
+Usar branches curtas e com âmbito claro:
 
 ```text
 feature/admin-security-hardening
 feature/devsecops-report-hardening
 fix/upload-validation
-docs/asvs-evidence
+docs/finalize-phase2-sprint2-documentation
 ```
 
-Avoid mixing backend security changes with report/pipeline changes in the same
-branch unless they are directly related.
+Evitar misturar alterações de backend de segurança com documentação ou pipeline,
+excepto quando as alterações estiverem directamente relacionadas.
 
 ## Commits
 
-Use focused commits:
+Usar commits focados:
 
 ```text
 ci: clarify DevSecOps workflows
-docs: add coding standards
+docs: update Sprint 2 security report
 test: cover admin authorization
 security: add login rate limiting
 ```
 
-Each commit should compile or at least leave the touched area understandable.
-Do not commit generated local backups, temporary extracted text files or local
-IDE metadata.
+Cada commit deve compilar ou, no mínimo, deixar a área alterada compreensível.
+Não commitar backups locais gerados, texto extraído de PDFs, ficheiros de base
+de dados local, metadados de IDE ou resultados de ferramentas em `target/`.
 
-## Pull Requests
+## Pull requests
 
-Each pull request should include:
+Cada pull request deve indicar:
 
-- What changed.
-- Why it changed.
-- How it was tested.
-- Evidence artifacts or screenshots when relevant.
-- ASVS controls affected, if applicable.
+- o que mudou;
+- por que mudou;
+- como foi testado;
+- artefactos ou screenshots de evidência, quando aplicável;
+- controlos ASVS afectados, se aplicável.
 
-For DevSecOps/documentation pull requests, also include:
+Para branches de DevSecOps ou documentação, incluir também:
 
-- workflows changed;
-- expected artifacts;
-- whether the workflow is blocking or evidence review;
-- documentation updated to match the pipeline behavior.
+- workflows alterados;
+- artefactos esperados;
+- se o workflow é gate de merge ou recolha de evidência;
+- documentação actualizada para corresponder ao comportamento da pipeline.
 
-Before requesting review, run the relevant command:
+Antes de pedir revisão, correr o comando relevante:
 
 ```powershell
 cd ghostreport
 .\mvnw.cmd test
 ```
 
-For pipeline/documentation branches, verify YAML indentation and artifact paths.
+Para alterações de pipeline, verificar indentação YAML e caminhos dos
+artefactos.
 
-Useful validation command:
+## Checklist de revisão
 
-```powershell
-python - <<'PY'
-import yaml
-from pathlib import Path
-for path in Path('.github/workflows').glob('*.yml'):
-    yaml.safe_load(path.read_text(encoding='utf-8'))
-    print(f'valid yaml: {path}')
-PY
-```
+- A implementação corresponde ao texto do relatório?
+- As roles dos endpoints estão alinhadas com `SecurityConfig`?
+- Os erros são suficientemente genéricos para não revelar detalhes internos?
+- Novas afirmações de segurança têm suporte em testes, workflows ou artefactos?
+- As limitações estão documentadas sem exagerar o que está implementado?
+- Os links do `README.md` e do relatório Sprint 2 continuam válidos?
 
-## Review Checklist
+## Regras de documentação
 
-- Does the implementation match the report wording?
-- Are endpoint roles aligned with `SecurityConfig`?
-- Are errors generic enough to avoid leaking internals?
-- Are new security claims supported by tests or artifacts?
-- Are scope boundaries documented without overstating claims?
+Quando um controlo de segurança é criado ou alterado, actualizar o ficheiro
+relevante da entrega em `Deliverables/Phase 2/Sprint 2/`, sobretudo:
 
-## Documentation Rules
+- `PHASE2_SPRINT2_REPORT.md`
+- `AUTHORIZATION_MATRIX.md`
+- `SECURITY_TESTING.md`
+- `DEVSECOPS_PIPELINE.md`
+- `SCA_TRIAGE.md`
+- `SPOTBUGS_TRIAGE.md`
+- `SECURITY_ASSESSMENT.md`
+- `SECURITY_CONFIGURATION_ASSESSMENT.md`
+- `SECURE_INSTALLATION.md`
+- `ASVS_EVIDENCE.md`
 
-When a security control is added or changed, update at least one of:
-
-- `docs/ASVS_EVIDENCE.md`
-- `docs/ASVS_LEVEL2_EVIDENCE.md`
-- `docs/SECURITY_ASSESSMENT.md`
-- `docs/SECURITY_CONFIGURATION_ASSESSMENT.md`
-- `docs/DEVSECOPS_PIPELINE.md`
-- final report chapter
-- ASVS tracker spreadsheet
-
-The report should describe only what is implemented, validated or supported by
-project evidence.
+O relatório deve descrever apenas o que está implementado, validado ou suportado
+por evidência do projecto.

@@ -204,6 +204,7 @@
 					</outputFormats>
 
 					<timestampedReports>false</timestampedReports>
+					<useClasspathJar>true</useClasspathJar>
 
 				</configuration>
 			</plugin>

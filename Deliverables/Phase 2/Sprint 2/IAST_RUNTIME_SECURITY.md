@@ -1,95 +1,58 @@
-# Runtime Security Evidence and IAST-like Testing
+# Segurança em runtime e evidência IAST-like
 
-GhostReport produces runtime security evidence in the `dast-scan / dast-scan`
-job of the main GitHub Actions workflow:
+GhostReport não integra uma ferramenta IAST comercial nem um agente de
+instrumentação. A evidência do Sprint 2 é, por isso, descrita como segurança em
+runtime e IAST-like: a aplicação arranca, fluxos sensíveis são exercitados,
+logs/respostas são verificados e o OWASP ZAP baseline corre contra o serviço em
+execução.
 
-```text
-.github/workflows/dev.yml
-```
+## O que está implementado
 
-The project does not claim full agent-based IAST. For the DESOFS academic
-requirement, GhostReport uses an IAST-like runtime security testing approach:
-security-focused Spring Boot tests run against the application runtime, the
-application is started as a packaged JAR, selected endpoints are exercised, and
-OWASP ZAP baseline scans the live HTTP surface.
-
-## Architecture
-
-```text
-GitHub Actions dev workflow
-  -> dast-scan / dast-scan
-  -> Maven security-focused tests
-  -> Spring Boot application context / MockMvc runtime
-  -> AuditLogService and SecurityMonitoringService
-  -> packaged Spring Boot JAR on localhost:8081
-  -> endpoint smoke traffic
-  -> OWASP ZAP baseline traffic
-  -> runtime security evidence artifacts
-```
-
-## Runtime Coverage
-
-The runtime security evidence job executes tests for:
-
-- successful and failed authentication events;
-- invalid/expired JWT handling;
-- login rate limiting and brute-force alert generation;
-- CSRF rejection and accepted CSRF-protected requests;
-- generic error responses without stack traces;
-- browser security headers;
-- audit/security event sanitization.
-
-## Endpoints Exercised in CI
-
-The workflow records HTTP status evidence for:
-
-| Endpoint | Purpose |
+| Evidência | Descrição |
 | --- | --- |
-| `GET /index.html` | Public frontend availability and security headers |
-| `GET /login.html` | Unauthenticated login page request |
-| `GET /admin/users` | Protected admin endpoint without token |
-| `GET /admin/users` with invalid bearer token | Invalid JWT rejection path |
-| `POST /auth/login` with invalid credentials | Failed login path |
-| repeated `POST /auth/login` failures | Rate-limit/brute-force evidence path |
-| `POST /auth/password/change` without CSRF token | CSRF rejection path |
+| Testes runtime | O job `dast-scan` executa testes de segurança antes de empacotar a aplicação, incluindo report flow, uploads, RBAC, MFA, auditoria e backups. |
+| Aplicação em execução | A CI inicia o GhostReport em `localhost:8081` e exercita endpoints reais. |
+| Probes live | A CI cria denúncia, valida tracking code, tenta inputs inválidos/perigosos, testa uploads, completa MFA dev e valida endpoints protegidos com tokens reais por role. |
+| Revisão de logs | O workflow verifica logs para evitar fuga de passwords, bearer tokens, secrets e stack traces. |
+| ZAP baseline | OWASP ZAP gera artefactos HTML/XML/JSON em modo baseline/passivo. |
+| Sumário | O workflow publica `iast-runtime-security-evidence` e evidência DAST. |
 
-ZAP baseline also crawls and passively scans `http://localhost:8081`.
+## Artefactos documentados
 
-## Monitored Events
+- [iast-runtime-evidence.md](iast-runtime-evidence.md)
+- [runtime-endpoints.md](runtime-endpoints.md)
+- [runtime-log-sanitization.md](runtime-log-sanitization.md)
 
-| Event | Evidence |
-| --- | --- |
-| Successful login | `LOGIN_SUCCESS` audit log in runtime tests |
-| Failed login | `LOGIN_FAILED` audit log in runtime tests |
-| Repeated failed login | `BRUTE_FORCE_LOGIN_ATTEMPT` security alert |
-| Invalid JWT | `INVALID_JWT_TOKEN` security alert |
-| Generic error handling | Correlation ID and controlled error response |
-| Security headers | CSP, frame protection, referrer policy and related headers |
+## Porque não é IAST completo
 
-## Pipeline Integration
+IAST completo exige normalmente instrumentação da aplicação para observar fluxo
+de dados dentro do runtime durante os testes. Isso não existe neste repositório.
+O projecto evita, por isso, afirmar cobertura IAST completa.
 
-| Item | Value |
-| --- | --- |
-| Workflow | `.github/workflows/dev.yml` |
-| Job | `dast-scan / dast-scan` |
-| Artifact | `iast-runtime-security-evidence` |
-| Gate mode | Runtime security tests and app startup are blocking; ZAP is evidence review |
+## Riscos cobertos
 
-The artifact contains:
+- endpoints protegidos exigem roles esperadas;
+- fluxos anónimos continuam públicos;
+- MFA é exigido antes da emissão de JWT para roles internas configuradas;
+- upload e validação de caminhos são exercitados;
+- headers e respostas genéricas são avaliados por requests runtime e ZAP;
+- logs são revistos para reduzir fuga de evidência sensível.
 
-- Surefire reports for the security-focused runtime tests;
-- `target/iast-evidence/iast-runtime-evidence.md`;
-- `target/iast-evidence/runtime-endpoints.md`;
-- `target/iast-evidence/runtime-log-sanitization.md`;
-- application startup/runtime log;
-- ZAP baseline evidence in the separate `dast-zap-baseline-reports` artifact.
+## Cobertura reforçada no `dast-scan`
 
-## Scope Boundaries
+O job cobre, por testes e probes:
 
-This approach is intentionally described as runtime security testing or
-IAST-like evidence. It does not attach a JVM taint-tracking sensor, does not
-provide data-flow tracing from source to sink, and does not replace a commercial
-or dedicated open-source IAST platform. CSRF acceptance is validated by
-`CsrfSecurityTest`; live unauthenticated endpoint probes only evidence CSRF
-rejection. Findings are interpreted together with SAST, SCA, SBOM and DAST
-evidence.
+- `POST /reports` válido, inválido, com caracteres perigosos e tentativa de mass assignment;
+- `POST /reports/verify` com tracking code válido, inválido e tentativas repetidas;
+- uploads permitidos, extensão proibida, conteúdo suspeito e filename com traversal;
+- endpoint admin sem token e com JWT inválido;
+- login real com MFA para admin, analyst e auditor usando o código dev exposto no log da CI;
+- RBAC live com tokens reais para `/admin/**`, `/analyst/**` e `/audit/**`;
+- JWT expirado, backups, ZIP Slip e tamanho máximo através da suite runtime-focused.
+
+## Trabalho futuro
+
+- Integrar agente IAST compatível com Java/Spring Boot.
+- Adicionar contextos ZAP autenticados para admin, analyst e auditor.
+- Arquivar relatório IAST formal como artefacto.
+- Correlacionar findings runtime com controlos ASVS.

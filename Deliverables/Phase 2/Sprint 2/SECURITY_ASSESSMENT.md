@@ -1,100 +1,186 @@
-# Security Assessment
+# Avaliacao final de seguranca
 
-This assessment summarizes GhostReport's implemented security controls and the
-evidence used to verify them. It should be read together with
-`docs/ASVS_EVIDENCE.md`, `docs/DEVSECOPS_PIPELINE.md` and the ASVS tracker.
+## 1. Sumario executivo
 
-## Assessment Scope
+GhostReport implementa uma arquitectura coerente de seguranca para o ambito
+academico: fluxo anonimo protegido por tracking code, roles internas com
+password + MFA + JWT, RBAC, ownership, validacao, upload hardening, auditoria,
+alertas, backups verificaveis, SCA/SAST/DAST e documentacao ASVS.
 
-| Area | Scope |
-| --- | --- |
-| Authentication | JWT login/logout flow, BCrypt password hashing, inactive-user checks, login rate limiting, password policy, password history, authenticated password change and password reset tokens. |
-| Authorization | RBAC for `ADMIN`, `ANALYST` and `AUDITOR`, plus analyst ownership controls. |
-| Business workflow | Explicit report state transitions, terminal case protection, transactional workflow updates and optimistic locking for report/case review state. |
-| Input validation | DTO validation, domain primitives and upload validation. |
-| File handling | Safe upload storage, attachment access, evidence packages and backup verification. |
-| Cryptography | JWT HMAC signing, backup manifest HMAC signing, SHA-256 integrity checks, BCrypt password hashing and key validation. |
-| Audit and monitoring | Audit logs and security alerts for security-relevant events, correlation IDs, UTC timestamps, redaction and event integrity hashes. |
-| Configuration | Runtime profiles, environment variables, JWT/backup HMAC secret validation and seed-user controls. |
-| DevSecOps | The `dev` GitHub Actions workflow covers build, tests, coverage, secret scanning, SAST, SCA, SBOM, DAST and runtime security/IAST-like evidence. PIT evidence runs in the separate `pit-mutation-testing` workflow. |
+O sistema nao e declarado production-ready. A avaliacao separa controlos
+implementados, controlos parcialmente dependentes de operacao e trabalho futuro.
 
-## Evidence Matrix
+## 2. Superficies de ataque
 
-| Control | Evidence | Result | Status |
-| --- | --- | --- | --- |
-| Password hashing | `SecurityConfig.passwordEncoder()`, user creation tests | Passwords are stored with BCrypt. | Implemented |
-| Password policy | `PasswordPolicyService`, `PasswordPolicyAndResetSecurityTest` | Compromised-password examples are rejected and password reuse is checked against current/history hashes. | Implemented |
-| Authenticated password change | `AuthController`, `UserService`, `ChangePasswordRequest` | Current password is required and new password is stored only as a hash. | Implemented |
-| Password reset | `PasswordResetService`, `PasswordResetToken`, reset tests | Reset tokens are random, single-use, expiring and stored only as SHA-256 hashes. | Implemented |
-| JWT signing, validation and revocation | `JwtService`, `AuthController`, `JwtServiceSecurityTest`, `RuntimeSecurityEventLoggingTest` | Signature, expiry, issuer, audience, role validation and logout-driven revocation are tested. | Implemented with residual risk |
-| JWT and backup key validation | `SecurityConfigurationValidator`, `.env.example`, validator tests | Unsafe production-like JWT/backup HMAC configuration fails fast; backup HMAC key must be separate from JWT key. | Implemented |
-| Login abuse protection | `RateLimiterService`, `LoginRateLimitSecurityTest` | Repeated failures trigger rate limiting and alerts. | Implemented |
-| Runtime auth monitoring | `RuntimeSecurityEventLoggingTest`, `AuditLogService`, `SecurityMonitoringService` | Auth events are recorded without passwords or tokens. | Implemented |
-| Correlation IDs | `CorrelationIdFilter`, `GlobalExceptionHandler`, runtime logging tests | `X-Correlation-ID` is propagated to responses and stored in audit/security events. | Implemented |
-| UTC audit timestamps | `AuditLog`, `SecurityAlert`, runtime logging tests | Audit/security event timestamps are generated in UTC. | Implemented |
-| Log redaction | `SecurityLogSanitizer`, runtime logging tests | Passwords, tokens, authorization values and tracking codes are redacted from event details. | Implemented |
-| Tamper-evident event fields | `AuditLogService`, `SecurityMonitoringService`, DTOs | Audit logs and security alerts include SHA-256 integrity hashes over the stored event fields. | Implemented baseline |
-| RBAC | `SecurityConfig`, `RbacAuthorizationMatrixTest` | Role-specific access is verified. | Implemented |
-| Analyst ownership | `AnalystCaseOwnershipTest`, service ownership checks | Analysts are restricted to owned/eligible cases. | Implemented |
-| Report state workflow | `ReportWorkflowPolicy`, `BusinessLogicWorkflowSecurityTest` | Only allowed status transitions are accepted and invalid jumps preserve the previous state. | Implemented |
-| Workflow transactions and concurrency | `@Transactional`, `@Version`, `GlobalExceptionHandler`, `BusinessLogicWorkflowSecurityTest` | Critical report/case mutations run transactionally; stale concurrent writes are rejected with `409 Conflict`. | Implemented |
-| Public report confidentiality | `TrackingCode`, tracking code tests | Public tracking and attachment listing require valid tracking codes. | Implemented |
-| Upload validation | `FileStorageService`, upload tests | Size, MIME, extension, magic bytes and safe paths are verified. | Implemented |
-| Path traversal protection | `SafeFilename`, storage boundary checks | Malicious names and paths are rejected. | Implemented |
-| Error handling | `GlobalExceptionHandler`, `ErrorHandlingSecurityTest` | Responses avoid stack traces and include correlation IDs. | Implemented |
-| Security headers | `SecurityConfig`, `SecurityHeadersTest` | Browser-facing headers are configured and tested, including CSP `form-action 'self'`. | Implemented baseline |
-| Audit logs | `AuditLogService`, audit tests | Critical state changes are logged with sanitized details. | Implemented |
-| Security alerts | `SecurityMonitoringService`, alert tests | Suspicious activity and forbidden access attempts create security alerts. | Implemented |
-| Backup integrity and authenticity | `BackupService`, backup tests | Manifests include SHA-256 file hashes and an HMAC-SHA256 manifest signature; verify/restore rejects tampering and unsigned extra entries. | Implemented |
-| Evidence packages | `CasePackageService`, package tests | Closed-case packages can be generated and verified. | Implemented |
-| DevSecOps pipeline | `.github/workflows/dev.yml` | One visible workflow timeline with dependent jobs and downloadable artifacts. | Implemented |
-| SAST | SpotBugs, SonarCloud and CodeQL in the `sast` job | Static analysis evidence is generated; CodeQL primary evidence is GitHub Code Scanning. | Evidence review |
-| SCA/SBOM | Dependency-Check and CycloneDX in the `dependency-scanning` job | Dependency risk and inventory evidence is generated. | Evidence review |
-| Secret scanning | Gitleaks in `security-secrets` | Repository secret scan evidence is generated and confirmed leaks block the workflow. | Implemented |
-| DAST | ZAP baseline in `dast-scan`, `CsrfCookieAttributesTest`, `SecurityHeadersTest` | Runtime HTTP baseline evidence is generated against a live CI application instance; `XSRF-TOKEN` keeps frontend-readable CSRF behavior with `SameSite=Lax`; `no-store` and session-management informational alerts are accepted by design. | Evidence review |
-| Runtime security / IAST-like evidence | Runtime tests, live endpoint checks and ZAP-adjacent runtime notes in `dast-scan` | Runtime security tests always run; full agent-based IAST is not claimed. | Evidence review |
-| Coverage and mutation testing | JaCoCo in `build-test`; PIT in `pit-mutation-testing` | Coverage is blocking; PIT is evidence review with report/fallback artifact. | Evidence review |
+| Superficie | Risco | Controlos |
+| --- | --- | --- |
+| Login interno | brute force, spoofing, inactive users | Rate limiting, BCrypt, MFA, audit log, inactive block. |
+| JWT | token tampering, replay, role spoofing | Assinatura, issuer/audience/kid, expiracao, revogacao, role match. |
+| Tracking code | enumeracao, acesso indevido | Formato, rate limiting, erros genericos, nao colocar em URL. |
+| Uploads | malware, path traversal, content spoofing | Allowlist, MIME/magic bytes, scanner, nomes gerados, quarentena. |
+| Analyst workflows | EoP, IDOR, alteracao indevida | RBAC, ownership, workflow validation, optimistic locking. |
+| Auditoria | repudiation/tampering | correlationId, integrityHash, DTOs sem segredos. |
+| Backups/packages | tampering, ZIP Slip, path traversal | HMAC/hash manifests, canonical path checks, verify before restore. |
+| CI/CD | secrets, dependencias vulneraveis, regressao | Gitleaks, Dependency-Check, CycloneDX, SAST, testes. |
 
-## Gate Policy
+## 3. STRIDE aplicado
 
-| Check | Current behavior |
-| --- | --- |
-| Maven compile/test | Blocking |
-| Security configuration validator tests | Blocking |
-| JaCoCo report and coverage check | Blocking in `build-test` |
-| Gitleaks | Blocking for confirmed leaks |
-| Runtime security tests | Blocking inside `dast-scan` |
-| Application startup for ZAP | Blocking inside `dast-scan` |
-| PIT | Evidence review |
-| SpotBugs, SonarCloud, CodeQL, Dependency-Check, CycloneDX and ZAP | Evidence review with manual triage |
+### Spoofing
 
-## Tool Assessment Matrix
+Ameacas:
 
-| Tool | Result | Evidence | Residual risk |
-| --- | --- | --- | --- |
-| JUnit/MockMvc | Maven `test`/`verify` runs the automated test suite and CI uploads Surefire evidence. | `ci-surefire-test-reports`, `ghostreport/target/surefire-reports` | Keep expanding negative-path tests for admin, report and backup workflows over time. |
-| JaCoCo | Coverage report and coverage check run during Maven `verify` in CI. | `ci-jacoco-coverage-report`, `ghostreport/target/site/jacoco`, `ghostreport/target/jacoco.exec` | Some controllers/services can still be improved without lowering the current gate. |
-| Gitleaks | Generates JSON evidence and blocks confirmed leaks. | `secret-scan-gitleaks-json` | Workspace-wide local scans can include ignored diagnostic files; use repository-scope CI evidence for assessment. |
-| SpotBugs | Runs in the SAST job and uploads XML evidence. | `sast-reports` | Findings require triage before suppression or acceptance. |
-| SonarCloud | Runs when `SONAR_TOKEN` is configured. | `sast-reports`, SonarCloud UI | The job depends on repository secrets/variables being configured. |
-| CodeQL | Publishes primary findings to GitHub Code Scanning. | GitHub Code Scanning, `sast-reports` summary | Local full SARIF archive is not claimed by this workflow. |
-| Dependency-Check | Runs in evidence mode and uploads reports. | `dependency-check-sca-reports` | Findings require applicability and upgrade triage. |
-| CycloneDX | Generates JSON/XML SBOM. | `sbom-cyclonedx` | SBOM is inventory evidence, not vulnerability triage by itself. |
-| ZAP | Baseline DAST runs against a live app in CI. | `dast-zap-baseline-reports`, `CsrfCookieAttributesTest` | `XSRF-TOKEN` is intentionally not `HttpOnly` because frontend JavaScript reads it for `X-XSRF-TOKEN`; `SameSite=Lax` is enforced. Baseline scan is unauthenticated and should be treated as first-line DAST evidence. |
-| Runtime security / IAST-like evidence | Security-focused tests run with JaCoCo skipped and upload Surefire, endpoint checks and runtime notes. | `iast-runtime-security-evidence` | Full agent-based IAST and taint tracking are not claimed. |
-| PIT | Runs in the dedicated `pit-mutation-testing` workflow, validates `target/pit-reports/index.html` and uploads the complete HTML/XML report plus summaries. | `pit-mutation-testing-report` | Mutation score is not a blocking Sprint 2 gate. |
-| actionlint | Workflow syntax can be validated locally when actionlint is available. | Local command output or pipeline validation notes | Does not replace a real GitHub Actions run. |
+- atacante tenta autenticar-se como role interna;
+- token JWT manipulado para alterar `role`;
+- utilizador inactivo tenta continuar a usar credenciais.
 
-## Scope Boundaries
+Mitigacoes:
 
-The current assessment covers the implemented coursework application and its
-automated security evidence. External SIEM, distributed token revocation,
-authenticated deep DAST, production TLS operations, WORM or append-only log
-storage and automated retention are documented as future operational hardening.
-MFA is implemented for ADMIN with short-lived one-time codes; production
-delivery/enrollment through email/SMS, TOTP or an external identity provider
-remains future operational hardening.
+- password hashing com BCrypt;
+- MFA para `ADMIN`, `ANALYST` e `AUDITOR`;
+- JWT assinado e validado;
+- token role deve corresponder ao utilizador actual;
+- inactive users sao bloqueados;
+- rate limiting e alertas de brute force.
 
-The local folder `Deliverables/Phase 2/Evidence` is not automatically written by
-GitHub Actions. It is a curated archive populated from downloaded workflow
-artifacts using `scripts/collect-evidence.ps1`.
+Evidencia: `AdminMfaAuthenticationTest`, `JwtServiceSecurityTest`,
+`AuthenticationSecurityIntegrationTest`, `LoginRateLimitSecurityTest`.
+
+### Tampering
+
+Ameacas:
+
+- alterar backups;
+- alterar pacotes de evidencia;
+- alterar logs/alertas;
+- alterar ficheiros no filesystem por traversal.
+
+Mitigacoes:
+
+- manifestos com hashes/HMAC;
+- verificacao de backups antes de restore;
+- rejeicao de manifest tampering;
+- `integrityHash` em auditoria/alertas;
+- canonical path checks;
+- nomes de ficheiro gerados.
+
+Evidencia: `BackupServiceIntegrationTest`, `CasePackageServiceIntegrationTest`,
+`FileStorageServiceTest`.
+
+### Repudiation
+
+Ameacas:
+
+- admin nega alteracao de utilizador;
+- analyst nega alteracao de caso;
+- actor nega logout/login/MFA.
+
+Mitigacoes:
+
+- audit logs para operacoes criticas;
+- actor/action/target/details/correlationId;
+- security alerts em eventos suspeitos;
+- nao guardar segredos nos logs.
+
+Evidencia: `AuditLogSecurityTest`, `RuntimeSecurityEventLoggingTest`,
+`AdminUserManagementSecurityTest`.
+
+### Information Disclosure
+
+Ameacas:
+
+- leak de tokens/passwords/tracking codes;
+- leak de paths internos;
+- XSS no frontend;
+- auditor receber dados anonimos sensiveis em excesso.
+
+Mitigacoes:
+
+- DTOs de resposta;
+- redaction de logs;
+- erros genericos;
+- frontend sem sinks perigosos;
+- tokens nao persistidos em browser storage;
+- tracking code nao colocado no URL;
+- auditor ve metadados adequados.
+
+Evidencia: `AnonymousDataLoggingTest`, `FrontendXssDataExposureTest`,
+`ErrorHandlingSecurityTest`, `AuditorAuthorizationTest`.
+
+### Denial of Service
+
+Ameacas:
+
+- brute force login;
+- spam de tracking code;
+- uploads grandes/muitos ficheiros;
+- abuso de downloads.
+
+Mitigacoes:
+
+- rate limiting por fluxo;
+- limite de tamanho;
+- limite de ficheiros por request;
+- rejeicao antecipada de conteudo invalido;
+- respostas controladas.
+
+Evidencia: `RateLimiterServiceTest`, `LoginRateLimitSecurityTest`,
+`ReportControllerAttachmentUploadTest`.
+
+### Elevation of Privilege
+
+Ameacas:
+
+- analyst usa endpoints admin/auditor;
+- auditor altera casos;
+- analyst acede a caso de outro analyst;
+- ultimo admin activo e removido;
+- role invalida criada por admin.
+
+Mitigacoes:
+
+- regras Spring Security;
+- service-level ownership;
+- role allowlist;
+- proteccao do ultimo admin activo;
+- testes negativos por role.
+
+Evidencia: `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`,
+`AuditorAuthorizationTest`, `AdminUserManagementSecurityTest`.
+
+## 4. Avaliacao por controlo
+
+| Controlo | Estado | Observacao |
+| --- | --- | --- |
+| Denuncia anonima | Implementado | Sem conta de reporter; tracking code controla acompanhamento. |
+| Autenticacao interna | Implementado | Password + MFA + JWT. |
+| MFA | Implementado | Roles internas exigem MFA por omissao. |
+| RBAC | Implementado | Spring Security + testes. |
+| Ownership | Implementado | Analistas limitados a casos elegiveis/atribuidos. |
+| Validacao input | Implementado | DTOs, Bean Validation, allowlists. |
+| Upload hardening | Implementado | MIME/magic bytes/scanner/path checks. |
+| Auditoria/alertas | Implementado | Logs e alertas com integrity metadata. |
+| Backups | Implementado | Manifestos, hashes, HMAC, verify/restore. |
+| SCA/SBOM | Implementado | Dependency-Check e CycloneDX. |
+| SAST | Implementado como evidencia | CodeQL, SpotBugs, SonarCloud. |
+| DAST | Implementado baseline | ZAP baseline e runtime probes. |
+| IAST | Parcial | Evidencia runtime/IAST-like, nao agente completo. |
+| Instalacao segura | Documentado | Secrets, perfis, PostgreSQL, checklist. |
+
+## 5. Riscos residuais
+
+| Risco | Impacto | Mitigacao futura |
+| --- | --- | --- |
+| Canal MFA real nao integrado | MFA dev usa logs quando activado | Integrar TOTP, email/SMS seguro ou IdP. |
+| Rate limiting em memoria | Multi-no nao partilha counters | Redis/API gateway/WAF. |
+| Sem Flyway/Liquibase | Drift de schema em producao | Migrações versionadas. |
+| Sem SIEM/WORM | Retencao/auditoria operacional limitada | Exportar logs para storage imutavel/SIEM. |
+| ZAP nao autenticado | Cobertura DAST incompleta | Contextos autenticados por role. |
+| Sem IAST agent-based | Menos visibilidade runtime interna | Integrar ferramenta IAST. |
+| Sem secret manager externo | Gestao manual de secrets | Vault/cloud secret manager. |
+
+## 6. Conclusao
+
+Para o ambito DESOFS, o projecto demonstra uma abordagem completa: ameacas
+foram identificadas, mitigacoes foram implementadas, testes validam comportamento
+esperado e a pipeline produz evidencia. As limitacoes restantes sao claras e
+maioritariamente operacionais.

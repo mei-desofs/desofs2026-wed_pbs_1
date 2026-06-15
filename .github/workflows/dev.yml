@@ -400,7 +400,7 @@ jobs:
           mkdir -p target/iast-evidence
           ./mvnw \
             -Djacoco.skip=true \
-            -Dtest=RuntimeSecurityEventLoggingTest,ErrorHandlingSecurityTest,SecurityHeadersTest,JwtServiceSecurityTest,LoginRateLimitSecurityTest,CsrfSecurityTest \
+            -Dtest=RuntimeSecurityEventLoggingTest,ErrorHandlingSecurityTest,SecurityHeadersTest,JwtServiceSecurityTest,LoginRateLimitSecurityTest,CsrfSecurityTest,PublicReportFlowIntegrationTest,ReportControllerAttachmentUploadTest,RbacAuthorizationMatrixTest,AdminMfaAuthenticationTest,AuditorAuthorizationTest,AdminBackupControllerSecurityTest,BackupServiceIntegrationTest,ApiValidationContractTest \
             test
 
       - name: Build GhostReport executable JAR for DAST and runtime security testing
@@ -437,49 +437,10 @@ jobs:
 
       - name: Exercise runtime security endpoints for evidence
         run: |
-          mkdir -p target/iast-evidence
-
-          login_payload='{"username":"ci-runtime-probe","password":"invalid-password"}'
-          failed_login_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-            -H 'Content-Type: application/json' \
-            --data "$login_payload" \
-            http://localhost:8081/auth/login || true)"
-
-          rate_limit_status="not exercised"
-          for attempt in 1 2 3 4 5 6; do
-            rate_limit_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-              -H 'Content-Type: application/json' \
-              --data "$login_payload" \
-              http://localhost:8081/auth/login || true)"
-          done
-
-          {
-            echo "| Endpoint | Purpose | HTTP status |"
-            echo "| --- | --- | --- |"
-            for item in \
-              "GET /index.html|Public frontend and security headers|http://localhost:8081/index.html" \
-              "GET /login.html|Unauthenticated login page request|http://localhost:8081/login.html" \
-              "GET /admin/users|Protected admin endpoint without token|http://localhost:8081/admin/users"
-            do
-              method_and_path="${item%%|*}"
-              rest="${item#*|}"
-              purpose="${rest%%|*}"
-              url="${rest#*|}"
-              status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$url" || true)"
-              echo "| $method_and_path | $purpose | $status |"
-            done
-
-            invalid_jwt_status="$(python -c "import http.client; conn = http.client.HTTPConnection('localhost', 8081, timeout=10); conn.request('GET', '/admin/users', headers={'Authorization': 'Bearer invalid-ci-runtime-token'}); print(conn.getresponse().status)" 2>/dev/null || echo 000)"
-            csrf_rejection_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-              -H 'Content-Type: application/json' \
-              --data '{"currentPassword":"old-password","newPassword":"new-password"}' \
-              http://localhost:8081/auth/password/change || true)"
-
-            echo "| GET /admin/users | Protected endpoint with invalid JWT | $invalid_jwt_status |"
-            echo "| POST /auth/login | Failed login attempt with invalid credentials | $failed_login_status |"
-            echo "| POST /auth/login | Repeated failed login attempts for rate-limit/brute-force evidence | $rate_limit_status |"
-            echo "| POST /auth/password/change | CSRF rejection on protected state-changing endpoint without CSRF token | $csrf_rejection_status |"
-          } > target/iast-evidence/runtime-endpoints.md
+          python ../.github/scripts/runtime_security_probe.py \
+            --base-url http://localhost:8081 \
+            --output-dir target/iast-evidence \
+            --app-log target/ghostreport-dast-app.log
 
       - name: Check runtime logs for sensitive evidence leakage
         if: always()
@@ -566,11 +527,25 @@ jobs:
             echo "- JwtServiceSecurityTest"
             echo "- LoginRateLimitSecurityTest"
             echo "- CsrfSecurityTest"
+            echo "- PublicReportFlowIntegrationTest"
+            echo "- ReportControllerAttachmentUploadTest"
+            echo "- RbacAuthorizationMatrixTest"
+            echo "- AdminMfaAuthenticationTest"
+            echo "- AuditorAuthorizationTest"
+            echo "- AdminBackupControllerSecurityTest"
+            echo "- BackupServiceIntegrationTest"
+            echo "- ApiValidationContractTest"
             echo ""
             echo "Validated controls:"
             echo ""
             echo "- authentication success/failure audit events;"
             echo "- invalid/expired JWT handling and alerting;"
+            echo "- MFA challenge, invalid code rejection and valid verification for internal roles;"
+            echo "- public report creation, invalid input and dangerous-character handling;"
+            echo "- tracking-code verification and repeated invalid tracking attempts;"
+            echo "- upload allow/block decisions for extension, content signature and path traversal;"
+            echo "- RBAC for admin, analyst and auditor endpoint groups;"
+            echo "- backup creation, verification, tampering detection and path rejection;"
             echo "- login rate limiting and brute-force detection;"
             echo "- CSRF rejection/acceptance behaviour;"
             echo "- browser security headers, including CSP;"
@@ -653,4 +628,3 @@ jobs:
           if [ -f target/ghostreport-dast-app.pid ]; then
             kill "$(cat target/ghostreport-dast-app.pid)" || true
           fi
-

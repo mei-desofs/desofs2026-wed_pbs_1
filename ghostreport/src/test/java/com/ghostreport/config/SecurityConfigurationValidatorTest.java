@@ -46,6 +46,43 @@ class SecurityConfigurationValidatorTest {
     }
 
     @Test
+    void explicitProductionProfileRejectsDevelopmentJwtSecret() {
+        MockEnvironment environment = new MockEnvironment();
+        environment.setActiveProfiles("prod");
+
+        SecurityConfigurationValidator validator = validator(
+                environment,
+                "dev-only-change-this-secret-32-chars",
+                VALID_BACKUP_SECRET,
+                3600,
+                false,
+                "uploads",
+                "backups"
+        );
+
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("must not use development or test JWT secrets");
+    }
+
+    @Test
+    void runTriggersConfigurationValidation() {
+        SecurityConfigurationValidator validator = validator(
+                new MockEnvironment(),
+                "short-secret",
+                VALID_BACKUP_SECRET,
+                3600,
+                false,
+                "uploads",
+                "backups"
+        );
+
+        assertThatThrownBy(() -> validator.run(null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("JWT_SECRET");
+    }
+
+    @Test
     void devProfileAllowsDevelopmentJwtSecretAndSeedUsers() {
         MockEnvironment environment = new MockEnvironment();
         environment.setActiveProfiles("dev");
@@ -99,11 +136,75 @@ class SecurityConfigurationValidatorTest {
     }
 
     @Test
+    void acceptsJwtSecretWithExactlyThirtyTwoBytes() {
+        SecurityConfigurationValidator validator = validator(
+                new MockEnvironment(),
+                "j".repeat(32),
+                VALID_BACKUP_SECRET,
+                3600,
+                false,
+                "uploads",
+                "backups"
+        );
+
+        assertThatCode(validator::validate).doesNotThrowAnyException();
+    }
+
+    @Test
+    void rejectsJwtSecretBelowThirtyTwoBytes() {
+        SecurityConfigurationValidator validator = validator(
+                new MockEnvironment(),
+                "j".repeat(31),
+                VALID_BACKUP_SECRET,
+                3600,
+                false,
+                "uploads",
+                "backups"
+        );
+
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("JWT_SECRET");
+    }
+
+    @Test
     void rejectsWeakBackupHmacSecret() {
         SecurityConfigurationValidator validator = validator(
                 new MockEnvironment(),
                 VALID_TEST_VALUE,
                 "short-backup-secret",
+                3600,
+                false,
+                "uploads",
+                "backups"
+        );
+
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("BACKUP_HMAC_SECRET");
+    }
+
+    @Test
+    void acceptsBackupHmacSecretWithExactlyThirtyTwoBytes() {
+        SecurityConfigurationValidator validator = validator(
+                new MockEnvironment(),
+                VALID_TEST_VALUE,
+                "b".repeat(32),
+                3600,
+                false,
+                "uploads",
+                "backups"
+        );
+
+        assertThatCode(validator::validate).doesNotThrowAnyException();
+    }
+
+    @Test
+    void rejectsBackupHmacSecretBelowThirtyTwoBytes() {
+        SecurityConfigurationValidator validator = validator(
+                new MockEnvironment(),
+                VALID_TEST_VALUE,
+                "b".repeat(31),
                 3600,
                 false,
                 "uploads",
@@ -164,6 +265,21 @@ class SecurityConfigurationValidatorTest {
         assertThatThrownBy(validator::validate)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("JWT_EXPIRATION_SECONDS");
+    }
+
+    @Test
+    void acceptsOneSecondJwtExpiration() {
+        SecurityConfigurationValidator validator = validator(
+                new MockEnvironment(),
+                VALID_TEST_VALUE,
+                VALID_BACKUP_SECRET,
+                1,
+                false,
+                "uploads",
+                "backups"
+        );
+
+        assertThatCode(validator::validate).doesNotThrowAnyException();
     }
 
     @Test

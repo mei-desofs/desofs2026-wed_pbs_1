@@ -11,10 +11,18 @@ class ReportDescriptionTest {
 
         ReportDescription desc =
                 new ReportDescription(
-                        "This is a valid description"
+                        "  This is a valid description  "
                 );
 
         assertNotNull(desc);
+        assertEquals(
+                "This is a valid description",
+                desc.value()
+        );
+        assertEquals(
+                "This is a valid description",
+                desc.toString()
+        );
     }
 
     @Test
@@ -23,6 +31,46 @@ class ReportDescriptionTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> new ReportDescription("abc")
+        );
+    }
+
+    @Test
+    void minimumLengthDescriptionIsAccepted() {
+
+        ReportDescription desc =
+                new ReportDescription("1234567890");
+
+        assertEquals("1234567890", desc.value());
+    }
+
+    @Test
+    void descriptionJustBelowMinimumLengthThrows() {
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new ReportDescription("123456789")
+        );
+    }
+
+    @Test
+    void maximumLengthDescriptionIsAccepted() {
+
+        String value = "a".repeat(3000);
+
+        ReportDescription desc =
+                new ReportDescription(value);
+
+        assertEquals(value, desc.value());
+    }
+
+    @Test
+    void descriptionAboveMaximumLengthThrows() {
+
+        String tooLongDescription = "a".repeat(3001);
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new ReportDescription(tooLongDescription)
         );
     }
 }

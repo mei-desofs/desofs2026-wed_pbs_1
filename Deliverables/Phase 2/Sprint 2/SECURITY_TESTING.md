@@ -1,91 +1,103 @@
-# Security Testing Evidence
+# Testes de seguranca e validacao
 
-GhostReport uses automated tests and pipeline tools as security evidence for
-Phase 2 Sprint 2.
+## 1. Resultado local
 
-| Test/tool | Purpose | Evidence | Gate mode |
-| --- | --- | --- | --- |
-| JUnit/MockMvc | Authentication, authorization, validation, error handling and file/backup flows | Surefire reports and `ghostreport/src/test/java` | Blocking |
-| JaCoCo | Coverage visibility and minimum coverage gate | `target/site/jacoco` and `ci-jacoco-coverage-report` | Blocking in `build-test / build-and-test` |
-| Runtime security tests | Focused tests for JWT, rate limiting, CSRF, headers and security events | `iast-runtime-security-evidence` | Blocking inside `dast-scan / dast-scan` |
-| OWASP ZAP | Baseline DAST against the running app | ZAP HTML/JSON/XML artifacts | Evidence review |
-| PIT | Mutation testing for test-quality evidence | `target/pit-reports` and CI artifact | Evidence review |
+Comando executado na linha actual:
 
-## PIT Configuration
-
-PIT is configured for the GhostReport application subpackages:
-
-- `com.ghostreport.config.*`
-- `com.ghostreport.controller.*`
-- `com.ghostreport.domain.*`
-- `com.ghostreport.dto.*`
-- `com.ghostreport.exception.*`
-- `com.ghostreport.model.*`
-- `com.ghostreport.repository.*`
-- `com.ghostreport.security.*`
-- `com.ghostreport.service.*`
-- `com.ghostreport.validation.*`
-
-HTML and XML output are enabled, and `timestampedReports=false` keeps the final
-report at a predictable path:
-
-```text
-ghostreport/target/pit-reports/index.html
+```powershell
+cd ghostreport
+.\mvnw.cmd test
 ```
 
-Mutation testing remains evidence review, not a fast merge gate. It is separated
-from the main `dev` workflow into the dedicated `pit-mutation-testing` workflow
-so the main pipeline stays responsive while PIT can run long enough to generate
-the complete final report.
+Resultado: 180 testes, 0 falhas, 0 erros, 0 skipped.
 
-## Current PIT Status
+## 2. Estrategia
 
-The dedicated workflow:
+Os testes do GhostReport foram organizados para validar nao so "happy paths",
+mas tambem abuso, autorizacao negativa, erros genericos, integridade e limites
+operacionais. Isto segue a linha da Phase 1: cada ameaca STRIDE deve ter pelo
+menos uma mitigacao implementada e, sempre que possivel, um teste que a prove.
 
-- compiles tests/classes and archives `pit-target-classes.txt` for diagnostics;
-- runs `org.pitest:pitest-maven:mutationCoverage`;
-- uses the full Maven PIT scope from `ghostreport/pom.xml`;
-- validates that `target/pit-reports/index.html` exists;
-- uploads the complete `target/pit-reports/**` artifact;
-- writes `pit-evidence-summary.md` and `pit-mutation-summary.md` with the final
-  mutation percentages when `mutations.xml` is generated.
+## 3. Categorias de testes
 
-Local execution on this workstation can still be unreliable with Java 23 because
-PIT has previously failed with `MINION_DIED` / `CoverageMinion` startup failure.
-The GitHub Actions workflow uses Java 17 and is the expected source of final PIT
-evidence.
-
-Latest local attempt on Java 23:
-
-- command: `.\mvnw.cmd test org.pitest:pitest-maven:mutationCoverage`;
-- Surefire completed first with `180` tests and `0` failures;
-- PIT failed during coverage generation with `Coverage generation minion exited
-  abnormally` and `Could not find or load main class
-  org.pitest.coverage.execute.CoverageMinion`;
-- no local `mutations.xml` was generated, so no survivor list was available for
-  safe targeted mutation-test work in this pass.
-
-The useful test hardening added in this pass focuses on real behavior rather
-than artificial mutant killing: deterministic MFA expiry/reuse checks and a live
-CSRF cookie attribute test.
-
-## Sonar Maintainability Review
-
-The final review pass resolved the Sonar maintainability findings for:
-
-- empty Jackson DTO constructors in `MfaVerifyRequest` and `UpdateUserRequest`,
-  now documented as required for request-body binding before Bean Validation;
-- duplicated `User not found` literals in `UserService`, now centralized in a
-  private constant;
-- chained AssertJ assertions in schema/frontend tests;
-- `AdminMfaAuthenticationTest` method references and removal of the real
-  `Thread.sleep()` expiry wait.
-
-## ZAP Alert Review
-
-| Alert | Decision | Rationale / evidence |
+| Categoria | Testes/classes | O que validam |
 | --- | --- | --- |
-| `Cookie No HttpOnly Flag` on `XSRF-TOKEN` | Accepted by design | The static frontend reads `XSRF-TOKEN` in `js/api.js` and returns it in `X-XSRF-TOKEN`. It is a CSRF token, not a JWT/session/authentication cookie. Setting `HttpOnly=true` would break the current SPA-style CSRF flow. |
-| `Cookie without SameSite Attribute` on `XSRF-TOKEN` | Fixed | `SecurityConfig` customizes the CSRF cookie with `SameSite=Lax`. `CsrfCookieAttributesTest` verifies `XSRF-TOKEN` includes `SameSite=Lax` and remains readable by frontend JavaScript. |
-| `Non-Storable Content` | Accepted informational | `Cache-Control: no-store` is intentional for a whistleblowing/reporting app with authentication and sensitive report flows. It should not be weakened to satisfy an informational DAST item. |
-| `Session Management Response Identified` | Accepted informational | `XSRF-TOKEN` is not a session identifier and carries no authenticated session or JWT credential. Authentication remains via JWT in the `Authorization` header. |
+| Contexto/config | `GhostreportApplicationTests`, `SecurityConfigurationValidatorTest`, `DataInitializerDisabledTest`, `SchemaMigrationScriptTest` | Arranque, secrets fracos, seed users, schema metadata. |
+| Autenticacao/MFA/JWT | `AdminMfaAuthenticationTest`, `AuthenticationSecurityIntegrationTest`, `JwtServiceSecurityTest`, `JwtRevocationPersistenceIntegrationTest` | Password login, MFA para roles internas, token claims, revogacao, expiracao, kid, issuer/audience. |
+| Password reset/policy | `PasswordPolicyAndResetSecurityTest` | Password comprometida, reutilizacao, token expirado/reutilizado. |
+| RBAC | `RbacAuthorizationMatrixTest`, `AdminAuthorizationTest`, `AuditorAuthorizationTest` | Endpoints permitidos/negados por role. |
+| Admin lifecycle | `AdminUserManagementSecurityTest` | Activar/desactivar, editar roles, ultimo admin activo, audit logs. |
+| Analyst ownership | `AnalystCaseOwnershipTest`, `BusinessLogicWorkflowSecurityTest` | Ownership, casos de outro analista, transitions, optimistic locking. |
+| Public reports | `PublicReportFlowIntegrationTest`, `TrackingCodeEnumerationTest` | Criacao anonima, tracking code, erros seguros, enumeracao. |
+| Uploads/files | `ReportControllerAttachmentUploadTest`, `FileStorageServiceTest`, `SafeFilenameSecurityTest`, `SafeFilenameTest` | MIME, magic bytes, traversal, malware/quarantine, limites, paths. |
+| Auditoria/logging | `AuditLogSecurityTest`, `AnonymousDataLoggingTest`, `RuntimeSecurityEventLoggingTest` | Nao guardar passwords/tokens/tracking code, alertas e correlationId. |
+| Backups/packages | `BackupServiceIntegrationTest`, `AdminBackupControllerSecurityTest`, `CasePackageServiceIntegrationTest` | Manifestos, tampering, restore, traversal, packages. |
+| Frontend | `FrontendXssDataExposureTest`, `FrontendNavbarVisibilityTest`, `CsrfCookieAttributesTest` | XSS sinks, tokens em storage, tracking code em URL, navs escondidas, CSRF cookie. |
+| Headers/erros | `SecurityHeadersTest`, `ErrorHandlingSecurityTest`, `ApiValidationContractTest` | Headers, JSON errors genericos, validacao de contratos. |
+| Rate limiting | `RateLimiterServiceTest`, `LoginRateLimitSecurityTest` | Limites, reset de janela, brute force alert. |
+
+## 4. Matriz de validacao de endpoints
+
+| Fluxo | Validacoes | Testes |
+| --- | --- | --- |
+| `/auth/login` | Campos obrigatorios, rate limit, inactive user, erros genericos. | `AuthenticationSecurityIntegrationTest`, `LoginRateLimitSecurityTest`. |
+| `/auth/mfa/verify` | Challenge obrigatorio, codigo de 6 digitos, TTL, uso unico, role activa. | `AdminMfaAuthenticationTest`. |
+| `/auth/password-reset/*` | Resposta generica, token expirado/reutilizado, password policy. | `PasswordPolicyAndResetSecurityTest`. |
+| `/reports` | Titulo/descricao/categoria, DTO, resposta sem hash interno. | `PublicReportFlowIntegrationTest`, `ApiValidationContractTest`. |
+| `/reports/verify` | Tracking code format, erro seguro, rate limit/enumeracao. | `TrackingCodeEnumerationTest`, `PublicReportFlowIntegrationTest`. |
+| `/reports/{id}/attachments` | Max files, size, MIME, magic bytes, filename, tracking code. | `ReportControllerAttachmentUploadTest`, `FileStorageServiceTest`. |
+| `/analyst/**` | Role, ownership, workflow, status/priority/notes. | `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`, `BusinessLogicWorkflowSecurityTest`. |
+| `/audit/**` | Auditor/admin read-only, sem paths/filenames sensiveis. | `AuditorAuthorizationTest`. |
+| `/admin/users/**` | Role allowlist, password policy, ultimo admin activo. | `AdminUserManagementSecurityTest`. |
+| `/admin/backups/**` | Admin-only, path traversal, verify before restore. | `AdminBackupControllerSecurityTest`, `BackupServiceIntegrationTest`. |
+
+## 5. STRIDE e testes
+
+| STRIDE | Testes associados |
+| --- | --- |
+| Spoofing | `AdminMfaAuthenticationTest`, `JwtServiceSecurityTest`, `LoginRateLimitSecurityTest`. |
+| Tampering | `BackupServiceIntegrationTest`, `CasePackageServiceIntegrationTest`, `JwtServiceSecurityTest`. |
+| Repudiation | `AuditLogSecurityTest`, `RuntimeSecurityEventLoggingTest`. |
+| Information Disclosure | `AnonymousDataLoggingTest`, `FrontendXssDataExposureTest`, `ErrorHandlingSecurityTest`. |
+| Denial of Service | `RateLimiterServiceTest`, upload size/max files tests. |
+| Elevation of Privilege | `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`, `AdminUserManagementSecurityTest`. |
+
+## 6. Testes frontend
+
+O frontend e estatico, mas tambem foi validado:
+
+- nao usa `innerHTML`/sinks perigosos para dados externos;
+- renderiza dados atraves de text nodes/helpers;
+- nao guarda bearer tokens em `localStorage`/`sessionStorage`;
+- nao coloca tracking code em URLs;
+- navs autenticadas começam escondidas;
+- MFA existe em admin, analyst e auditor.
+
+## 7. Testes de seguranca runtime/pipeline
+
+Na pipeline, alem de `./mvnw verify`, existe job `dast-scan` que:
+
+- corre testes runtime seleccionados;
+- arranca a aplicacao em `localhost:8081`;
+- faz probes HTTP;
+- verifica logs para fuga de dados sensiveis;
+- corre ZAP baseline;
+- publica evidencia.
+
+Artefactos relacionados:
+
+- [iast-runtime-evidence.md](iast-runtime-evidence.md)
+- [runtime-endpoints.md](runtime-endpoints.md)
+- [runtime-log-sanitization.md](runtime-log-sanitization.md)
+
+O reforco runtime inclui probes live para `POST /reports`, tracking code,
+uploads e endpoints protegidos, e testes runtime-focused para MFA, RBAC por
+role, JWT invalido/expirado, backups, ZIP Slip, max upload size e error
+handling.
+
+## 8. Limitacoes
+
+- Testes automatizados nao substituem pentest manual.
+- ZAP baseline e passivo e nao autenticado.
+- IAST e evidencia runtime/IAST-like, nao agent-based.
+- Rate limiting e em memoria; ambiente multi-no exigiria mecanismo externo.

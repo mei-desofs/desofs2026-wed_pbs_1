@@ -39,7 +39,7 @@ ghostreport:
     expiration-seconds: 3600
   mfa:
     enabled: false
-    admin-required: true
+    required-roles: ADMIN,ANALYST,AUDITOR
     code-ttl-seconds: 300
     expose-code: true
   seed-users:

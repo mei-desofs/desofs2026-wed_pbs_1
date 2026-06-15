@@ -1,59 +1,41 @@
 # GhostReport
 
-GhostReport is a Spring Boot web application for anonymous reporting, internal
-case analysis and audit evidence management. The project was developed for the
-DESOFS secure software development coursework.
+GhostReport é uma aplicação web Spring Boot para denúncia anónima, análise
+interna de casos e gestão de evidência de auditoria. O projecto foi
+desenvolvido no âmbito da unidade curricular de desenvolvimento seguro de
+software.
 
-## Main Capabilities
+## Capacidades principais
 
-- Anonymous report submission.
-- Tracking code based report verification.
-- Evidence upload with file validation and safe storage.
-- JWT based authentication for internal users.
-- Mandatory code-based MFA for `ADMIN` users.
-- Role based access control for internal `ADMIN`, `ANALYST` and `AUDITOR` accounts.
-- Analyst case ownership controls.
-- Audit logs and security alerts.
-- Evidence package generation for closed cases.
-- Backup generation and integrity verification.
-- DevSecOps evidence through GitHub Actions.
+- Submissão anónima de denúncias e verificação pública por código de tracking.
+- Upload de evidência com validação de ficheiros, nomes gerados e armazenamento
+  seguro.
+- Autenticação JWT para utilizadores internos.
+- MFA baseado em código antes da emissão de JWT para `ADMIN`, `ANALYST` e `AUDITOR`.
+- Controlo de acesso por roles `ADMIN`, `ANALYST` e `AUDITOR`.
+- Controlo de propriedade de casos para analistas.
+- Logs de auditoria, alertas de segurança e hashes de integridade para registos
+  críticos.
+- Geração de pacotes de evidência para casos fechados.
+- Geração, reposição e verificação de integridade de backups.
+- Evidência DevSecOps através de GitHub Actions, SCA, SAST, DAST e SBOM.
 
-## Current Role Model
+## Modelo de roles actual
 
-| Role | Implemented capabilities |
+| Role | Capacidades implementadas |
 | --- | --- |
-| Anonymous reporter | Submit reports, verify tracking codes and upload evidence. |
-| User | Authenticated basic role; no access to admin, analyst or audit routes. |
-| Analyst | View eligible cases, claim cases, update assigned cases and generate evidence packages for closed cases. |
-| Auditor | View audit/security evidence and verify evidence packages and backups. |
-| Admin | Create/list/edit/activate/deactivate users, manage roles, view audit/security information and manage backup operations. |
+| Denunciante anónimo | Submeter denúncias, verificar códigos de tracking, enviar evidência e descarregar uma cópia da denúncia por código. |
+| Analyst | Consultar casos elegíveis, assumir/actualizar casos atribuídos e gerar pacotes de evidência para casos fechados. |
+| Auditor | Consultar evidência de auditoria/segurança e verificar pacotes de evidência e backups. |
+| Admin | Criar, listar, editar, activar e desactivar utilizadores, consultar informação de auditoria/segurança e gerir backups. |
 
-Admin user management currently supports the lifecycle operations needed by the
-implemented role model. User removal is implemented as logical deactivation so
-audit history and ownership references remain intact.
+As roles internas activas são `ADMIN`, `ANALYST` e `AUDITOR`. Linhas legadas
+`USER` são tratadas como dados históricos e não fazem parte do modelo de acesso
+actual.
 
-## Security Controls
+## Execução local
 
-- Stateless JWT authentication.
-- Admin MFA before JWT issuance.
-- Login rate limiting and brute-force security alerts.
-- Inactive users are blocked from login.
-- BCrypt password hashing.
-- Centralized Spring Security authorization rules.
-- Domain validation for tracking codes, report descriptions and filenames.
-- Upload restrictions for size, extension, MIME type and file signatures.
-- Path traversal and zip slip protections.
-- In-memory rate limiting for login and public abuse-sensitive flows.
-- SHA-256 hashes for attachments, evidence packages and backup manifests.
-- Security headers configured in Spring Security.
-- Audit logs for critical operations.
-
-Scope boundaries and operational hardening notes are documented in the security
-assessment and ASVS evidence.
-
-## Running Locally
-
-From the Spring Boot module:
+A partir do módulo Spring Boot:
 
 ```powershell
 cd ghostreport
@@ -63,40 +45,52 @@ $env:JWT_SECRET="dev-local-secret-with-at-least-32-chars"
 .\mvnw.cmd spring-boot:run
 ```
 
-The application uses port `8081` by default.
-For PowerShell, prefer `.\mvnw.cmd "-Dspring-boot.run.profiles=dev" spring-boot:run`.
-The dev profile seeds `admin`, `analyst`, `auditor` and `user`; admin login requires MFA and shows the demo code when `GHOSTREPORT_MFA_EXPOSE_CODE=true`.
-The dev profile also runs an idempotent PostgreSQL schema repair script before
-Hibernate update so legacy audit/security rows receive `correlation_id` and
-`integrity_hash` values without deleting data.
-
-For local Docker execution with PostgreSQL:
+A aplicação usa a porta `8081` por omissão. Em PowerShell, o comando equivalente
+com perfil explícito é:
 
 ```powershell
-$env:DB_PASSWORD="<local-database-password>"
-$env:JWT_SECRET="<random-secret-at-least-32-characters>"
+.\mvnw.cmd "-Dspring-boot.run.profiles=dev" spring-boot:run
+```
+
+O perfil `dev` cria contas `admin`, `analyst` e `auditor` numa base de dados
+nova. O login destas roles internas exige MFA; com `GHOSTREPORT_MFA_EXPOSE_CODE=true`,
+o código MFA de desenvolvimento é escrito no log da aplicação apenas para testes
+locais.
+
+Para execução local com Docker e PostgreSQL:
+
+```powershell
+$env:DB_PASSWORD="<password-local-da-base-de-dados>"
+$env:JWT_SECRET="<segredo-aleatorio-com-pelo-menos-32-caracteres>"
 docker compose up --build
 ```
 
-## Test and Evidence Commands
+## Comandos de teste e evidência
 
 ```powershell
 cd ghostreport
 .\mvnw.cmd test
 .\mvnw.cmd test jacoco:report
-.\mvnw.cmd -DskipTests compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs -Dspotbugs.xmlOutput=true
+.\mvnw.cmd -DskipTests compile com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:spotbugs "-Dspotbugs.xmlOutput=true"
 .\mvnw.cmd org.owasp:dependency-check-maven:12.1.0:check -Dformat=ALL -DossindexAnalyzerEnabled=false -DfailOnError=false -DfailBuildOnCVSS=11
+.\mvnw.cmd -DskipTests org.cyclonedx:cyclonedx-maven-plugin:2.9.1:makeAggregateBom
 ```
 
-PIT mutation testing is intentionally separated from the main `dev` workflow
-because it is the slowest evidence step and is reviewed manually rather than
-used as a fast merge gate. The dedicated `pit-mutation-testing` workflow runs on
-manual dispatch, pull requests to `main`, and `main` changes that touch source,
-tests, the Maven POM or the PIT workflow itself. Its expected final report entry
-point is `ghostreport/target/pit-reports/index.html` inside the
-`pit-mutation-testing-report` artifact.
+A aplicação usa actualmente Spring Boot `3.5.15`; os módulos Spring Security
+são geridos pelo BOM do Spring Boot e resolvem para `6.5.11`.
 
-## Authors
+## Documentação de entrega
+
+A entrega final da Phase 2 Sprint 2 está indexada em:
+
+- [Índice da documentação Sprint 2](Deliverables/Phase%202/Sprint%202/README.md)
+- [Relatório principal Sprint 2](Deliverables/Phase%202/Sprint%202/PHASE2_SPRINT2_REPORT.md)
+
+Os relatórios históricos permanecem em `Deliverables/Phase 1/` e
+`Deliverables/Phase 2/Sprint 1/`. A documentação específica do Sprint 2 fica
+consolidada dentro da pasta da entrega.
+
+## Autores
 
 - Alexandre Vieira
 - Barbara Silva

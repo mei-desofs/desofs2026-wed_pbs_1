@@ -9,9 +9,10 @@ const {
 
 let analystAuth = null;
 let analystUsername = null;
+let analystMfaChallengeId = null;
 
 function clearMessages() {
-    ["loginError", "globalResult", "globalError", "caseResult", "caseError"].forEach(id => setText(id, ""));
+    ["loginError", "mfaError", "globalResult", "globalError", "caseResult", "caseError"].forEach(id => setText(id, ""));
 }
 
 function showElement(id, display = "block") {
@@ -80,7 +81,7 @@ async function safeFetch(url, options = {}) {
         ? csrfFetchOptions(options)
         : options;
     const response = await fetch(url, fetchOptions);
-    const authFlowRequest = String(url).includes("/auth/login");
+    const authFlowRequest = String(url).includes("/auth/login") || String(url).includes("/auth/mfa/verify");
 
     if (!authFlowRequest && (response.status === 401 || response.status === 403)) {
         analystAuth = null;
@@ -104,6 +105,7 @@ async function validateSession() {
 function showDashboard() {
     hideElement("analystLoginPanel");
     hideElement("loginSection");
+    hideElement("mfaSection");
     showElement("dashboard");
 
     hideElement("publicNav");
@@ -134,6 +136,16 @@ async function login() {
             body: JSON.stringify({ username, password })
         });
         const loginData = await handleJsonResponse(loginResponse);
+
+        if (loginData.mfaRequired) {
+            analystAuth = null;
+            analystUsername = loginData.username;
+            analystMfaChallengeId = loginData.mfaChallengeId;
+            hideElement("loginSection");
+            showElement("mfaSection");
+            return;
+        }
+
         analystAuth = `${loginData.tokenType} ${loginData.token}`;
 
         await validateSession();
@@ -147,6 +159,48 @@ async function login() {
     }
 }
 
+async function verifyAnalystMfa() {
+    clearMessages();
+
+    const code = document.getElementById("mfaCode").value.trim();
+    if (!analystMfaChallengeId || !code) {
+        setText("mfaError", "Introduz o codigo de verificacao.");
+        return;
+    }
+
+    try {
+        const response = await safeFetch(`${API_BASE}/auth/mfa/verify`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                challengeId: analystMfaChallengeId,
+                code
+            })
+        });
+        const data = await handleJsonResponse(response);
+        analystAuth = `${data.tokenType} ${data.token}`;
+        analystUsername = data.username;
+        analystMfaChallengeId = null;
+        document.getElementById("mfaCode").value = "";
+
+        await validateSession();
+        showDashboard();
+    } catch (error) {
+        analystAuth = null;
+        setText("mfaError", error.message || "Codigo invalido ou expirado.");
+    }
+}
+
+function cancelAnalystMfa() {
+    analystMfaChallengeId = null;
+    analystUsername = null;
+    document.getElementById("mfaCode").value = "";
+    hideElement("mfaSection");
+    showElement("loginSection");
+}
+
 async function logout(reload = true) {
     if (typeof revokeCurrentToken === "function") {
         await revokeCurrentToken(analystAuth);
@@ -154,6 +208,7 @@ async function logout(reload = true) {
 
     analystAuth = null;
     analystUsername = null;
+    analystMfaChallengeId = null;
 
     if (reload) {
         location.reload();
@@ -161,6 +216,7 @@ async function logout(reload = true) {
         showElement("publicNav", "flex");
         hideElement("analystNav");
         hideElement("dashboard");
+        hideElement("mfaSection");
         showElement("analystLoginPanel");
         showElement("loginSection", "flex");
     }
@@ -528,6 +584,8 @@ document.addEventListener("click", event => {
         showPage: () => showPage(button.dataset.page),
         logout: () => logout(),
         login,
+        verifyAnalystMfa,
+        cancelAnalystMfa,
         loadSubmittedReports,
         loadMyCases,
         updateStatus,

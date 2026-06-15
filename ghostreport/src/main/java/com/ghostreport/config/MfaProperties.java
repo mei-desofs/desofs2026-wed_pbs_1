@@ -1,12 +1,16 @@
 package com.ghostreport.config;
 
+import com.ghostreport.model.UserRole;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.util.EnumSet;
+import java.util.Set;
 
 @ConfigurationProperties(prefix = "ghostreport.mfa")
 public class MfaProperties {
 
     private boolean enabled = false;
-    private boolean adminRequired = true;
+    private Set<UserRole> requiredRoles = EnumSet.allOf(UserRole.class);
     private long codeTtlSeconds = 300;
     private boolean exposeCode = false;
 
@@ -18,12 +22,14 @@ public class MfaProperties {
         this.enabled = enabled;
     }
 
-    public boolean isAdminRequired() {
-        return adminRequired;
+    public Set<UserRole> getRequiredRoles() {
+        return requiredRoles;
     }
 
-    public void setAdminRequired(boolean adminRequired) {
-        this.adminRequired = adminRequired;
+    public void setRequiredRoles(Set<UserRole> requiredRoles) {
+        this.requiredRoles = requiredRoles == null || requiredRoles.isEmpty()
+                ? EnumSet.noneOf(UserRole.class)
+                : EnumSet.copyOf(requiredRoles);
     }
 
     public long getCodeTtlSeconds() {

@@ -1,110 +1,174 @@
-# DevSecOps Pipeline
+# Pipeline DevSecOps e automacoes
 
-GhostReport uses the `dev` GitHub Actions workflow as the main Sprint 2
-evidence pipeline:
+## 1. Objectivo
 
-```text
-.github/workflows/dev.yml
-```
+A pipeline DevSecOps do GhostReport transforma a entrega num processo
+reprodutivel: compila, testa, mede cobertura, procura secrets, analisa codigo,
+verifica dependencias, gera SBOM, arranca a aplicacao, executa checks runtime,
+corre ZAP baseline e publica artefactos.
 
-The workflow name is `dev`. It runs on `workflow_dispatch`, `push` and
-`pull_request` for `main` and `develop`. Mutation testing is separated into the
-dedicated `pit-mutation-testing` workflow because PIT is slower and is evidence
-review rather than a fast merge gate.
+## 2. Workflows existentes
 
-## Pipeline Timeline
-
-```text
-build-test / build-and-test
-security-secrets / secrets
-        |
-        +--> sast / SonarCloud SAST Scan
-        +--> dependency-scanning / Dependency Vulnerability Scanning
-        +--> dast-scan / dast-scan
-
-pit-mutation-testing / pit / mutation-testing
-        runs separately on workflow_dispatch, pull requests to main and
-        main-branch changes that touch source, tests, the Maven POM or PIT workflow
-```
-
-`build-test` and `security-secrets` run first. The SAST, SCA/SBOM and
-DAST/runtime evidence jobs only start after those two jobs complete.
-
-## Job Map
-
-| Job | Purpose | Gate mode | Main artifacts/evidence |
-| --- | --- | --- | --- |
-| `build-test / build-and-test` | Maven automated tests and JaCoCo coverage report. | Blocking for tests and coverage. | `ci-surefire-test-reports`, `ci-jacoco-coverage-report` |
-| `security-secrets / secrets` | Gitleaks scan of repository content using `.gitleaks.toml`. | Blocking for confirmed secret leaks. | `secret-scan-gitleaks-json` |
-| `sast / SonarCloud SAST Scan` | CodeQL, SpotBugs and SonarCloud SAST. | Evidence review. SonarCloud fails if `SONAR_TOKEN` is missing or the analysis fails. | `sast-reports`, GitHub Code Scanning alerts |
-| `dependency-scanning / Dependency Vulnerability Scanning` | OWASP Dependency-Check and CycloneDX SBOM. | Evidence review. Dependency-Check does not block the pipeline by CVSS threshold in Sprint 2 evidence mode. | `dependency-check-sca-reports`, `sbom-cyclonedx`, Code Scanning SARIF when generated |
-| `dast-scan / dast-scan` | Runtime security tests, IAST-like evidence, live application startup and OWASP ZAP baseline. | Runtime tests and application startup are blocking. ZAP is evidence review. | `iast-runtime-security-evidence`, `dast-zap-baseline-reports` |
-| `pit-mutation-testing / pit / mutation-testing` | Full configured PIT mutation testing for the GhostReport package. | Evidence review; separated from the main pipeline for runtime. | `pit-mutation-testing-report` |
-
-## Blocking Policy
-
-The project treats build, tests, coverage and confirmed secret leaks as the main
-quality gates. These checks answer the basic question: can the application be
-built, tested and reviewed without introducing obvious repository secrets?
-
-SAST, SCA, SBOM, DAST, runtime security evidence and PIT produce evidence for
-manual review. This is intentional: security tools often need triage to decide
-whether a finding is exploitable, framework-managed, out of scope or already
-mitigated elsewhere.
-
-## Evidence Boundaries
-
-| Area | What exists | What is not claimed |
+| Workflow | Triggers | Objectivo |
 | --- | --- | --- |
-| CodeQL | CodeQL runs in GitHub Actions and publishes findings to GitHub Code Scanning. The workflow also uploads SAST summary files through `sast-reports`. | A local full CodeQL SARIF archive is not promised unless exported separately from GitHub. |
-| Runtime security / IAST-like | Runtime security-focused tests always run and produce Surefire plus `iast-runtime-evidence.md`. The workflow starts the packaged app, records selected endpoint status checks, scans logs for obvious sensitive leakage and runs ZAP baseline against the live app. | Full agent-based IAST, taint tracking and source-to-sink telemetry are not claimed. |
-| PIT | The dedicated `pit-mutation-testing` workflow runs the full PIT scope configured in `ghostreport/pom.xml`, writes `pit-evidence-summary.md`, `pit-mutation-summary.md`, validates `target/pit-reports/index.html`, and uploads the complete HTML/XML report artifact. | PIT is not part of the fast main workflow and remains evidence review rather than a blocking mutation score gate. |
-| ZAP | ZAP baseline runs against a live local GhostReport instance in the CI runner and uploads HTML/XML/JSON reports plus the application log. | ZAP baseline is not authenticated deep DAST and is not equivalent to a full penetration test. |
-| Local evidence folder | `Deliverables/Phase 2/Evidence` is a curated local archive for downloaded artifacts. | GitHub Actions does not write directly into this repository folder. |
+| `.github/workflows/dev.yml` | `push`, `pull_request`, `workflow_dispatch` | Pipeline principal de build, testes e seguranca. |
+| `.github/workflows/pit.yml` | `workflow_dispatch`, PRs e alteracoes relevantes em `main` | Mutation testing completo com PIT. |
 
-## Artifact Collection
+O workflow principal usa `concurrency` para cancelar execucoes anteriores da
+mesma ref, evitando consumir runner em builds obsoletas.
 
-The primary evidence source is the GitHub Actions run page: job logs, job
-summaries and artifacts. For presentation and local archive, download the run
-artifacts and organize them with:
+## 3. Job `build-test`
 
-```powershell
-.\scripts\collect-evidence.ps1
-```
+Automacoes:
 
-The script expects artifacts under `downloaded-artifacts/` by default and copies
-them into:
+- checkout;
+- configuracao Java 17 com cache Maven;
+- `./mvnw verify`;
+- upload de Surefire reports;
+- upload de JaCoCo;
+- publicacao de sumario no GitHub Step Summary.
 
-- `Deliverables/Phase 2/Evidence/testing`
-- `Deliverables/Phase 2/Evidence/sast`
-- `Deliverables/Phase 2/Evidence/sca`
-- `Deliverables/Phase 2/Evidence/secret-scanning`
-- `Deliverables/Phase 2/Evidence/dast`
-- `Deliverables/Phase 2/Evidence/pipelines`
-- `Deliverables/Phase 2/Evidence/asvs`
+Valor de seguranca:
 
-## Current Local Validation
+- impede regressao funcional;
+- garante que testes de seguranca entram no gate normal;
+- gera artefactos revistos pelo professor/equipa;
+- JaCoCo evita que novas areas fiquem sem cobertura minima.
 
-Validate the workflow locally with `actionlint` when it is available. Validate
-the Spring Boot module with:
+## 4. Job `security-secrets`
 
-```powershell
-cd ghostreport
-.\mvnw test
-.\mvnw verify
-```
+Automacoes:
 
-`verify` is the local command that generates the JaCoCo report and applies the
-coverage check. Final grading evidence should still come from a fresh GitHub
-Actions run after the branch is pushed.
+- corre Gitleaks em Docker;
+- usa `.gitleaks.toml`;
+- gera `target/gitleaks/gitleaks-report.json`;
+- publica artefacto `secret-scan-gitleaks-json`;
+- escreve sumario de evidencia.
 
-## Demo Path
+Mitigacao STRIDE:
 
-For the final presentation:
+- reduz Information Disclosure por secrets commitados;
+- ajuda a detectar tokens/passwords/keys antes de merge.
 
-1. Open the Pull Request checks page.
-2. Open the `dev` workflow run.
-3. Show `build-test` and `security-secrets` as the first gates.
-4. Show the dependent SAST, SCA/SBOM and DAST/runtime jobs.
-5. Open the artifacts list and connect each artifact to the ASVS evidence.
-6. Explain which checks are blocking and which are evidence review.
+## 5. Job `sast`
+
+Automacoes:
+
+- inicializa CodeQL para Java;
+- compila o projecto para analise;
+- corre SpotBugs;
+- corre SonarCloud quando `SONAR_TOKEN` existe;
+- executa CodeQL analyze;
+- publica `sast-reports`.
+
+Notas importantes:
+
+- CodeQL envia resultados para GitHub Code Scanning;
+- SpotBugs gera XML/site como evidencia;
+- SonarCloud depende de secret configurado;
+- SAST e evidencia complementar, nao prova ausencia de vulnerabilidades.
+
+## 6. Job `dependency-scanning`
+
+Automacoes:
+
+- OWASP Dependency-Check `12.1.0`;
+- formatos HTML/XML/JSON/SARIF;
+- upload SARIF para GitHub Code Scanning quando gerado;
+- CycloneDX `makeAggregateBom`;
+- artefactos `dependency-check-sca-reports` e `sbom-cyclonedx`;
+- sumario no Step Summary.
+
+Evidencia recente:
+
+- alertas Spring Security `6.5.10` foram corrigidos;
+- Spring Boot BOM `3.5.15` resolve Spring Security `6.5.11`;
+- SBOM permite listar componentes e suportar triagem futura.
+
+## 7. Job `dast-scan`
+
+Automacoes:
+
+- corre testes runtime de seguranca seleccionados;
+- empacota a aplicacao;
+- arranca GhostReport em `localhost:8081`;
+- espera readiness;
+- exercita endpoints runtime para reports, tracking code, uploads, JWT invalido,
+  CSRF rejection e endpoints protegidos;
+- verifica logs para fuga de dados sensiveis;
+- corre OWASP ZAP baseline;
+- prepara sumario IAST-like/runtime;
+- publica `iast-runtime-security-evidence`;
+- publica `dast-zap-baseline-reports`;
+- para o processo no fim.
+
+O ZAP baseline e evidencia passiva/nao autenticada. A parte runtime cobre mais
+do que o ZAP sozinho, porque combina testes, app real, HTTP probes e logs.
+
+Artefactos documentados na entrega:
+
+- [iast-runtime-evidence.md](iast-runtime-evidence.md)
+- [runtime-endpoints.md](runtime-endpoints.md)
+- [runtime-log-sanitization.md](runtime-log-sanitization.md)
+
+## 8. Workflow `pit-mutation-testing`
+
+Automacoes:
+
+- prepara Java 17 e cache Maven;
+- compila testes;
+- inventaria classes alvo;
+- executa PIT com configuracao do `pom.xml`;
+- valida existencia de `target/pit-reports/index.html`;
+- gera sumario Markdown;
+- publica `pit-mutation-testing-report`.
+
+PIT fica separado porque e mais lento. Serve para avaliar qualidade dos testes e
+nao para bloquear todos os commits rapidamente.
+
+## 9. Artefactos esperados
+
+| Artefacto | Origem | Uso |
+| --- | --- | --- |
+| `ci-surefire-test-reports` | `build-test` | Evidencia de testes. |
+| `ci-jacoco-coverage-report` | `build-test` | Cobertura. |
+| `secret-scan-gitleaks-json` | `security-secrets` | Secrets scan. |
+| `sast-reports` | `sast` | SpotBugs/SonarCloud notes. |
+| GitHub Code Scanning alerts | CodeQL e Dependency-Check SARIF | Findings centralizados. |
+| `dependency-check-sca-reports` | `dependency-scanning` | SCA HTML/XML/JSON/SARIF. |
+| `sbom-cyclonedx` | `dependency-scanning` | SBOM JSON/XML. |
+| `iast-runtime-security-evidence` | `dast-scan` | Runtime/IAST-like. |
+| `dast-zap-baseline-reports` | `dast-scan` | ZAP HTML/XML/JSON e logs. |
+| `pit-mutation-testing-report` | `pit.yml` | Mutation testing. |
+
+## 10. Relacao com STRIDE
+
+| STRIDE | Pipeline/automacao |
+| --- | --- |
+| Spoofing | Testes de auth/JWT/MFA no build; runtime probes em CI. |
+| Tampering | Testes de backup/package integrity; SAST; dependency scanning. |
+| Repudiation | Testes de audit logs; runtime logs arquivados. |
+| Information Disclosure | Gitleaks, frontend XSS/data exposure tests, log leakage checks, ZAP baseline. |
+| Denial of Service | Rate limiter tests, upload limits, ZAP baseline como sinal passivo. |
+| Elevation of Privilege | RBAC/ownership tests no build; CodeQL/SpotBugs como apoio. |
+
+## 11. Governacao e code review
+
+As antigas notas separadas de branch protection, code review e coding standards
+foram consolidadas aqui:
+
+- branches curtas por tema;
+- PR deve explicar impacto de seguranca;
+- claims de relatorio precisam de evidencia;
+- novas rotas exigem actualizacao da matriz;
+- alteracoes em controlos exigem testes;
+- artefactos gerados ficam em CI/`target`, nao no repo;
+- secrets nunca sao commitados.
+
+## 12. Limitacoes da pipeline
+
+- Branch protection e configuracao do GitHub, nao totalmente provavel por ficheiros.
+- SonarCloud depende de `SONAR_TOKEN`.
+- ZAP baseline nao e DAST autenticado completo.
+- IAST e runtime/academic substitute, nao agent-based.
+- PIT pode ser demorado e por isso fica separado.
