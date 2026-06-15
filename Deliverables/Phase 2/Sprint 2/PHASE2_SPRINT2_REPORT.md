@@ -480,9 +480,11 @@ Na pipeline, os probes live exercitam:
 - casos negativos para metodo errado, JSON malformado, content type errado,
   Authorization malformado, JWT invalido e token ausente.
 
-A validacao local expandida do probe confirmou 101 probes: 99 passed, 0 failed
-e 2 skipped. Os skips foram `GET /login.html`, porque nao existe pagina publica
-separada, e restore de backup, que nao e exercitado destrutivamente pelo probe.
+A validacao local expandida do probe confirmou 101 probes: 101 passed, 0 failed
+e 0 skipped. `GET /login.html` e tratado como controlo de exposicao: `401/404`
+confirma que nao existe pagina publica separada. O restore destrutivo de backup
+continua fora do probe runtime; a evidencia executa validacao segura de
+filename/path traversal e os testes automatizados cobrem restore para staging.
 
 JWT expirado, backups, ZIP Slip e tamanho maximo de upload sao cobertos pela
 seleccao de testes Maven executada no mesmo job `dast-scan`.

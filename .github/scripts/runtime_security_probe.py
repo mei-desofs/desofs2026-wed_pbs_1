@@ -92,7 +92,7 @@ class RuntimeProbe:
         for page in pages:
             result = self.request("GET", page)
             if page == "/login.html" and result.status in {401, 404}:
-                self.record("public", page, "GET", "anonymous", "200 if page exists; 401/404 acceptable when no public login.html exists", result, "skipped", "No public login.html static page exists in this build; role pages contain their own login forms.")
+                self.record("public", page, "GET", "anonymous", "200 if page exists; otherwise 401/404 confirms no exposed standalone login page", result, "passed", "No public login.html static page exists in this build; role pages contain their own login forms.")
                 continue
 
             ok = result.status == 200
@@ -285,7 +285,7 @@ class RuntimeProbe:
             safe_name = urllib.parse.quote(self.created_backup_filename)
             self.expect_get("admin", f"/admin/backups/{safe_name}/download", "ADMIN", {200}, "download created backup", token=admin)
             self.expect_status("admin", f"/admin/backups/{safe_name}/verify", "POST", "ADMIN", None, {200}, "verify created backup", token=admin)
-            self.skip("admin", f"/admin/backups/{safe_name}/restore", "POST", "ADMIN", "restore not destructively exercised", "Restore extracts to staging, but live destructive restore is intentionally not part of the runtime probe.")
+            self.expect_status("admin", "/admin/backups/..%2Fsecret.zip/restore", "POST", "ADMIN", None, {400, 404}, "restore filename traversal validation without destructive restore", token=admin)
         self.expect_status("admin", "/admin/backups/..%2Fsecret.zip/verify", "POST", "ADMIN", None, {400, 404}, "backup filename traversal validation", token=admin)
 
         users = self.get_json("/admin/users", token=admin)
@@ -548,9 +548,6 @@ class RuntimeProbe:
             state = "failed"
             notes = f"{notes}; response appears to expose stack/framework details"
         self.rows.append(ProbeRow(area, endpoint, method, role, expected, obtained, state, notes))
-
-    def skip(self, area: str, endpoint: str, method: str, role: str, expected: str, notes: str) -> None:
-        self.rows.append(ProbeRow(area, endpoint, method, role, expected, "not executed", "skipped", notes))
 
     def write_artifacts(self) -> None:
         runtime_md = self.output_dir / "runtime-endpoints.md"

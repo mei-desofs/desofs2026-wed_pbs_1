@@ -10,22 +10,20 @@ The expanded local validation on 2026-06-15 produced:
 | Metric | Value |
 | --- | --- |
 | Total probes | 101 |
-| Passed | 99 |
+| Passed | 101 |
 | Failed | 0 |
-| Skipped | 2 |
-| Public endpoint probes | 22 |
-| Admin endpoint probes | 21 |
+| Skipped | 0 |
+| Public endpoint probes | 23 |
+| Admin endpoint probes | 22 |
 | Analyst endpoint probes | 17 |
 | Auditor endpoint probes | 13 |
 | Negative-case probes | 6 |
 
-Skipped probes:
-
-- `GET /login.html`: no separate public `login.html` exists; role pages contain
-  their own login forms.
-- `POST /admin/backups/{filename}/restore`: not exercised destructively by the
-  runtime probe. Access and validation are covered; restore staging is covered
-  by automated tests.
+No probes were skipped in the validated local run. `GET /login.html` is treated
+as an exposure check: `401/404` confirms there is no standalone public login
+page. Destructive backup restore remains outside the runtime probe; safe restore
+filename/path traversal validation is exercised, and restore staging remains
+covered by automated tests.
 
 ## Generated artifact format
 

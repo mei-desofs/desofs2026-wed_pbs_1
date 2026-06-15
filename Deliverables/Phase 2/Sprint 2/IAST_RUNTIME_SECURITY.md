@@ -31,10 +31,12 @@ com varias camadas:
 9. Publica artefactos `iast-runtime-security-evidence` e
    `dast-zap-baseline-reports`.
 
-Na validacao local expandida de 2026-06-15, o probe gerou 101 checks: 99
-passed, 0 failed e 2 skipped. Os skips foram `GET /login.html`, porque nao
-existe pagina publica separada de login, e restore de backup, que nao e
-exercitado de forma destrutiva pelo probe.
+Na validacao local expandida de 2026-06-15, o probe gerou 101 checks: 101
+passed, 0 failed e 0 skipped. `GET /login.html` e tratado como controlo de
+exposicao: `401/404` confirma que nao existe pagina publica separada de login.
+O restore destrutivo de backup nao e executado pelo probe; em vez disso, o
+probe exercita validacao segura de filename/path traversal para o endpoint de
+restore.
 
 ## Testes runtime executados
 

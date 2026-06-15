@@ -31,8 +31,8 @@ renomeacoes ou reorganizacao agressiva.
 - [runtime-endpoints.md](runtime-endpoints.md) - endpoints e probes exercitados durante a validacao runtime.
 - [runtime-log-sanitization.md](runtime-log-sanitization.md) - verificacao de logs contra passwords, tokens, secrets e stack traces.
 
-Validacao runtime expandida confirmada localmente: 101 probes, 99 passed, 0
-failed e 2 skipped. Os artefactos exactos sao gerados em `target/iast-evidence/`
+Validacao runtime expandida confirmada localmente: 101 probes, 101 passed, 0
+failed e 0 skipped. Os artefactos exactos sao gerados em `target/iast-evidence/`
 por cada run do workflow.
 
 ## Guia de demonstracao

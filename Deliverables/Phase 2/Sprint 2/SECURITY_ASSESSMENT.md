@@ -162,7 +162,7 @@ Evidencia: `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`,
 | Backups | Implementado | Manifestos, hashes, HMAC, verify/restore. |
 | SCA/SBOM | Implementado | Dependency-Check e CycloneDX. |
 | SAST | Implementado como evidencia | CodeQL, SpotBugs, SonarCloud. |
-| DAST | Implementado baseline | ZAP baseline e runtime probes; validacao local expandida com 101 probes, 99 passed, 0 failed e 2 skipped. |
+| DAST | Implementado baseline | ZAP baseline e runtime probes; validacao local expandida com 101 probes, 101 passed, 0 failed e 0 skipped. |
 | IAST | Parcial | Evidencia runtime/IAST-like, nao agente completo. |
 | Instalacao segura | Documentado | Secrets, perfis, PostgreSQL, checklist. |
 

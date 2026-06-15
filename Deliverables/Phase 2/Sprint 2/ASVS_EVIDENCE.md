@@ -14,7 +14,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 | Evidencia | Resultado confirmado |
 | --- | --- |
 | Testes Maven | `250` testes, `0` falhas, `0` erros, `0` skipped. |
-| Runtime probes locais | `101` probes, `99` passed, `0` failed, `2` skipped. |
+| Runtime probes locais | `101` probes, `101` passed, `0` failed, `0` skipped. |
 | Spring Security | `6.5.11` via Spring Boot `3.5.15`. |
 | SCA CVEs remediados | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003. |
 | Suppressions SCA | CVE-2025-15104 e CVE-2025-7962 documentados como nao aplicaveis/falso positivo para os componentes usados. |

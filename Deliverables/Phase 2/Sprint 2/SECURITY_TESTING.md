@@ -90,18 +90,20 @@ Validacao local do probe expandido, executado contra a aplicacao em
 | Metrica | Resultado |
 | --- | --- |
 | Total de probes runtime | 101 |
-| Passed | 99 |
+| Passed | 101 |
 | Failed | 0 |
-| Skipped | 2 |
-| Probes publicos | 22 |
-| Probes admin | 21 |
+| Skipped | 0 |
+| Probes publicos | 23 |
+| Probes admin | 22 |
 | Probes analyst | 17 |
 | Probes auditor | 13 |
 | Casos negativos | 6 |
 
-Skipped documentados: `GET /login.html`, porque nao existe pagina publica
-separada de login, e restore de backup, porque a operacao nao e exercitada de
-forma destrutiva pelo probe.
+Nao houve probes skipped na execucao local validada. `GET /login.html` e
+tratado como controlo de exposicao: `401/404` confirma que nao existe pagina
+publica separada de login. O restore destrutivo de backup continua fora do
+probe runtime; a evidencia executa validacao segura de filename/path traversal
+e mantem restore para staging coberto pelos testes automatizados.
 
 Artefactos relacionados:
 

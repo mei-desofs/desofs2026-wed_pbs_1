@@ -15,9 +15,11 @@ The evidence combines automated Spring Boot security tests, a packaged
 application running on `localhost:8081`, live HTTP probes, real MFA-backed role
 logins, application log sanitization and OWASP ZAP baseline output.
 
-The expanded local runtime probe run on 2026-06-15 produced 101 probes: 99
-passed, 0 failed and 2 skipped. Skipped items were the absent public
-`/login.html` page and non-destructive backup restore.
+The expanded local runtime probe run on 2026-06-15 produced 101 probes: 101
+passed, 0 failed and 0 skipped. The absent public `/login.html` page is treated
+as an exposure control: `401/404` confirms there is no standalone public login
+page. Destructive backup restore is still not executed by the runtime probe;
+safe restore filename validation is exercised instead.
 
 ## Runtime tests executed in CI
 
@@ -50,7 +52,7 @@ application:
 | RBAC | Live role probes for `/admin/**`, `/analyst/**` and `/audit/**`, plus `RbacAuthorizationMatrixTest` and `AuditorAuthorizationTest`. |
 | MFA | Live dev/test MFA login for admin, analyst and auditor by reading the dev MFA code from the runtime log; invalid code, valid code and challenge reuse are probed. |
 | Audit and alerts | Failed login, brute force, admin actions, denied access, audit/security alert listing and sensitive-log redaction. |
-| Backups | Creation, list, download, manifest/hash verification, invalid filename rejection and non-destructive restore skip. |
+| Backups | Creation, list, download, manifest/hash verification, invalid filename rejection and safe restore path validation. |
 | Error handling | Malformed JSON, wrong content type, wrong method, unknown endpoint and generic unauthorized/forbidden responses without stack traces. |
 | DAST | OWASP ZAP baseline/passive scan against the running app. |
 

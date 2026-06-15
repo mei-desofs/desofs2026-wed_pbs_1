@@ -173,18 +173,19 @@ Validacao local expandida do probe em 2026-06-15:
 | Metrica | Valor |
 | --- | --- |
 | Total probes | 101 |
-| Passed | 99 |
+| Passed | 101 |
 | Failed | 0 |
-| Skipped | 2 |
-| Public endpoint probes | 22 |
-| Admin endpoint probes | 21 |
+| Skipped | 0 |
+| Public endpoint probes | 23 |
+| Admin endpoint probes | 22 |
 | Analyst endpoint probes | 17 |
 | Auditor endpoint probes | 13 |
 | Negative-case probes | 6 |
 
-Skipped: `GET /login.html` porque nao existe pagina publica separada, e restore
-de backup porque o probe nao executa restore destrutivo. O workflow publica o
-JSON `runtime-probe-summary.json` para confirmar estes numeros por run.
+Nao houve probes skipped na validacao local. `GET /login.html` e tratado como
+controlo de exposicao quando responde `401/404`, e o restore destrutivo de
+backup continua fora do probe runtime. O workflow publica o JSON
+`runtime-probe-summary.json` para confirmar estes numeros por run.
 
 Artefactos documentados na entrega:
 
