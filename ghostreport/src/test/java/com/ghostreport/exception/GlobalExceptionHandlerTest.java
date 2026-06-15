@@ -266,5 +266,6 @@ class GlobalExceptionHandlerTest {
 
     @SuppressWarnings("unused")
     private void dummyValidationTarget(String value) {
+        throw new UnsupportedOperationException("Reflection-only test fixture method");
     }
 }
