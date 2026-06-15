@@ -1,34 +1,40 @@
-# Documentação final Phase 2 Sprint 2
+# Documentacao final Phase 2 Sprint 2
 
-Esta pasta contém a documentação final do GhostReport para a Phase 2 Sprint 2.
-Os ficheiros foram organizados como um relatório final com anexos técnicos, para
-que a avaliação consiga seguir a implementação, a segurança e a evidência sem
-documentação perdida.
+Esta pasta contem a documentacao final do GhostReport para a Phase 2 Sprint 2.
+A estrutura foi mantida como relatorio principal com anexos tecnicos, evitando
+renomeacoes ou reorganizacao agressiva.
 
 ## Documento principal
 
-- [PHASE2_SPRINT2_REPORT.md](PHASE2_SPRINT2_REPORT.md) - relatório principal da entrega.
+- [PHASE2_SPRINT2_REPORT.md](PHASE2_SPRINT2_REPORT.md) - relatorio principal da Sprint 2, cobrindo arquitectura, seguranca, testes, pipeline, ASVS, limitacoes e conclusao.
 
-## Evidência de suporte
+## Anexos tecnicos
 
-| Área | Documento |
-| --- | --- |
-| Todos os endpoints, roles e controlo de acesso | [AUTHORIZATION_MATRIX.md](AUTHORIZATION_MATRIX.md) |
-| Testes automatizados, segurança e validação | [SECURITY_TESTING.md](SECURITY_TESTING.md) |
-| Pipeline DevSecOps, automações e artefactos | [DEVSECOPS_PIPELINE.md](DEVSECOPS_PIPELINE.md) |
-| Segurança em runtime e evidência IAST-like | [IAST_RUNTIME_SECURITY.md](IAST_RUNTIME_SECURITY.md) |
-| Artefacto runtime IAST-like gerado pela CI | [iast-runtime-evidence.md](iast-runtime-evidence.md) |
-| Probes live de endpoints runtime | [runtime-endpoints.md](runtime-endpoints.md) |
-| Sanitização de logs runtime | [runtime-log-sanitization.md](runtime-log-sanitization.md) |
-| SCA, SBOM e alertas de dependências | [SCA_TRIAGE.md](SCA_TRIAGE.md) |
-| SpotBugs/SAST | [SPOTBUGS_TRIAGE.md](SPOTBUGS_TRIAGE.md) |
-| Instalação segura | [SECURE_INSTALLATION.md](SECURE_INSTALLATION.md) |
-| Avaliação de configuração de segurança | [SECURITY_CONFIGURATION_ASSESSMENT.md](SECURITY_CONFIGURATION_ASSESSMENT.md) |
-| STRIDE, mitigações e avaliação final de segurança | [SECURITY_ASSESSMENT.md](SECURITY_ASSESSMENT.md) |
-| Rastreabilidade ASVS | [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md) |
-| Revisão crítica final | [FINAL_PROJECT_REVIEW.md](FINAL_PROJECT_REVIEW.md) |
-| Guião de demonstração | [FINAL_DEMO_GUIDE.md](FINAL_DEMO_GUIDE.md) |
+- [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md) - evidencia de conformidade ASVS e estado dos requisitos de seguranca.
+- [AUTHORIZATION_MATRIX.md](AUTHORIZATION_MATRIX.md) - matriz de acesso por role, endpoint e controlo adicional.
+- [DEVSECOPS_PIPELINE.md](DEVSECOPS_PIPELINE.md) - fluxo CI/CD, code review, gates, artefactos e ferramentas de seguranca.
+- [IAST_RUNTIME_SECURITY.md](IAST_RUNTIME_SECURITY.md) - documento principal de seguranca runtime e evidencia IAST-like.
+- [SCA_TRIAGE.md](SCA_TRIAGE.md) - triagem SCA, CVEs Spring Security, suppressions e SBOM.
+- [SECURE_INSTALLATION.md](SECURE_INSTALLATION.md) - instalacao segura, perfis, secrets, base de dados e storage.
+- [SECURITY_ASSESSMENT.md](SECURITY_ASSESSMENT.md) - avaliacao final de seguranca, STRIDE, riscos residuais e revisao critica.
+- [SECURITY_CONFIGURATION_ASSESSMENT.md](SECURITY_CONFIGURATION_ASSESSMENT.md) - avaliacao de configuracao segura e diferencas dev/prod-like.
+- [SECURITY_TESTING.md](SECURITY_TESTING.md) - estrategia de testes, classes de teste e validacao de controlos.
+- [SPOTBUGS_TRIAGE.md](SPOTBUGS_TRIAGE.md) - papel de SpotBugs no SAST e regras de triagem.
 
-Os relatórios de Phase 1 e Sprint 1 permanecem fora desta pasta e devem ser
-usados apenas como contexto histórico. A evidência acima é a fonte actual para
-a entrega final do Sprint 2.
+## Evidencia runtime complementar
+
+- [iast-runtime-evidence.md](iast-runtime-evidence.md) - espelho documental do sumario runtime gerado pela CI.
+- [runtime-endpoints.md](runtime-endpoints.md) - endpoints e probes exercitados durante a validacao runtime.
+- [runtime-log-sanitization.md](runtime-log-sanitization.md) - verificacao de logs contra passwords, tokens, secrets e stack traces.
+
+## Guia de demonstracao
+
+- [FINAL_DEMO_GUIDE.md](FINAL_DEMO_GUIDE.md) - guiao pratico para demonstrar a aplicacao e apontar para as evidencias principais.
+
+## Notas de organizacao
+
+- `PHASE2_SPRINT2_REPORT.md` e a fonte narrativa principal.
+- `DEVSECOPS_PIPELINE.md` e a fonte principal para pipeline, code review e artefactos.
+- `IAST_RUNTIME_SECURITY.md` e a fonte principal para IAST/runtime; os restantes ficheiros runtime sao anexos de evidencia.
+- A revisao final antiga foi incorporada em [PHASE2_SPRINT2_REPORT.md](PHASE2_SPRINT2_REPORT.md) e [SECURITY_ASSESSMENT.md](SECURITY_ASSESSMENT.md), para evitar um ficheiro solto redundante.
+- Os relatorios de Phase 1 e Sprint 1 permanecem fora desta pasta e devem ser usados apenas como contexto historico.
