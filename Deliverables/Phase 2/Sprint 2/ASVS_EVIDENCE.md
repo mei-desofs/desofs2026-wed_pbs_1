@@ -4,8 +4,10 @@ O tracker ASVS principal do Sprint 2 e o ficheiro Excel:
 
 - [ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx](ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx)
 
-Este Markdown e apenas o resumo explicativo da evidencia. A spreadsheet de
-Sprint 1 permanece historica e nao substitui o tracker Sprint 2.
+O ficheiro foi criado como copia estrutural do tracker ASVS da Phase 2 Sprint
+1, mantendo as mesmas folhas, formulas, capitulos e formato geral. O conteudo
+foi actualizado para reflectir a evidencia factual do Sprint 2. Este Markdown
+e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 
 ## Base factual usada
 

@@ -10,7 +10,7 @@ renomeacoes ou reorganizacao agressiva.
 
 ## ASVS
 
-- [ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx](ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx) - tracker ASVS principal da Sprint 2 em Excel, actualizado com a evidencia factual do projecto.
+- [ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx](ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx) - tracker ASVS principal da Sprint 2 em Excel, copiado estruturalmente do tracker Sprint 1 e actualizado com a evidencia factual do projecto.
 - [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md) - resumo explicativo do tracker ASVS e links para a evidencia de suporte.
 
 ## Anexos tecnicos
