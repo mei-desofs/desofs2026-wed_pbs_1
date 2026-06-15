@@ -13,7 +13,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 
 | Evidencia | Resultado confirmado |
 | --- | --- |
-| Testes Maven | `272` testes, `0` falhas, `0` erros, `0` skipped. |
+| Testes Maven | `274` testes, `0` falhas, `0` erros, `0` skipped. |
 | Runtime probes locais | `101` probes, `101` passed, `0` failed, `0` skipped. |
 | Spring Security | `6.5.11` via Spring Boot `3.5.15`. |
 | SCA CVEs remediados | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003. |
@@ -34,7 +34,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 | Backups/evidencia | ZIPs com hashes, HMAC, manifesto, verificacao e restore para staging. | Implementado |
 | SCA/SAST/DAST/runtime | Dependency-Check, CycloneDX, CodeQL, SpotBugs, SonarCloud, Gitleaks, ZAP baseline e runtime evidence. | Implementado como evidencia |
 | Configuracao | Secrets por ambiente, PostgreSQL fora de testes, validacao de configuracao e guia seguro. | Implementado/documentado |
-| Headers/browser security | CSP restritiva com `report-uri`, endpoint `/security/csp-report`, HSTS preload, COOP/COEP/CORP, Fetch Metadata/Origin validation e bloqueio de headers anormais. | Implementado |
+| Headers/browser security | CSP restritiva com `report-uri`, endpoint `/security/csp-report`, HSTS preload, COOP/COEP/CORP, Fetch Metadata/Origin validation, fallback para browsers sem features esperadas e bloqueio de headers anormais. | Implementado |
 | Comunicacao segura | Perfil prod-like com modo TLS explicito, TLS 1.2/1.3, cifras modernas e PostgreSQL com `sslmode=verify-ca`/`verify-full`. | Implementado/configurado; certificado publico e operacional |
 | L2 aplicavel | Rate limit de submissao de denuncias, malware scanner local, JWT audience, MFA one-time, no-store, resource limits e logging estruturado. | Reavaliado no XLSX |
 
@@ -61,6 +61,12 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
   alem do limite de ficheiros por pedido.
 - `SecurityConfig` passou a rejeitar parametros escalares duplicados fora de
   multipart, mitigando HTTP parameter pollution antes dos controllers.
+- `SecurityConfig` passou a rejeitar pedidos HTTP/2 ou HTTP/3 com headers
+  connection-specific (`Transfer-Encoding`, `Connection`, `Upgrade`,
+  `Keep-Alive` ou `Proxy-Connection`) antes dos controllers.
+- As paginas estaticas passaram a carregar `/js/security-support.js`, que
+  detecta browsers sem features de seguranca/runtime esperadas, mostra aviso e
+  desactiva controlos interactivos.
 - `TrackingCodeTest` passou a validar 2.000 tracking codes gerados por
   `SecureRandom` sem colisoes em carga academica moderada.
 
@@ -103,6 +109,15 @@ real ou que puderam ser reforcados sem alterar radicalmente a aplicacao:
   pollution por parametros escalares duplicados.
 - `V6.3.2` e `V7.4.2` foram corrigidos com base em seed users desactivados em
   prod-like e rejeicao de JWTs quando a conta interna fica inactiva.
+- `V1.5.3` passou a `Compliant` com uso consistente de parsers/APIs
+  estruturadas: Jackson/Bean Validation nos DTOs, helpers DOM por text node,
+  normalizacao de paths/URIs e ausencia de parsing de tracking code via query
+  string no browser.
+- `V3.7.5` passou a `Compliant` com fallback documentado para browsers sem
+  `fetch`, `Promise`, `crypto.getRandomValues`, `TextEncoder` ou APIs DOM
+  esperadas.
+- `V4.2.3` passou a `Compliant` com rejeicao de headers connection-specific em
+  pedidos HTTP/2 e HTTP/3.
 
 Capitulos fora do escopo implementado, como OAuth/OIDC e WebRTC, permanecem
 `Not Applicable`; nao foram convertidos em `Compliant` para evitar claims

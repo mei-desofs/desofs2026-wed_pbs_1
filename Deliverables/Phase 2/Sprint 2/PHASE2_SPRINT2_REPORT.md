@@ -276,11 +276,15 @@ As validacoes principais incluem:
 - content type esperado em endpoints JSON;
 - rejeicao de `TRACE`, headers com caracteres de controlo e `Authorization`
   excessivamente grande antes de chegar aos controllers;
+- rejeicao de headers connection-specific em pedidos HTTP/2/HTTP/3 antes de
+  chegar aos controllers;
 - rejeicao de parametros escalares duplicados para mitigar HTTP parameter
   pollution fora de multipart;
 - validacao Fetch Metadata/Origin para bloquear pedidos unsafe cross-site;
 - CSP `report-uri /security/csp-report` para receber relatorios de violacao
   do browser sem expor tokens ou tracking codes em respostas.
+- fallback frontend para browsers que nao suportem features esperadas como
+  `fetch`, `crypto.getRandomValues`, `TextEncoder` e APIs DOM seguras.
 
 Uploads sao uma superficie critica. Mitigacoes:
 
@@ -509,7 +513,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 272 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 274 testes, 0 falhas, 0 erros, 0 skipped.
 
 Categorias cobertas:
 
@@ -518,7 +522,7 @@ Categorias cobertas:
 - autenticacao, JWT, MFA e password reset;
 - RBAC e endpoint matrix;
 - CSRF e security headers;
-- CSP/HSTS/COOP/COEP/CORP, CSP reporting, Fetch Metadata e request-boundary checks;
+- CSP/HSTS/COOP/COEP/CORP, CSP reporting, Fetch Metadata, fallback de browser e request-boundary checks;
 - uploads, MIME, magic bytes, malware/quarantine e traversal;
 - quotas de anexos por pedido e por denuncia;
 - tracking code e enumeracao;
@@ -578,8 +582,10 @@ real: CSP violation reporting, HSTS preload, validacao de utilizador activo em
 JWT, comparacao constante de assinatura JWT, superficie estatica limitada,
 no-store em endpoints sensiveis, quota acumulada de uploads, defesa contra HTTP
 parameter pollution, teste de `SecureRandom` sob carga, algoritmos
-criptograficos aprovados e reclassificacao de CSV/spreadsheet injection como
-nao aplicavel por ausencia de exports CSV/XLSX/ODS.
+criptograficos aprovados, parsing consistente, fallback para browsers sem
+features de seguranca esperadas, rejeicao de headers connection-specific em
+HTTP/2/HTTP/3 e reclassificacao de CSV/spreadsheet injection como nao
+aplicavel por ausencia de exports CSV/XLSX/ODS.
 
 Os capitulos fora do desenho implementado, como OAuth/OIDC e WebRTC, continuam
 marcados como `Not Applicable` no tracker em vez de `Compliant`.

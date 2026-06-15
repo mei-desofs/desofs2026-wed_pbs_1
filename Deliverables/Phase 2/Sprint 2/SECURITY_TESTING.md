@@ -9,7 +9,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 272 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 274 testes, 0 falhas, 0 erros, 0 skipped.
 
 ## 2. Estrategia
 
@@ -96,6 +96,10 @@ A revisao ASVS final adicionou evidencias directas para:
   `ReportControllerAttachmentUploadTest`;
 - rejeicao de HTTP parameter pollution por parametros escalares duplicados em
   `SecurityHeadersTest`;
+- rejeicao de headers connection-specific em pedidos HTTP/2/HTTP/3 em
+  `SecurityHeadersTest`;
+- fallback de browser sem features de seguranca/runtime esperadas em
+  `FrontendXssDataExposureTest`;
 - geracao de 2.000 tracking codes com `SecureRandom` sem colisoes em
   `TrackingCodeTest`.
 
