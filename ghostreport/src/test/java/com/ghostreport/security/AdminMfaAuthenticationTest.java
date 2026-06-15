@@ -41,6 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "ghostreport.mfa.enabled=true",
         "ghostreport.mfa.required-roles=ADMIN,ANALYST,AUDITOR",
         "ghostreport.mfa.code-ttl-seconds=1",
+        "ghostreport.mfa.max-attempts=5",
         "ghostreport.mfa.expose-code=true"
 })
 @AutoConfigureMockMvc
@@ -137,6 +138,26 @@ class AdminMfaAuthenticationTest {
 
         assertThat(auditLogRepository.findAll().stream().map(AuditLog::getAction))
                 .contains("MFA_VERIFY_REJECTED", "MFA_VERIFY_EXPIRED");
+    }
+
+    @Test
+    void mfaChallengeIsInvalidatedAfterTooManyWrongCodes() throws Exception {
+        JsonNode challenge = login(adminUsername);
+        String challengeId = challenge.path("mfaChallengeId").asText();
+        String correctCode = mfaCode(challenge);
+
+        for (int attempt = 0; attempt < 5; attempt++) {
+            verifyMfa(challengeId, "000000")
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.error").value("Invalid credentials"));
+        }
+
+        verifyMfa(challengeId, correctCode)
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Invalid credentials"));
+
+        assertThat(auditLogRepository.findAll().stream().map(AuditLog::getAction))
+                .contains("MFA_VERIFY_LOCKED");
     }
 
     @Test

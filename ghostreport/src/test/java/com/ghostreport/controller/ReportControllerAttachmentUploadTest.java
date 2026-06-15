@@ -248,7 +248,7 @@ class ReportControllerAttachmentUploadTest {
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-store")))
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-cache")))
                 .andExpect(header().string(HttpHeaders.PRAGMA, "no-cache"))
-                .andExpect(header().string(HttpHeaders.EXPIRES, "0"));
+                .andExpect(header().string(HttpHeaders.EXPIRES, containsString("1970")));
     }
 
     @Test

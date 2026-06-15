@@ -106,6 +106,7 @@ public class SecurityConfig {
                 )
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
+                .addFilterAfter(new SensitiveResponseCacheControlFilter(), CsrfCookieFilter.class)
                 .addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(jwtAuthenticationFilter, CorrelationIdFilter.class);
 
@@ -137,6 +138,31 @@ public class SecurityConfig {
                 csrfToken.getToken();
             }
             filterChain.doFilter(request, response);
+        }
+    }
+
+    private static final class SensitiveResponseCacheControlFilter extends OncePerRequestFilter {
+
+        @Override
+        protected void doFilterInternal(
+                HttpServletRequest request,
+                HttpServletResponse response,
+                FilterChain filterChain
+        ) throws ServletException, IOException {
+            filterChain.doFilter(request, response);
+            if (isSensitivePath(request.getRequestURI())) {
+                response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, max-age=0, must-revalidate");
+                response.setHeader(HttpHeaders.PRAGMA, "no-cache");
+                response.setDateHeader(HttpHeaders.EXPIRES, 0);
+            }
+        }
+
+        private boolean isSensitivePath(String path) {
+            return path.startsWith("/auth/")
+                    || path.startsWith("/reports")
+                    || path.startsWith("/admin/")
+                    || path.startsWith("/analyst/")
+                    || path.startsWith("/audit/");
         }
     }
 

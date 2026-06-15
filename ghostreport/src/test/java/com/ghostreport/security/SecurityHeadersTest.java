@@ -43,4 +43,14 @@ class SecurityHeadersTest {
                 .andExpect(header().string("Cross-Origin-Embedder-Policy", "require-corp"))
                 .andExpect(header().string("Cache-Control", containsString("no-store")));
     }
+
+    @Test
+    void sensitiveApiResponsesAreNotCacheable() throws Exception {
+        mockMvc.perform(get("/admin/panel"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("Cache-Control", containsString("no-store")))
+                .andExpect(header().string("Cache-Control", containsString("no-cache")))
+                .andExpect(header().string("Pragma", "no-cache"))
+                .andExpect(header().string("Expires", containsString("1970")));
+    }
 }

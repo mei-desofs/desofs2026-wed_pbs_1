@@ -25,8 +25,8 @@ import static org.mockito.Mockito.when;
 
 class PasswordPolicyServiceTest {
 
-    private static final String CURRENT_PASSWORD = "CurrentPassword123!";
-    private static final String NEW_PASSWORD = "FreshPassword123!";
+    private static final String CURRENT_PASSWORD = "CurrentVault123!";
+    private static final String NEW_PASSWORD = "FreshVault123!";
 
     private final PasswordHistoryRepository passwordHistoryRepository =
             mock(PasswordHistoryRepository.class);
@@ -41,7 +41,9 @@ class PasswordPolicyServiceTest {
             value = {
                     "NULL, Password is required",
                     "'   ', Password is required",
-                    "P@SSW0RD1234!, Password is compromised"
+                    "Short1!, Password length is invalid",
+                    "lowercaseonly123!, Password complexity is invalid",
+                    "P@ssW0rd1234!, Password is compromised"
             }
     )
     void rejectsInvalidPasswordValues(String password, String expectedReason) {
@@ -88,6 +90,25 @@ class PasswordPolicyServiceTest {
     }
 
     @Test
+    void rejectsContextSpecificWords() {
+        User user = userWithPassword(CURRENT_PASSWORD);
+        user.setUsername("caseworker");
+        user.setEmail("caseworker@ghostreport.test");
+
+        ResponseStatusException applicationWord = assertThrows(
+                ResponseStatusException.class,
+                () -> service.validateNewPassword(user, "GhostReportVault123!")
+        );
+        ResponseStatusException usernameWord = assertThrows(
+                ResponseStatusException.class,
+                () -> service.validateNewPassword(user, "CaseworkerVault123!")
+        );
+
+        assertEquals("Password contains context-specific words", applicationWord.getReason());
+        assertEquals("Password contains context-specific words", usernameWord.getReason());
+    }
+
+    @Test
     void acceptsFreshPasswordForUser() {
         User user = userWithPassword(CURRENT_PASSWORD);
         when(passwordHistoryRepository.findTop5ByUserOrderByCreatedAtDesc(user))
@@ -103,7 +124,7 @@ class PasswordPolicyServiceTest {
         User user = userWithPassword(CURRENT_PASSWORD);
         PasswordHistory history = new PasswordHistory();
         history.setUser(user);
-        history.setPasswordHash(passwordEncoder.encode("DifferentPassword123!"));
+        history.setPasswordHash(passwordEncoder.encode("DifferentVault123!"));
         when(passwordHistoryRepository.findTop5ByUserOrderByCreatedAtDesc(user))
                 .thenReturn(List.of(history));
 

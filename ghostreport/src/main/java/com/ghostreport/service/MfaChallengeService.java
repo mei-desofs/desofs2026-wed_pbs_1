@@ -56,7 +56,8 @@ public class MfaChallengeService {
                 user.getId(),
                 user.getUsername(),
                 passwordEncoder.encode(challengeId + ":" + code),
-                expiresAt
+                expiresAt,
+                0
         ));
         if (properties.isExposeCode()) {
             exposedCodesForTesting.put(challengeId, code);
@@ -86,6 +87,21 @@ public class MfaChallengeService {
         }
 
         if (!passwordEncoder.matches(challengeId + ":" + code, challenge.codeHash())) {
+            int attempts = challenge.failedAttempts() + 1;
+            int maxAttempts = Math.max(1, properties.getMaxAttempts());
+            if (attempts >= maxAttempts) {
+                challenges.remove(challengeId);
+                exposedCodesForTesting.remove(challengeId);
+                auditLogService.log("MFA_VERIFY_LOCKED", "USER", challenge.userId(), "MFA challenge locked after invalid attempts");
+                throw new IllegalArgumentException("Invalid or expired verification code");
+            }
+            challenges.put(challengeId, new Challenge(
+                    challenge.userId(),
+                    challenge.username(),
+                    challenge.codeHash(),
+                    challenge.expiresAt(),
+                    attempts
+            ));
             auditLogService.log("MFA_VERIFY_REJECTED", "USER", challenge.userId(), "Invalid MFA code");
             throw new IllegalArgumentException("Invalid or expired verification code");
         }
@@ -111,7 +127,8 @@ public class MfaChallengeService {
                 challenge.userId(),
                 challenge.username(),
                 challenge.codeHash(),
-                clock.instant().minusSeconds(1)
+                clock.instant().minusSeconds(1),
+                challenge.failedAttempts()
         ));
     }
 
@@ -129,6 +146,6 @@ public class MfaChallengeService {
     public record MfaChallenge(String challengeId) {
     }
 
-    private record Challenge(Long userId, String username, String codeHash, Instant expiresAt) {
+    private record Challenge(Long userId, String username, String codeHash, Instant expiresAt, int failedAttempts) {
     }
 }

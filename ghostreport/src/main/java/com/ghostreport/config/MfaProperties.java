@@ -12,6 +12,7 @@ public class MfaProperties {
     private boolean enabled = false;
     private Set<UserRole> requiredRoles = EnumSet.allOf(UserRole.class);
     private long codeTtlSeconds = 300;
+    private int maxAttempts = 5;
     private boolean exposeCode = false;
 
     public boolean isEnabled() {
@@ -38,6 +39,14 @@ public class MfaProperties {
 
     public void setCodeTtlSeconds(long codeTtlSeconds) {
         this.codeTtlSeconds = codeTtlSeconds;
+    }
+
+    public int getMaxAttempts() {
+        return maxAttempts;
+    }
+
+    public void setMaxAttempts(int maxAttempts) {
+        this.maxAttempts = maxAttempts;
     }
 
     public boolean isExposeCode() {
