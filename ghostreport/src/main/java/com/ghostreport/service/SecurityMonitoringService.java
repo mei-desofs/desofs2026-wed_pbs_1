@@ -179,6 +179,16 @@ public class SecurityMonitoringService {
         );
     }
 
+    public void recordCspViolation(String report) {
+        createAlert(
+                "CSP_VIOLATION",
+                "MEDIUM",
+                "BROWSER",
+                null,
+                "Content Security Policy violation report received: " + summarizeCspReport(report)
+        );
+    }
+
     public void createAlert(String alertType, String severity, String targetType, Long targetId, String description) {
         SecurityAlert alert = new SecurityAlert();
         alert.setTimestamp(LocalDateTime.ofInstant(Instant.now(), ZoneOffset.UTC));
@@ -232,6 +242,19 @@ public class SecurityMonitoringService {
         }
 
         return sanitizedPath;
+    }
+
+    private String summarizeCspReport(String report) {
+        if (report == null || report.isBlank()) {
+            return "empty report body";
+        }
+
+        String sanitized = sanitizer.sanitize(report);
+        if (sanitized.length() > 300) {
+            return sanitized.substring(0, 300);
+        }
+
+        return sanitized;
     }
 
     private String integrityHash(SecurityAlert alert) {

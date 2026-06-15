@@ -47,7 +47,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-                        .ignoringRequestMatchers("/auth/login")
+                        .ignoringRequestMatchers("/auth/login", "/security/csp-report")
                 )
                 .headers(headers -> headers
                         .contentTypeOptions(contentTypeOptions -> {
@@ -59,7 +59,7 @@ public class SecurityConfig {
                                 .maxAgeInSeconds(31_536_000)
                         )
                         .contentSecurityPolicy(csp -> csp
-                                .policyDirectives("default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; upgrade-insecure-requests")
+                                .policyDirectives("default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; upgrade-insecure-requests; report-uri /security/csp-report")
                         )
                         .referrerPolicy(referrer -> referrer
                                 .policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)
@@ -77,6 +77,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/auth/mfa/verify").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/password-reset/request").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/password-reset/confirm").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/security/csp-report").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/reports").permitAll()
                         .requestMatchers(HttpMethod.POST, "/reports/verify").permitAll()
@@ -164,6 +165,7 @@ public class SecurityConfig {
         private boolean isSensitivePath(String path) {
             return path.startsWith("/auth/")
                     || path.startsWith("/reports")
+                    || path.startsWith("/security/")
                     || path.startsWith("/admin/")
                     || path.startsWith("/analyst/")
                     || path.startsWith("/audit/");

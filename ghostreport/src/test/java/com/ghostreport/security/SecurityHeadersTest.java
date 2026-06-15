@@ -41,6 +41,7 @@ class SecurityHeadersTest {
                 .andExpect(header().string("Content-Security-Policy", containsString("base-uri 'none'")))
                 .andExpect(header().string("Content-Security-Policy", containsString("form-action 'self'")))
                 .andExpect(header().string("Content-Security-Policy", containsString("upgrade-insecure-requests")))
+                .andExpect(header().string("Content-Security-Policy", containsString("report-uri /security/csp-report")))
                 .andExpect(header().string("Content-Security-Policy", not(containsString("unsafe-inline"))))
                 .andExpect(header().string("Content-Security-Policy", not(containsString("unsafe-eval"))))
                 .andExpect(header().string("Permissions-Policy", containsString("geolocation=()")))
@@ -49,6 +50,26 @@ class SecurityHeadersTest {
                 .andExpect(header().string("Cross-Origin-Embedder-Policy", "require-corp"))
                 .andExpect(header().string("Cache-Control", containsString("no-store")))
                 .andExpect(header().doesNotExist("Server"));
+    }
+
+    @Test
+    void cspReportsAreAcceptedWithoutAuthenticationOrCsrfToken() throws Exception {
+        mockMvc.perform(post("/security/csp-report")
+                        .contentType("application/csp-report")
+                        .content("""
+                                {
+                                  "csp-report": {
+                                    "document-uri": "https://ghostreport.example/index.html",
+                                    "violated-directive": "script-src",
+                                    "blocked-uri": "inline",
+                                    "trackingCode": "GR-abcdefghijklmnopqrstuvwxyz"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isAccepted())
+                .andExpect(header().string("Cache-Control", containsString("no-store")))
+                .andExpect(jsonPath("$.message").value("Report accepted"))
+                .andExpect(jsonPath("$.correlationId").exists());
     }
 
     @Test
