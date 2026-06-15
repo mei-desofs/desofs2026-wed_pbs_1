@@ -3,6 +3,7 @@ package com.ghostreport.dto;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -99,7 +100,7 @@ class ResponseDtoCoverageTest {
     @Test
     void reportResponseAndAuditRecordsExposeTheirValues() {
         LocalDateTime timestamp =
-                LocalDateTime.of(2026, 6, 15, 1, 30);
+                LocalDateTime.of(2026, Month.JUNE, 15, 1, 30);
         ReportResponse report =
                 new ReportResponse(1L, "Title", "SUBMITTED", "Fraud", "Description");
         AuditLogResponse audit =

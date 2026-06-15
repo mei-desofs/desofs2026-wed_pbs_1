@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,9 +47,11 @@ class ModelEntityCoverageTest {
 
         assertEquals(0, report.getAttachments().size());
         assertNull(attachment.getReport());
+        List<Attachment> attachments = report.getAttachments();
+        Attachment rejectedAttachment = new Attachment();
         assertThrows(
                 UnsupportedOperationException.class,
-                () -> report.getAttachments().add(new Attachment())
+                () -> attachments.add(rejectedAttachment)
         );
     }
 
@@ -101,7 +104,7 @@ class ModelEntityCoverageTest {
         User analyst = new User();
         CaseReview review = new CaseReview();
         LocalDateTime manualTimestamp =
-                LocalDateTime.of(2026, 6, 15, 1, 40);
+                LocalDateTime.of(2026, Month.JUNE, 15, 1, 40);
 
         review.setId(1L);
         review.setVersion(2L);
@@ -126,7 +129,7 @@ class ModelEntityCoverageTest {
         User user = new User();
         CaseReview review = new CaseReview();
         LocalDateTime createdAt =
-                LocalDateTime.of(2026, 6, 15, 1, 45);
+                LocalDateTime.of(2026, Month.JUNE, 15, 1, 45);
 
         user.setId(1L);
         user.setUsername("analyst");
@@ -145,9 +148,10 @@ class ModelEntityCoverageTest {
         assertFalse(user.isActive());
         assertEquals(createdAt, user.getCreatedAt());
         assertEquals(1, user.getAssignedCases().size());
+        List<CaseReview> assignedCases = user.getAssignedCases();
         assertThrows(
                 UnsupportedOperationException.class,
-                () -> user.getAssignedCases().clear()
+                assignedCases::clear
         );
 
         user.setAssignedCases(null);
