@@ -12,6 +12,7 @@ renomeacoes ou reorganizacao agressiva.
 
 - [ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx](ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx) - tracker ASVS principal da Sprint 2 em Excel, copiado estruturalmente do tracker Sprint 1 e actualizado com a evidencia factual do projecto.
 - [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md) - resumo explicativo do tracker ASVS e links para a evidencia de suporte.
+- [DANGEROUS_FUNCTIONALITY.md](DANGEROUS_FUNCTIONALITY.md) - inventario de operacoes sensiveis/perigosas e respetivas mitigacoes/testes.
 
 ## Anexos tecnicos
 

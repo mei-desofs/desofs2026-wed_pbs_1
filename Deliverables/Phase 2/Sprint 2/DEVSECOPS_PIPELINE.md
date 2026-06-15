@@ -184,7 +184,8 @@ Validacao local expandida do probe em 2026-06-15:
 
 Nao houve probes skipped na validacao local. `GET /login.html` e tratado como
 controlo de exposicao quando responde `401/404`, e o restore destrutivo de
-backup continua fora do probe runtime. O workflow publica o JSON
+backup continua fora do probe runtime porque exige reautenticacao e e coberto
+por testes automatizados. O workflow publica o JSON
 `runtime-probe-summary.json` para confirmar estes numeros por run.
 
 Artefactos documentados na entrega:

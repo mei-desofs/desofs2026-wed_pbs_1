@@ -20,7 +20,7 @@ implementados, controlos parcialmente dependentes de operacao e trabalho futuro.
 | Uploads | malware, path traversal, content spoofing | Allowlist, MIME/magic bytes, scanner, nomes gerados, quarentena. |
 | Analyst workflows | EoP, IDOR, alteracao indevida | RBAC, ownership, workflow validation, optimistic locking. |
 | Auditoria | repudiation/tampering | correlationId, integrityHash, DTOs sem segredos. |
-| Backups/packages | tampering, ZIP Slip, path traversal | HMAC/hash manifests, canonical path checks, verify before restore. |
+| Backups/packages | tampering, ZIP Slip, path traversal, uso indevido de restore | HMAC/hash manifests, canonical path checks, verify before restore, reautenticacao admin e respostas sem paths internos. |
 | CI/CD | secrets, dependencias vulneraveis, regressao | Gitleaks, Dependency-Check, CycloneDX, SAST, testes. |
 
 ## 3. STRIDE aplicado
@@ -57,7 +57,7 @@ Ameacas:
 Mitigacoes:
 
 - manifestos com hashes/HMAC;
-- verificacao de backups antes de restore;
+- verificacao de backups antes de restore e reautenticacao do admin;
 - rejeicao de manifest tampering;
 - `integrityHash` em auditoria/alertas;
 - canonical path checks;
@@ -159,7 +159,7 @@ Evidencia: `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`,
 | Validacao input | Implementado | DTOs, Bean Validation, allowlists. |
 | Upload hardening | Implementado | MIME/magic bytes/scanner/path checks. |
 | Auditoria/alertas | Implementado | Logs e alertas com integrity metadata. |
-| Backups | Implementado | Manifestos, hashes, HMAC, verify/restore. |
+| Backups | Implementado | Manifestos, hashes, HMAC, verify/restore para staging com reautenticacao e sem exposicao de path interno na resposta. |
 | SCA/SBOM | Implementado | Dependency-Check e CycloneDX. |
 | SAST | Implementado como evidencia | CodeQL, SpotBugs, SonarCloud. |
 | DAST | Implementado baseline | ZAP baseline e runtime probes; validacao local expandida com 101 probes, 101 passed, 0 failed e 0 skipped. |

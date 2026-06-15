@@ -13,7 +13,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 
 | Evidencia | Resultado confirmado |
 | --- | --- |
-| Testes Maven | `283` testes, `0` falhas, `0` erros, `0` skipped. |
+| Testes Maven | `286` testes, `0` falhas, `0` erros, `0` skipped. |
 | Runtime probes locais | `101` probes, `101` passed, `0` failed, `0` skipped. |
 | Spring Security | `6.5.11` via Spring Boot `3.5.15`. |
 | SCA CVEs remediados | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003. |
@@ -31,11 +31,12 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 | Validacao | DTOs, Bean Validation, enums/allowlists, tracking code e contratos API. | Implementado |
 | Ficheiros/uploads | Extensao/MIME/magic bytes, tamanho, quota por request/denuncia, nomes gerados, path checks e ZIP Slip em backups/packages. | Implementado |
 | Erros e logging | Erros genericos, correlation id, audit logs, security alerts e sanitizacao. | Implementado |
-| Backups/evidencia | ZIPs com hashes, HMAC, manifesto, verificacao e restore para staging. | Implementado |
+| Backups/evidencia | ZIPs com hashes, HMAC, manifesto, verificacao e restore para staging com reautenticacao do admin. | Implementado |
 | SCA/SAST/DAST/runtime | Dependency-Check, CycloneDX, CodeQL, SpotBugs, SonarCloud, Gitleaks, ZAP baseline e runtime evidence. | Implementado como evidencia |
 | Configuracao | Secrets por ambiente, PostgreSQL fora de testes, validacao de configuracao e guia seguro. | Implementado/documentado |
 | Headers/browser security | CSP restritiva com `report-uri`, endpoint `/security/csp-report`, HSTS preload, COOP/COEP/CORP, Fetch Metadata/Origin validation, fallback para browsers sem features esperadas e bloqueio de headers anormais. | Implementado |
 | Criptografia | [CRYPTOGRAPHIC_INVENTORY.md](CRYPTOGRAPHIC_INVENTORY.md) mapeia BCrypt, SecureRandom, HMAC-SHA-256, SHA-256, JWT, backups e hashes de integridade; `CryptographicInventoryTest` verifica o inventario. | Implementado |
+| Dangerous functionality | [DANGEROUS_FUNCTIONALITY.md](DANGEROUS_FUNCTIONALITY.md) mapeia restore, backups, uploads, packages, password reset, JWT/logging/crypto e e verificado por teste. | Implementado |
 | Comunicacao segura | Perfil prod-like com modo TLS explicito, TLS 1.2/1.3, cifras modernas e PostgreSQL com `sslmode=verify-ca`/`verify-full`. | Implementado/configurado; certificado publico e operacional |
 | L2 aplicavel | Rate limit de submissao de denuncias, malware scanner local, JWT audience, MFA one-time, no-store, resource limits e logging estruturado. | Reavaliado no XLSX |
 
@@ -82,6 +83,13 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 - `FrontendXssDataExposureTest` passou a cobrir padroes de DOM clobbering,
   garantindo ausencia de `name` em controlos e de acesso `document.<id>` aos
   elementos da pagina.
+- `AdminBackupController` passou a exigir reautenticacao por
+  `X-Reauth-Password` antes de executar restore de backup para staging.
+- `BackupRestoreResponse` e `CasePackageResponse` deixaram de expor paths
+  internos/listas de ficheiros gerados, com cobertura em
+  `ResponseDataMinimizationTest`.
+- `DANGEROUS_FUNCTIONALITY.md` e `DangerousFunctionalityInventoryTest` passaram
+  a manter rastreabilidade de operacoes sensiveis.
 
 ## Melhorias L2 adicionais
 
@@ -141,6 +149,16 @@ real ou que puderam ser reforcados sem alterar radicalmente a aplicacao:
   sem definir a password do utilizador.
 - `V3.2.3` passou a `Compliant` com teste automatico contra padroes de DOM
   clobbering no frontend estatico.
+- `V7.5.3` passou a `Compliant` porque operacoes sensiveis cobertas exigem
+  verificacao adicional: password actual em password change e
+  `X-Reauth-Password` em restore de backup admin.
+- `V14.2.6` passou a `Compliant` porque respostas de backup/package deixam de
+  expor paths internos ou listas de ficheiros gerados, com teste de contrato.
+- `V15.1.5` passou a `Compliant` com inventario de dangerous functionality
+  verificado por teste.
+- `V11.3.4` e `V11.3.5` foram reclassificados como `Not Applicable` porque a
+  aplicacao nao usa `Cipher`/encriptacao aplicacional com IV ou composicao
+  encryption+MAC.
 
 Capitulos fora do escopo implementado, como OAuth/OIDC e WebRTC, permanecem
 `Not Applicable`; nao foram convertidos em `Compliant` para evitar claims
@@ -165,5 +183,6 @@ enganosos.
 - [DEVSECOPS_PIPELINE.md](DEVSECOPS_PIPELINE.md)
 - [SCA_TRIAGE.md](SCA_TRIAGE.md)
 - [CRYPTOGRAPHIC_INVENTORY.md](CRYPTOGRAPHIC_INVENTORY.md)
+- [DANGEROUS_FUNCTIONALITY.md](DANGEROUS_FUNCTIONALITY.md)
 - [IAST_RUNTIME_SECURITY.md](IAST_RUNTIME_SECURITY.md)
 - [SECURITY_ASSESSMENT.md](SECURITY_ASSESSMENT.md)

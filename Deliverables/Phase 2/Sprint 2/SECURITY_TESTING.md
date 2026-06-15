@@ -9,7 +9,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 283 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 286 testes, 0 falhas, 0 erros, 0 skipped.
 
 ## 2. Estrategia
 
@@ -31,10 +31,10 @@ menos uma mitigacao implementada e, sempre que possivel, um teste que a prove.
 | Public reports | `PublicReportFlowIntegrationTest`, `TrackingCodeEnumerationTest`, `RateLimiterServiceTest` | Criacao anonima, tracking code, erros seguros, enumeracao e rate limit de submissao. |
 | Uploads/files | `ReportControllerAttachmentUploadTest`, `FileStorageServiceTest`, `SafeFilenameSecurityTest`, `SafeFilenameTest` | MIME, magic bytes, traversal, malware/quarantine, limites, paths. |
 | Auditoria/logging | `AuditLogSecurityTest`, `AnonymousDataLoggingTest`, `RuntimeSecurityEventLoggingTest` | Nao guardar passwords/tokens/tracking code, alertas e correlationId. |
-| Backups/packages | `BackupServiceIntegrationTest`, `AdminBackupControllerSecurityTest`, `CasePackageServiceIntegrationTest` | Manifestos, tampering, restore, traversal, packages. |
+| Backups/packages | `BackupServiceIntegrationTest`, `AdminBackupControllerSecurityTest`, `CasePackageServiceIntegrationTest` | Manifestos, tampering, restore com reautenticacao, traversal, packages e respostas sem paths internos. |
 | Frontend | `FrontendXssDataExposureTest`, `FrontendNavbarVisibilityTest`, `CsrfCookieAttributesTest` | DOM clobbering, XSS sinks, scripts inline, tokens em storage, tracking code em URL, navs escondidas, CSRF cookie. |
 | Headers/erros | `SecurityHeadersTest`, `SecurityMonitoringServiceTest`, `ErrorHandlingSecurityTest`, `ApiValidationContractTest` | CSP/HSTS/COOP/COEP/CORP, CSP report endpoint, Fetch Metadata, headers anormais, metadata `.git`/`.svn`, JSON errors genericos, validacao de contratos e alerta sanitizado. |
-| Criptografia | `CryptographicInventoryTest`, `JwtServiceSecurityTest`, `TrackingCodeTest`, `BackupServiceIntegrationTest` | Inventario criptografico, algoritmos aprovados, ausencia de algoritmos obsoletos, JWT HMAC, SecureRandom e integridade de backups. |
+| Criptografia/arquitectura sensivel | `CryptographicInventoryTest`, `DangerousFunctionalityInventoryTest`, `ResponseDataMinimizationTest`, `JwtServiceSecurityTest`, `TrackingCodeTest`, `BackupServiceIntegrationTest` | Inventario criptografico, dangerous functionality, minimizacao de respostas, algoritmos aprovados, ausencia de algoritmos obsoletos, JWT HMAC, SecureRandom e integridade de backups. |
 | Rate limiting | `RateLimiterServiceTest`, `LoginRateLimitSecurityTest` | Limites, reset de janela, brute force alert. |
 
 ## 4. Matriz de validacao de endpoints
@@ -51,7 +51,7 @@ menos uma mitigacao implementada e, sempre que possivel, um teste que a prove.
 | `/analyst/**` | Role, ownership, workflow, status/priority/notes. | `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`, `BusinessLogicWorkflowSecurityTest`. |
 | `/audit/**` | Auditor/admin read-only, sem paths/filenames sensiveis. | `AuditorAuthorizationTest`. |
 | `/admin/users/**` | Role allowlist, password policy, ultimo admin activo. | `AdminUserManagementSecurityTest`. |
-| `/admin/backups/**` | Admin-only, path traversal, verify before restore. | `AdminBackupControllerSecurityTest`, `BackupServiceIntegrationTest`. |
+| `/admin/backups/**` | Admin-only, path traversal, verify before restore, reautenticacao para restore e resposta sem path interno. | `AdminBackupControllerSecurityTest`, `BackupServiceIntegrationTest`. |
 | `/security/csp-report` | Recepcao publica/sem CSRF de CSP reports, resposta generica e alerta sanitizado sem JWT/tracking code. | `SecurityHeadersTest`, `SecurityMonitoringServiceTest`. |
 
 ## 5. STRIDE e testes
@@ -108,6 +108,11 @@ A revisao ASVS final adicionou evidencias directas para:
 - reset de password iniciado por admin sem escolha de nova password em
   `AdminUserManagementSecurityTest`;
 - ausencia de padroes de DOM clobbering em `FrontendXssDataExposureTest`;
+- reautenticacao obrigatoria para restore de backup admin em
+  `AdminBackupControllerSecurityTest`;
+- minimizacao de respostas para nao expor paths internos de restore/packages em
+  `ResponseDataMinimizationTest`;
+- inventario de dangerous functionality em `DangerousFunctionalityInventoryTest`;
 - geracao de 2.000 tracking codes com `SecureRandom` sem colisoes em
   `TrackingCodeTest`.
 
@@ -140,8 +145,9 @@ Validacao local do probe expandido, executado contra a aplicacao em
 Nao houve probes skipped na execucao local validada. `GET /login.html` e
 tratado como controlo de exposicao: `401/404` confirma que nao existe pagina
 publica separada de login. O restore destrutivo de backup continua fora do
-probe runtime; a evidencia executa validacao segura de filename/path traversal
-e mantem restore para staging coberto pelos testes automatizados.
+probe runtime; a evidencia executa validacao segura de filename/path traversal,
+e os testes automatizados cobrem restore para staging com reautenticacao do
+admin.
 
 Artefactos relacionados:
 

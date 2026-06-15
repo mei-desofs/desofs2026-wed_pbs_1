@@ -103,7 +103,7 @@ constraint e a aplicacao usam apenas `ADMIN`, `ANALYST` e `AUDITOR`.
 | GET | `/admin/backups` | `ADMIN` | Listar backups. | Apenas ficheiros validos no directorio base. |
 | GET | `/admin/backups/{filename}/download` | `ADMIN` | Descarregar backup. | Content-Disposition seguro e path canonical. |
 | POST | `/admin/backups/{filename}/verify` | `ADMIN` | Verificar backup. | Detecta tampering/manifest mismatch. |
-| POST | `/admin/backups/{filename}/restore` | `ADMIN` | Repor backup. | Validacao antes de restore. |
+| POST | `/admin/backups/{filename}/restore` | `ADMIN` | Repor backup para staging. | Validacao antes de restore, CSRF, JWT admin e reautenticacao por `X-Reauth-Password`; resposta sem path interno. |
 
 ## 9. Matriz resumida por role
 

@@ -33,8 +33,11 @@ rastreabilidade entre codigo, finalidade, algoritmo e material de chave.
 
 ## Limitacoes
 
+- Nao existe `Cipher`/encriptacao aplicacional com IV/nonce ou combinacao
+  encryption+MAC; a aplicacao usa BCrypt, SecureRandom, HMAC-SHA-256, SHA-256
+  e TLS da plataforma/deployment.
 - Nao existe HSM, vault ou KMS externo no ambiente academico actual.
 - Nao existe inventario automatico de runtime em producao; a verificacao e
   feita por teste estatico no codigo-fonte.
-- Migração para algoritmos pos-quanticos fica como trabalho futuro, porque o
+- Migracao para algoritmos pos-quanticos fica como trabalho futuro, porque o
   sistema actual usa sobretudo HMAC, BCrypt e hashes para integridade local.

@@ -260,7 +260,7 @@ Os endpoints principais estao agrupados abaixo.
 | GET | `/admin/backups` | `ADMIN` | Listar backups. |
 | GET | `/admin/backups/{filename}/download` | `ADMIN` | Descarregar backup. |
 | POST | `/admin/backups/{filename}/verify` | `ADMIN` | Verificar backup. |
-| POST | `/admin/backups/{filename}/restore` | `ADMIN` | Repor backup validado. |
+| POST | `/admin/backups/{filename}/restore` | `ADMIN` | Repor backup validado para staging, com reautenticacao. |
 
 ## 10. Validacao, uploads e seguranca de input
 
@@ -505,7 +505,8 @@ A validacao local expandida do probe confirmou 101 probes: 101 passed, 0 failed
 e 0 skipped. `GET /login.html` e tratado como controlo de exposicao: `401/404`
 confirma que nao existe pagina publica separada. O restore destrutivo de backup
 continua fora do probe runtime; a evidencia executa validacao segura de
-filename/path traversal e os testes automatizados cobrem restore para staging.
+filename/path traversal e os testes automatizados cobrem restore para staging
+com reautenticacao do admin.
 
 JWT expirado, backups, ZIP Slip e tamanho maximo de upload sao cobertos pela
 seleccao de testes Maven executada no mesmo job `dast-scan`.
@@ -519,7 +520,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 283 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 286 testes, 0 falhas, 0 erros, 0 skipped.
 
 Categorias cobertas:
 
@@ -537,11 +538,13 @@ Categorias cobertas:
 - analista ownership e workflow de casos;
 - auditor read-only;
 - admin user lifecycle;
-- backups, restore e integridade;
+- backups, restore com reautenticacao, integridade e minimizacao de paths internos;
 - frontend: DOM clobbering, XSS sinks, scripts inline, tokens em storage,
   tracking code em URL, navs escondidas.
 - inventario criptografico: rastreabilidade de BCrypt, SecureRandom,
   HMAC-SHA-256, SHA-256, JWT e backups.
+- inventario de dangerous functionality: restore, uploads, packages, password
+  reset, JWT/logging/crypto e respetivos testes.
 
 Resumo detalhado: [SECURITY_TESTING.md](SECURITY_TESTING.md).
 

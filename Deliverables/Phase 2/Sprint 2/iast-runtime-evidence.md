@@ -19,7 +19,8 @@ The expanded local runtime probe run on 2026-06-15 produced 101 probes: 101
 passed, 0 failed and 0 skipped. The absent public `/login.html` page is treated
 as an exposure control: `401/404` confirms there is no standalone public login
 page. Destructive backup restore is still not executed by the runtime probe;
-safe restore filename validation is exercised instead.
+safe restore filename validation is exercised instead, while automated tests
+cover admin reauthentication for staging restore.
 
 ## Runtime tests executed in CI
 
