@@ -161,6 +161,15 @@ upload/list/download de anexos, login/MFA/logout/password reset, endpoints
 JSON malformado, content type errado, Authorization malformado, JWT invalido,
 role errada e token ausente.
 
+## 7.1 Triagem ZAP baseline
+
+| Finding | Estado | Justificacao |
+| --- | --- | --- |
+| `CSP: Notices` | Corrigido por teste de headers | `SecurityHeadersTest` confirma CSP com `report-to csp-endpoint`, header `Report-To`, ausencia de `report-uri`, `unsafe-inline` e `unsafe-eval`. |
+| `Cookie No HttpOnly Flag` em `XSRF-TOKEN` | Aceite tecnicamente | `CsrfCookieAttributesTest` confirma que o cookie e legivel pelo frontend, tem `SameSite=Lax`, nao contem JWT/bearer token e nao ha `JSESSIONID`. |
+| `Non-Storable Content` | Aceite informacional | O `no-store` e intencional em respostas sensiveis para reduzir exposicao em cache. |
+| `Session Management Response Identified` em `XSRF-TOKEN` | Aceite informacional | `XSRF-TOKEN` e token CSRF, nao token de autenticacao nem sessao. |
+
 ## 8. Limitacoes
 
 - Testes automatizados nao substituem pentest manual.

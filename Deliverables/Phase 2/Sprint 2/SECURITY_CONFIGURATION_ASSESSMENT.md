@@ -11,7 +11,7 @@ producao real.
 
 | Area | Configuracao actual | Avaliacao |
 | --- | --- | --- |
-| Spring Security | Regras centralizadas, filtro JWT, CSP/HSTS/COOP/COEP/CORP, `report-uri /security/csp-report`, Fetch Metadata/Origin validation e request-boundary filter. | Implementado. |
+| Spring Security | Regras centralizadas, filtro JWT, CSP/HSTS/COOP/COEP/CORP, `report-to csp-endpoint`, header `Report-To`, Fetch Metadata/Origin validation e request-boundary filter. | Implementado. |
 | Autenticacao | BCrypt, JWT e MFA para `ADMIN`, `ANALYST` e `AUDITOR`. | Implementado. |
 | Secrets | Esperados por ambiente/deployment secrets; dev/test secrets sao rejeitados em prod-like. | Implementado; secret manager e futuro. |
 | Base de dados | PostgreSQL em runtime, H2 em testes; prod-like exige `sslmode=verify-ca` ou `sslmode=verify-full`. | Implementado; migracoes formais sao futuro. |
@@ -23,7 +23,7 @@ producao real.
 | Backups | Manifesto HMAC e verificacao. | Implementado; encriptacao/retencao externa sao futuro. |
 | Rate limiting | Em memoria na aplicacao para login, tracking, report submission, upload e download. | Adequado ao ambito; externo/distribuido e futuro. |
 | Logs/auditoria | Auditoria e alertas com metadados de integridade. | Implementado; SIEM/WORM e futuro. |
-| CSP reporting | Endpoint publico `/security/csp-report` guarda alerta sanitizado para violacoes CSP do browser. | Implementado. |
+| CSP reporting | Endpoint publico `/security/csp-report` guarda alerta sanitizado para violacoes CSP do browser via `report-to`/`Report-To`. | Implementado. |
 | Dependencias | Dependency-Check e CycloneDX. | Implementado. |
 | Inventario criptografico | `CRYPTOGRAPHIC_INVENTORY.md` documenta BCrypt, SecureRandom, HMAC-SHA-256, SHA-256 e JWT; `CryptographicInventoryTest` valida a rastreabilidade. | Implementado. |
 

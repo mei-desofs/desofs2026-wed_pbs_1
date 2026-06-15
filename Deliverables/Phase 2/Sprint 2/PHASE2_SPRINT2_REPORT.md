@@ -283,8 +283,8 @@ As validacoes principais incluem:
 - rejeicao de parametros escalares duplicados para mitigar HTTP parameter
   pollution fora de multipart;
 - validacao Fetch Metadata/Origin para bloquear pedidos unsafe cross-site;
-- CSP `report-uri /security/csp-report` para receber relatorios de violacao
-  do browser sem expor tokens ou tracking codes em respostas.
+- CSP `report-to csp-endpoint` com header `Report-To` para receber relatorios
+  de violacao do browser sem expor tokens ou tracking codes em respostas.
 - fallback frontend para browsers que nao suportem features esperadas como
   `fetch`, `crypto.getRandomValues`, `TextEncoder` e APIs DOM seguras.
 - bloqueio explicito de caminhos `/.git` e `/.svn` para impedir exposicao de
@@ -461,6 +461,15 @@ SAST combina:
 DAST e feito por OWASP ZAP baseline contra `http://localhost:8081` apos a
 aplicacao arrancar em CI. O scan e baseline/passivo, nao substitui um teste de
 penetracao autenticado.
+
+Triagem ZAP actual:
+
+| Finding | Decisao | Justificacao |
+| --- | --- | --- |
+| `CSP: Notices` | Corrigido no codigo | A CSP passou de `report-uri` para `report-to csp-endpoint` e o header `Report-To` aponta para `/security/csp-report`. |
+| `Cookie No HttpOnly Flag` em `XSRF-TOKEN` | Aceite/justificado | O frontend le `XSRF-TOKEN` via JavaScript para enviar `X-XSRF-TOKEN`; nao e JWT nem cookie de sessao autenticada. |
+| `Non-Storable Content` | Aceite informacional | `Cache-Control: no-store` e intencional em respostas sensiveis e nao deve ser removido para silenciar ZAP. |
+| `Session Management Response Identified` em `XSRF-TOKEN` | Aceite informacional | O cookie e apenas token CSRF, nao concede acesso sozinho e nao transporta autenticacao. |
 
 ### IAST-like
 

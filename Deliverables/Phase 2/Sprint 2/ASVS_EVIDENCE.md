@@ -34,7 +34,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 | Backups/evidencia | ZIPs com hashes, HMAC, manifesto, verificacao e restore para staging com reautenticacao do admin. | Implementado |
 | SCA/SAST/DAST/runtime | Dependency-Check, CycloneDX, CodeQL, SpotBugs, SonarCloud, Gitleaks, ZAP baseline e runtime evidence. | Implementado como evidencia |
 | Configuracao | Secrets por ambiente, PostgreSQL fora de testes, validacao de configuracao e guia seguro. | Implementado/documentado |
-| Headers/browser security | CSP restritiva com `report-uri`, endpoint `/security/csp-report`, HSTS preload, COOP/COEP/CORP, Fetch Metadata/Origin validation, fallback para browsers sem features esperadas e bloqueio de headers anormais. | Implementado |
+| Headers/browser security | CSP restritiva com `report-to`, header `Report-To`, endpoint `/security/csp-report`, HSTS preload, COOP/COEP/CORP, Fetch Metadata/Origin validation, fallback para browsers sem features esperadas e bloqueio de headers anormais. | Implementado |
 | Criptografia | [CRYPTOGRAPHIC_INVENTORY.md](CRYPTOGRAPHIC_INVENTORY.md) mapeia BCrypt, SecureRandom, HMAC-SHA-256, SHA-256, JWT, backups e hashes de integridade; `CryptographicInventoryTest` verifica o inventario. | Implementado |
 | Dangerous functionality | [DANGEROUS_FUNCTIONALITY.md](DANGEROUS_FUNCTIONALITY.md) mapeia restore, backups, uploads, packages, password reset, JWT/logging/crypto e e verificado por teste. | Implementado |
 | Comunicacao segura | Perfil prod-like com modo TLS explicito, TLS 1.2/1.3, cifras modernas e PostgreSQL com `sslmode=verify-ca`/`verify-full`. | Implementado/configurado; certificado publico e operacional |
@@ -105,9 +105,9 @@ logging estruturado e tratamento de erros inesperados.
 O tracker XLSX tambem foi revisto para controlos L3 que ja tinham evidencia
 real ou que puderam ser reforcados sem alterar radicalmente a aplicacao:
 
-- `V3.4.7` passou a `Compliant` com CSP `report-uri /security/csp-report`,
-  endpoint publico para relatorios CSP, alerta `CSP_VIOLATION` e sanitizacao de
-  JWT/tracking codes antes de persistir o alerta.
+- `V3.4.7` passou a `Compliant` com CSP `report-to csp-endpoint`, header
+  `Report-To`, endpoint publico para relatorios CSP, alerta `CSP_VIOLATION` e
+  sanitizacao de JWT/tracking codes antes de persistir o alerta.
 - `V3.1.1` e `V3.7.4` foram actualizados com base nos headers ja testados:
   CSP, HSTS `includeSubDomains`/`preload`, COOP, CORP, COEP,
   Permissions-Policy e no-store para respostas sensiveis.

@@ -264,6 +264,15 @@ Critérios de triagem:
 | ZAP baseline informativo | Avaliar impacto; corrigir se expuser controlos reais ou documentar como hardening futuro. |
 | Evidencia incompleta por ambiente | Repetir workflow ou documentar limitação operacional sem transformar em claim. |
 
+### Triagem ZAP actual
+
+| Finding ZAP | Estado | Decisao tecnica |
+| --- | --- | --- |
+| `CSP: Notices` | Corrigido | `SecurityConfig` usa `report-to csp-endpoint` e header `Report-To` em vez de depender de `report-uri`. |
+| `Cookie No HttpOnly Flag` (`XSRF-TOKEN`) | Aceite | O frontend precisa ler o cookie para enviar `X-XSRF-TOKEN`; nao e cookie de sessao/JWT e fica com `SameSite=Lax`. |
+| `Non-Storable Content` | Aceite informacional | `no-store` e mantido para endpoints/paginas sensiveis. |
+| `Session Management Response Identified` (`XSRF-TOKEN`) | Aceite informacional | O cookie identifica proteccao CSRF, nao uma sessao autenticada. |
+
 ## 15. Limitacoes da pipeline
 
 - Branch protection e configuracao do GitHub, nao totalmente provavel por ficheiros.
