@@ -44,6 +44,10 @@ class CsrfCookieAttributesTest {
                 .anySatisfy(cookie -> assertThat(cookie)
                         .contains("XSRF-TOKEN=")
                         .contains("SameSite=Lax")
-                        .doesNotContain("HttpOnly"));
+                        .doesNotContain("HttpOnly")
+                        .doesNotContain("Bearer")
+                        .doesNotContain("JWT"));
+        assertThat(response.headers().allValues(HttpHeaders.SET_COOKIE))
+                .noneMatch(cookie -> cookie.startsWith("JSESSIONID="));
     }
 }

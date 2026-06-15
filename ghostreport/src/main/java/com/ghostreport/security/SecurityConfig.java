@@ -36,6 +36,28 @@ import java.util.Set;
 public class SecurityConfig {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final String[] PUBLIC_PAGES = {
+            "/",
+            "/index.html",
+            "/submit.html",
+            "/track.html",
+            "/analyst.html",
+            "/admin.html",
+            "/auditor.html"
+    };
+    private static final String CSP_REPORTING_GROUP = "csp-endpoint";
+    private static final String CSP_REPORT_ENDPOINT = "/security/csp-report";
+    private static final String CONTENT_SECURITY_POLICY = "default-src 'self'; "
+            + "script-src 'self'; "
+            + "style-src 'self'; "
+            + "object-src 'none'; "
+            + "frame-ancestors 'none'; "
+            + "base-uri 'none'; "
+            + "form-action 'self'; "
+            + "upgrade-insecure-requests; "
+            + "report-to " + CSP_REPORTING_GROUP;
+    private static final String REPORT_TO_HEADER = "{\"group\":\"" + CSP_REPORTING_GROUP
+            + "\",\"max_age\":10886400,\"endpoints\":[{\"url\":\"" + CSP_REPORT_ENDPOINT + "\"}]}";
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -44,79 +66,106 @@ public class SecurityConfig {
             JwtAuthenticationFilter jwtAuthenticationFilter,
             CorrelationIdFilter correlationIdFilter
     ) throws Exception {
-        http
-                .csrf(csrf -> csrf
-                        .csrfTokenRepository(csrfTokenRepository())
-                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-                        .ignoringRequestMatchers("/auth/login", "/security/csp-report")
-                )
-                .headers(headers -> headers
-                        .contentTypeOptions(contentTypeOptions -> {
-                        })
-                        .frameOptions(frameOptions -> frameOptions.deny())
-                        .httpStrictTransportSecurity(hsts -> hsts
-                                .includeSubDomains(true)
-                                .preload(true)
-                                .maxAgeInSeconds(31_536_000)
-                        )
-                        .contentSecurityPolicy(csp -> csp
-                                .policyDirectives("default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; upgrade-insecure-requests; report-uri /security/csp-report")
-                        )
-                        .referrerPolicy(referrer -> referrer
-                                .policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)
-                        )
-                        .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=()"))
-                        .addHeaderWriter(new StaticHeadersWriter("Cross-Origin-Opener-Policy", "same-origin"))
-                        .addHeaderWriter(new StaticHeadersWriter("Cross-Origin-Resource-Policy", "same-origin"))
-                        .addHeaderWriter(new StaticHeadersWriter("Cross-Origin-Embedder-Policy", "require-corp"))
-                )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/index.html", "/submit.html", "/track.html", "/analyst.html", "/admin.html", "/auditor.html").permitAll()
-                        .requestMatchers("/css/**", "/js/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/mfa/verify").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/password-reset/request").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/password-reset/confirm").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/security/csp-report").permitAll()
+        configureCsrf(http);
+        configureHeaders(http);
+        configureAuthorization(http);
+        configureExceptionHandling(http, securityMonitoringService);
+        configureFilters(http, jwtAuthenticationFilter, correlationIdFilter);
+        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .httpBasic(httpBasic -> httpBasic.disable());
 
-                        .requestMatchers(HttpMethod.POST, "/reports").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/reports/verify").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/reports/{id}/attachments").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/reports/{id}/attachments/list").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/reports/download").permitAll()
+        return http.build();
+    }
 
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/analyst/**").hasAnyRole("ANALYST", "ADMIN")
-                        .requestMatchers("/audit/**").hasAnyRole("AUDITOR", "ADMIN")
+    private void configureCsrf(HttpSecurity http) throws Exception {
+        http.csrf(csrf -> csrf
+                .csrfTokenRepository(csrfTokenRepository())
+                .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                .ignoringRequestMatchers("/auth/login", CSP_REPORT_ENDPOINT)
+        );
+    }
 
-                        .anyRequest().authenticated()
+    private void configureHeaders(HttpSecurity http) throws Exception {
+        http.headers(headers -> headers
+                .contentTypeOptions(contentTypeOptions -> {
+                })
+                .frameOptions(frameOptions -> frameOptions.deny())
+                .httpStrictTransportSecurity(hsts -> hsts
+                        .includeSubDomains(true)
+                        .preload(true)
+                        .maxAgeInSeconds(31_536_000)
                 )
-                .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            if (request.getRequestURI().startsWith("/admin/backups")) {
-                                securityMonitoringService.recordUnauthorizedBackupAccess(request.getRequestURI());
-                            }
-                            response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer realm=\"GhostReport\"");
-                            writeSecurityError(response, 401, "Unauthorized");
-                        })
-                        .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            securityMonitoringService.recordForbiddenAccess(request.getRequestURI());
-                            if (request.getRequestURI().startsWith("/admin/backups")) {
-                                securityMonitoringService.recordUnauthorizedBackupAccess(request.getRequestURI());
-                            }
-                            writeSecurityError(response, 403, "Access denied");
-                        })
+                .contentSecurityPolicy(csp -> csp.policyDirectives(CONTENT_SECURITY_POLICY))
+                .referrerPolicy(referrer -> referrer
+                        .policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)
                 )
-                .httpBasic(httpBasic -> httpBasic.disable())
-                .addFilterBefore(new HttpRequestBoundaryFilter(), CsrfFilter.class)
+                .addHeaderWriter(new StaticHeadersWriter("Report-To", REPORT_TO_HEADER))
+                .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=()"))
+                .addHeaderWriter(new StaticHeadersWriter("Cross-Origin-Opener-Policy", "same-origin"))
+                .addHeaderWriter(new StaticHeadersWriter("Cross-Origin-Resource-Policy", "same-origin"))
+                .addHeaderWriter(new StaticHeadersWriter("Cross-Origin-Embedder-Policy", "require-corp"))
+        );
+    }
+
+    private void configureAuthorization(HttpSecurity http) throws Exception {
+        http.authorizeHttpRequests(auth -> auth
+                .requestMatchers(PUBLIC_PAGES).permitAll()
+                .requestMatchers("/css/**", "/js/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/auth/mfa/verify").permitAll()
+                .requestMatchers(HttpMethod.POST, "/auth/password-reset/request").permitAll()
+                .requestMatchers(HttpMethod.POST, "/auth/password-reset/confirm").permitAll()
+                .requestMatchers(HttpMethod.POST, CSP_REPORT_ENDPOINT).permitAll()
+                .requestMatchers(HttpMethod.POST, "/reports").permitAll()
+                .requestMatchers(HttpMethod.POST, "/reports/verify").permitAll()
+                .requestMatchers(HttpMethod.POST, "/reports/{id}/attachments").permitAll()
+                .requestMatchers(HttpMethod.POST, "/reports/{id}/attachments/list").permitAll()
+                .requestMatchers(HttpMethod.POST, "/reports/download").permitAll()
+                .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/analyst/**").hasAnyRole("ANALYST", "ADMIN")
+                .requestMatchers("/audit/**").hasAnyRole("AUDITOR", "ADMIN")
+                .anyRequest().authenticated()
+        );
+    }
+
+    private void configureExceptionHandling(
+            HttpSecurity http,
+            SecurityMonitoringService securityMonitoringService
+    ) throws Exception {
+        http.exceptionHandling(exception -> exception
+                .authenticationEntryPoint((request, response, authException) -> {
+                    recordBackupAccessAttempt(request, securityMonitoringService);
+                    response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer realm=\"GhostReport\"");
+                    writeSecurityError(response, 401, "Unauthorized");
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    securityMonitoringService.recordForbiddenAccess(request.getRequestURI());
+                    recordBackupAccessAttempt(request, securityMonitoringService);
+                    writeSecurityError(response, 403, "Access denied");
+                })
+        );
+    }
+
+    private void configureFilters(
+            HttpSecurity http,
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            CorrelationIdFilter correlationIdFilter
+    ) {
+        http.addFilterBefore(new HttpRequestBoundaryFilter(), CsrfFilter.class)
                 .addFilterBefore(new FetchMetadataFilter(), CsrfFilter.class)
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
                 .addFilterAfter(new SensitiveResponseCacheControlFilter(), CsrfCookieFilter.class)
                 .addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(jwtAuthenticationFilter, CorrelationIdFilter.class);
+    }
 
-        return http.build();
+    private void recordBackupAccessAttempt(
+            HttpServletRequest request,
+            SecurityMonitoringService securityMonitoringService
+    ) {
+        if (request.getRequestURI().startsWith("/admin/backups")) {
+            securityMonitoringService.recordUnauthorizedBackupAccess(request.getRequestURI());
+        }
     }
 
     @SuppressWarnings("java:S3330")
