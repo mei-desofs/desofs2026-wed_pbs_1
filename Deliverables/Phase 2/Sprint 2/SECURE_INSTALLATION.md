@@ -27,6 +27,7 @@
 | `SERVER_SSL_CIPHERS` | Cifras TLS | Cifras modernas; defaults definidos em `application-prod.yaml`. |
 | `DB_POOL_MAX_SIZE`, `DB_POOL_MIN_IDLE` | Pool Hikari | Limites positivos obrigatorios em prod-like. |
 | `SERVER_MAX_CONNECTIONS`, `SERVER_TOMCAT_THREADS_MAX` | Recursos Tomcat | Limites positivos obrigatorios em prod-like. |
+| `RATE_LIMIT_REPORT_MAX_ATTEMPTS`, `RATE_LIMIT_REPORT_WINDOW_SECONDS` | Submissao publica anonima | Controla abuso de `POST /reports`. |
 
 ## Execucao local
 
@@ -95,6 +96,7 @@ Os perfis configuram limites de pool e servidor para reduzir risco de exaustao:
 - Tomcat: `max-connections`, `accept-count`, `threads.max`,
   `threads.min-spare`, `connection-timeout`;
 - HTTP request headers: `server.max-http-request-header-size`.
+- Public report submission: `security.rate-limit.report`.
 
 Em prod-like, o arranque falha se os limites obrigatorios forem ausentes ou nao
 positivos.

@@ -115,7 +115,7 @@ Controlos associados:
 
 - tracking code validado por formato;
 - erros genericos para evitar enumeracao;
-- rate limiting em verificacao/download;
+- rate limiting em submissao publica, verificacao e download;
 - DTOs para impedir mass assignment;
 - descricao e categoria validadas.
 
@@ -503,7 +503,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 266 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 267 testes, 0 falhas, 0 erros, 0 skipped.
 
 Categorias cobertas:
 
@@ -515,6 +515,7 @@ Categorias cobertas:
 - CSP/HSTS/COOP/COEP/CORP, Fetch Metadata e request-boundary checks;
 - uploads, MIME, magic bytes, malware/quarantine e traversal;
 - tracking code e enumeracao;
+- rate limit de submissao publica anonima;
 - analista ownership e workflow de casos;
 - auditor read-only;
 - admin user lifecycle;
@@ -558,6 +559,11 @@ O ficheiro [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md) e apenas o resumo explicativo.
 O projecto cobre de forma implementada ou documentada areas como autenticacao,
 autorizacao, validacao, file handling, logging, configuracao, dependency control
 e runtime testing.
+
+Na revisao L2 adicional foram melhorados ou reclassificados com evidencia
+verificavel controlos de business limits, anti-automation, malware scanning,
+password policy, MFA, JWT audience, tokens self-contained, crypto integrity,
+resource limits, data protection/no-store, producao minima e logging.
 
 Pontos parciais ou dependentes de operacao:
 

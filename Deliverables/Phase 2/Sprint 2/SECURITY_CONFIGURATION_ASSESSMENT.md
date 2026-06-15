@@ -19,7 +19,7 @@ producao real.
 | Limites de recursos | Hikari pool, timeouts, Tomcat connections/threads/backlog e header size configurados. | Implementado e validado em prod-like. |
 | Uploads | Tamanho/tipo/assinatura e nomes gerados. | Implementado. |
 | Backups | Manifesto HMAC e verificacao. | Implementado; encriptacao/retencao externa sao futuro. |
-| Rate limiting | Em memoria na aplicacao. | Adequado ao ambito; externo/distribuido e futuro. |
+| Rate limiting | Em memoria na aplicacao para login, tracking, report submission, upload e download. | Adequado ao ambito; externo/distribuido e futuro. |
 | Logs/auditoria | Auditoria e alertas com metadados de integridade. | Implementado; SIEM/WORM e futuro. |
 | Dependencias | Dependency-Check e CycloneDX. | Implementado. |
 

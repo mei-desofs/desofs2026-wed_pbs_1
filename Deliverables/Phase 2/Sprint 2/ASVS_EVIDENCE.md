@@ -13,7 +13,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 
 | Evidencia | Resultado confirmado |
 | --- | --- |
-| Testes Maven | `266` testes, `0` falhas, `0` erros, `0` skipped. |
+| Testes Maven | `267` testes, `0` falhas, `0` erros, `0` skipped. |
 | Runtime probes locais | `101` probes, `101` passed, `0` failed, `0` skipped. |
 | Spring Security | `6.5.11` via Spring Boot `3.5.15`. |
 | SCA CVEs remediados | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003. |
@@ -36,6 +36,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 | Configuracao | Secrets por ambiente, PostgreSQL fora de testes, validacao de configuracao e guia seguro. | Implementado/documentado |
 | Headers/browser security | CSP restritiva, HSTS, COOP/COEP/CORP, Fetch Metadata/Origin validation e bloqueio de headers anormais. | Implementado |
 | Comunicacao segura | Perfil prod-like com modo TLS explicito, TLS 1.2/1.3, cifras modernas e PostgreSQL com `sslmode=verify-ca`/`verify-full`. | Implementado/configurado; certificado publico e operacional |
+| L2 aplicavel | Rate limit de submissao de denuncias, malware scanner local, JWT audience, MFA one-time, no-store, resource limits e logging estruturado. | Reavaliado no XLSX |
 
 ## Melhorias de codigo apos revisao L1/L2
 
@@ -54,6 +55,17 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 - `SecurityConfigurationValidator` passou a validar configuracao prod-like de
   TLS, reverse proxy, PostgreSQL com validacao de certificado e limites
   positivos de pool/conexoes/threads.
+- `RateLimiterService` passou a ter limite especifico para `POST /reports`,
+  reduzindo abuso automatizado da submissao publica anonima.
+
+## Melhorias L2 adicionais
+
+O tracker XLSX foi revisto para todos os capitulos L2. Foram actualizados como
+`Compliant` apenas controlos com evidencia verificavel no codigo, testes ou
+documentacao: business limits, malware scanner local/EICAR, password policy,
+MFA one-time/hashed challenge, JWT `iss`/`aud`/`jti`, crypto key rotation hooks,
+no-store em dados sensiveis, limites de recursos, configuracao prod-like,
+logging estruturado e tratamento de erros inesperados.
 
 ## Limitacoes ASVS registadas
 

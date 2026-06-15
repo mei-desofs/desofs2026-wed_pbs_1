@@ -9,7 +9,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 266 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 267 testes, 0 falhas, 0 erros, 0 skipped.
 
 ## 2. Estrategia
 
@@ -28,7 +28,7 @@ menos uma mitigacao implementada e, sempre que possivel, um teste que a prove.
 | RBAC | `RbacAuthorizationMatrixTest`, `AdminAuthorizationTest`, `AuditorAuthorizationTest` | Endpoints permitidos/negados por role. |
 | Admin lifecycle | `AdminUserManagementSecurityTest` | Activar/desactivar, editar roles, ultimo admin activo, audit logs. |
 | Analyst ownership | `AnalystCaseOwnershipTest`, `BusinessLogicWorkflowSecurityTest` | Ownership, casos de outro analista, transitions, optimistic locking. |
-| Public reports | `PublicReportFlowIntegrationTest`, `TrackingCodeEnumerationTest` | Criacao anonima, tracking code, erros seguros, enumeracao. |
+| Public reports | `PublicReportFlowIntegrationTest`, `TrackingCodeEnumerationTest`, `RateLimiterServiceTest` | Criacao anonima, tracking code, erros seguros, enumeracao e rate limit de submissao. |
 | Uploads/files | `ReportControllerAttachmentUploadTest`, `FileStorageServiceTest`, `SafeFilenameSecurityTest`, `SafeFilenameTest` | MIME, magic bytes, traversal, malware/quarantine, limites, paths. |
 | Auditoria/logging | `AuditLogSecurityTest`, `AnonymousDataLoggingTest`, `RuntimeSecurityEventLoggingTest` | Nao guardar passwords/tokens/tracking code, alertas e correlationId. |
 | Backups/packages | `BackupServiceIntegrationTest`, `AdminBackupControllerSecurityTest`, `CasePackageServiceIntegrationTest` | Manifestos, tampering, restore, traversal, packages. |
@@ -44,6 +44,7 @@ menos uma mitigacao implementada e, sempre que possivel, um teste que a prove.
 | `/auth/mfa/verify` | Challenge obrigatorio, codigo de 6 digitos, TTL, uso unico, limite de tentativas invalidas e role activa. | `AdminMfaAuthenticationTest`. |
 | `/auth/password-reset/*` | Resposta generica, token expirado/reutilizado, password policy. | `PasswordPolicyAndResetSecurityTest`. |
 | `/reports` | Titulo/descricao/categoria, DTO, resposta sem hash interno. | `PublicReportFlowIntegrationTest`, `ApiValidationContractTest`. |
+| `/reports` abuse | Rate limit especifico para submissao publica anonima. | `RateLimiterServiceTest`. |
 | `/reports/verify` | Tracking code format, erro seguro, rate limit/enumeracao. | `TrackingCodeEnumerationTest`, `PublicReportFlowIntegrationTest`. |
 | `/reports/{id}/attachments` | Max files, size, MIME, magic bytes, filename, tracking code. | `ReportControllerAttachmentUploadTest`, `FileStorageServiceTest`. |
 | `/analyst/**` | Role, ownership, workflow, status/priority/notes. | `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`, `BusinessLogicWorkflowSecurityTest`. |
