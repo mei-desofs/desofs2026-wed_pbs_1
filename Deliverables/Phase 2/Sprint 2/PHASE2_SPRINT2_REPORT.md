@@ -274,6 +274,9 @@ As validacoes principais incluem:
   comprometidas, reutilizacao e palavras contextuais;
 - `attachmentId` positivo e tracking code valido em downloads;
 - content type esperado em endpoints JSON.
+- rejeicao de `TRACE`, headers com caracteres de controlo e `Authorization`
+  excessivamente grande antes de chegar aos controllers;
+- validacao Fetch Metadata/Origin para bloquear pedidos unsafe cross-site.
 
 Uploads sao uma superficie critica. Mitigacoes:
 
@@ -333,7 +336,7 @@ quando autorizados.
 | Tampering | Alteracao de logs, backups, packages ou ficheiros. | Hashes, manifestos HMAC, verificacao de backups, integridade em audit/security records, rejeicao de ZIP tampering. | `BackupServiceIntegrationTest`, audit/security DTOs. |
 | Repudiation | Utilizador nega operacao critica. | Audit logs com accao, actor, target, correlationId e integrityHash. | `AuditLogSecurityTest`, `RuntimeSecurityEventLoggingTest`. |
 | Information Disclosure | Exposicao de tracking code, token, password, paths ou dados anonimos. | Erros genericos, redaction de logs, DTOs, ausencia de tokens em browser storage, tracking code nao vai em URL. | `AnonymousDataLoggingTest`, `FrontendXssDataExposureTest`, `ErrorHandlingSecurityTest`. |
-| Denial of Service | Abuso de login, tracking, upload/download ou ficheiros grandes. | Rate limiting por fluxo, limites de upload, max files per request, rejeicao antecipada. | `RateLimiterServiceTest`, upload tests. |
+| Denial of Service | Abuso de login, tracking, upload/download, headers excessivos ou ficheiros grandes. | Rate limiting por fluxo, limites de upload, max files per request, limites Tomcat/Hikari, rejeicao antecipada. | `RateLimiterServiceTest`, upload tests, `SecurityHeadersTest`, `SecurityConfigurationValidatorTest`. |
 | Elevation of Privilege | Analyst tenta agir como admin/auditor ou aceder a caso de outro analyst. | RBAC central, service-level ownership, tests para forbidden routes, proteccao do ultimo admin activo. | `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`, `AdminUserManagementSecurityTest`. |
 
 ## 14. Code review e controlo antes de merge
@@ -500,7 +503,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 255 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 266 testes, 0 falhas, 0 erros, 0 skipped.
 
 Categorias cobertas:
 
@@ -509,13 +512,14 @@ Categorias cobertas:
 - autenticacao, JWT, MFA e password reset;
 - RBAC e endpoint matrix;
 - CSRF e security headers;
+- CSP/HSTS/COOP/COEP/CORP, Fetch Metadata e request-boundary checks;
 - uploads, MIME, magic bytes, malware/quarantine e traversal;
 - tracking code e enumeracao;
 - analista ownership e workflow de casos;
 - auditor read-only;
 - admin user lifecycle;
 - backups, restore e integridade;
-- frontend: XSS sinks, tokens em storage, tracking code em URL, navs escondidas.
+- frontend: XSS sinks, scripts inline, tokens em storage, tracking code em URL, navs escondidas.
 
 Resumo detalhado: [SECURITY_TESTING.md](SECURITY_TESTING.md).
 
@@ -527,11 +531,19 @@ Secrets devem vir do ambiente:
 - `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`;
 - `BACKUP_HMAC_SECRET`, `BACKUP_HMAC_KEY_ID`;
 - `GHOSTREPORT_MFA_REQUIRED_ROLES`;
+- `GHOSTREPORT_TRANSPORT_TLS_MODE`;
+- `GHOSTREPORT_TRUSTED_PROXY_ENABLED`;
+- `SERVER_FORWARD_HEADERS_STRATEGY`;
+- `SERVER_SSL_ENABLED`, `SERVER_SSL_KEY_STORE`, `SERVER_SSL_KEY_STORE_PASSWORD`;
+- `SERVER_SSL_ENABLED_PROTOCOLS`, `SERVER_SSL_CIPHERS`;
+- `DB_POOL_MAX_SIZE`, `DB_CONNECTION_TIMEOUT_MS`, `SERVER_MAX_CONNECTIONS`,
+  `SERVER_TOMCAT_THREADS_MAX`;
 - directorios de upload, evidence e backups.
 
 O perfil `dev` pode expor codigo MFA em logs para demonstracao. Isto deve estar
-desligado em ambientes partilhados/prod-like. O perfil prod-like usa PostgreSQL
-e validacao de schema; ainda falta Flyway/Liquibase.
+desligado em ambientes partilhados/prod-like. O perfil prod-like usa PostgreSQL,
+validacao de schema, modo TLS explicito e rejeita `DB_URL` PostgreSQL sem
+`sslmode=verify-ca` ou `sslmode=verify-full`; ainda falta Flyway/Liquibase.
 
 Guias:
 
@@ -553,6 +565,7 @@ Pontos parciais ou dependentes de operacao:
 - secret manager externo;
 - SIEM/retencao imutavel;
 - migrations formais;
+- certificado publico/TLS operacional e canal MFA real;
 - IAST agent-based;
 - DAST autenticado completo.
 
@@ -581,7 +594,7 @@ Claims finais correctamente delimitados:
 | MFA | Implementado para `ADMIN`, `ANALYST` e `AUDITOR`; em dev/test o codigo pode ser exposto em logs para demonstracao. |
 | DAST | OWASP ZAP baseline/passivo e probes runtime; nao e pentest autenticado completo. |
 | IAST | Evidencia runtime/IAST-like; nao existe agente IAST com taint tracking. |
-| Producao | Existe guia prod-like, mas faltam controlos operacionais externos como secret manager, SIEM/WORM e canal MFA real. |
+| Producao | Existe guia prod-like com TLS/proxy/PostgreSQL TLS/resource limits validados no arranque; faltam controlos operacionais externos como certificado publico, secret manager, SIEM/WORM e canal MFA real. |
 | ASVS | Tracker Sprint 2 em XLSX actualizado; Markdown funciona como resumo explicativo. |
 
 Limitacoes:

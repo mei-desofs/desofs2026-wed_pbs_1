@@ -9,7 +9,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 255 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 266 testes, 0 falhas, 0 erros, 0 skipped.
 
 ## 2. Estrategia
 
@@ -22,7 +22,7 @@ menos uma mitigacao implementada e, sempre que possivel, um teste que a prove.
 
 | Categoria | Testes/classes | O que validam |
 | --- | --- | --- |
-| Contexto/config | `GhostreportApplicationTests`, `SecurityConfigurationValidatorTest`, `DataInitializerDisabledTest`, `SchemaMigrationScriptTest` | Arranque, secrets fracos, seed users, schema metadata. |
+| Contexto/config | `GhostreportApplicationTests`, `SecurityConfigurationValidatorTest`, `DataInitializerDisabledTest`, `SchemaMigrationScriptTest` | Arranque, secrets fracos, seed users, schema metadata, TLS/proxy/PostgreSQL TLS e limites de recursos prod-like. |
 | Autenticacao/MFA/JWT | `AdminMfaAuthenticationTest`, `AuthenticationSecurityIntegrationTest`, `JwtServiceSecurityTest`, `JwtRevocationPersistenceIntegrationTest` | Password login, MFA para roles internas, token claims, revogacao, expiracao, kid, issuer/audience e bloqueio de challenge apos tentativas MFA invalidas. |
 | Password reset/policy | `PasswordPolicyAndResetSecurityTest`, `PasswordPolicyServiceTest` | Password comprometida, reutilizacao, comprimento, complexidade, palavras contextuais e token expirado/reutilizado. |
 | RBAC | `RbacAuthorizationMatrixTest`, `AdminAuthorizationTest`, `AuditorAuthorizationTest` | Endpoints permitidos/negados por role. |
@@ -32,8 +32,8 @@ menos uma mitigacao implementada e, sempre que possivel, um teste que a prove.
 | Uploads/files | `ReportControllerAttachmentUploadTest`, `FileStorageServiceTest`, `SafeFilenameSecurityTest`, `SafeFilenameTest` | MIME, magic bytes, traversal, malware/quarantine, limites, paths. |
 | Auditoria/logging | `AuditLogSecurityTest`, `AnonymousDataLoggingTest`, `RuntimeSecurityEventLoggingTest` | Nao guardar passwords/tokens/tracking code, alertas e correlationId. |
 | Backups/packages | `BackupServiceIntegrationTest`, `AdminBackupControllerSecurityTest`, `CasePackageServiceIntegrationTest` | Manifestos, tampering, restore, traversal, packages. |
-| Frontend | `FrontendXssDataExposureTest`, `FrontendNavbarVisibilityTest`, `CsrfCookieAttributesTest` | XSS sinks, tokens em storage, tracking code em URL, navs escondidas, CSRF cookie. |
-| Headers/erros | `SecurityHeadersTest`, `ErrorHandlingSecurityTest`, `ApiValidationContractTest` | Headers, JSON errors genericos, validacao de contratos. |
+| Frontend | `FrontendXssDataExposureTest`, `FrontendNavbarVisibilityTest`, `CsrfCookieAttributesTest` | XSS sinks, scripts inline, tokens em storage, tracking code em URL, navs escondidas, CSRF cookie. |
+| Headers/erros | `SecurityHeadersTest`, `ErrorHandlingSecurityTest`, `ApiValidationContractTest` | CSP/HSTS/COOP/COEP/CORP, Fetch Metadata, headers anormais, JSON errors genericos, validacao de contratos. |
 | Rate limiting | `RateLimiterServiceTest`, `LoginRateLimitSecurityTest` | Limites, reset de janela, brute force alert. |
 
 ## 4. Matriz de validacao de endpoints
@@ -68,10 +68,23 @@ O frontend e estatico, mas tambem foi validado:
 
 - nao usa `innerHTML`/sinks perigosos para dados externos;
 - renderiza dados atraves de text nodes/helpers;
+- nao usa scripts inline nem event handlers inline;
 - nao guarda bearer tokens em `localStorage`/`sessionStorage`;
 - nao coloca tracking code em URLs;
 - navs autenticadas começam escondidas;
 - MFA existe em admin, analyst e auditor.
+
+## 6.1 Testes de configuracao prod-like
+
+`SecurityConfigurationValidatorTest` cobre explicitamente:
+
+- rejeicao de secrets dev/test em perfis prod-like;
+- rejeicao de seed users fora de dev/test;
+- modo TLS obrigatorio (`direct` ou `reverse-proxy`);
+- `direct` com `server.ssl.enabled=true`, keystore e apenas TLS 1.2/1.3;
+- `reverse-proxy` com `server.forward-headers-strategy` e trusted proxy;
+- PostgreSQL apenas com `sslmode=verify-ca` ou `sslmode=verify-full`;
+- limites positivos para Hikari pool e Tomcat conexoes/threads/backlog.
 
 ## 7. Testes de seguranca runtime/pipeline
 
@@ -123,3 +136,5 @@ role errada e token ausente.
 - ZAP baseline e passivo e nao autenticado.
 - IAST e evidencia runtime/IAST-like, nao agent-based.
 - Rate limiting e em memoria; ambiente multi-no exigiria mecanismo externo.
+- Certificado publico TLS, OCSP/ECH, secret manager e SIEM/WORM continuam
+  controlos operacionais fora dos testes automatizados.

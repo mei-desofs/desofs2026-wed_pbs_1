@@ -13,7 +13,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 
 | Evidencia | Resultado confirmado |
 | --- | --- |
-| Testes Maven | `255` testes, `0` falhas, `0` erros, `0` skipped. |
+| Testes Maven | `266` testes, `0` falhas, `0` erros, `0` skipped. |
 | Runtime probes locais | `101` probes, `101` passed, `0` failed, `0` skipped. |
 | Spring Security | `6.5.11` via Spring Boot `3.5.15`. |
 | SCA CVEs remediados | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003. |
@@ -34,6 +34,8 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 | Backups/evidencia | ZIPs com hashes, HMAC, manifesto, verificacao e restore para staging. | Implementado |
 | SCA/SAST/DAST/runtime | Dependency-Check, CycloneDX, CodeQL, SpotBugs, SonarCloud, Gitleaks, ZAP baseline e runtime evidence. | Implementado como evidencia |
 | Configuracao | Secrets por ambiente, PostgreSQL fora de testes, validacao de configuracao e guia seguro. | Implementado/documentado |
+| Headers/browser security | CSP restritiva, HSTS, COOP/COEP/CORP, Fetch Metadata/Origin validation e bloqueio de headers anormais. | Implementado |
+| Comunicacao segura | Perfil prod-like com modo TLS explicito, TLS 1.2/1.3, cifras modernas e PostgreSQL com `sslmode=verify-ca`/`verify-full`. | Implementado/configurado; certificado publico e operacional |
 
 ## Melhorias de codigo apos revisao L1/L2
 
@@ -45,6 +47,13 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 - `SecurityConfig` passou a aplicar `Cache-Control: no-store, no-cache`,
   `Pragma: no-cache` e `Expires` a respostas sensiveis de auth, reports,
   admin, analyst e audit.
+- `SecurityConfig` passou a aplicar CSP mais restritiva, HSTS com preload,
+  COOP/COEP/CORP, validacao Fetch Metadata/Origin para pedidos unsafe e
+  rejeicao antecipada de `TRACE`, headers com caracteres de controlo e
+  `Authorization` excessivamente grande.
+- `SecurityConfigurationValidator` passou a validar configuracao prod-like de
+  TLS, reverse proxy, PostgreSQL com validacao de certificado e limites
+  positivos de pool/conexoes/threads.
 
 ## Limitacoes ASVS registadas
 
@@ -54,7 +63,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 - MFA em dev/test pode expor codigo em log para demonstracao; producao precisa
   de canal real.
 - Rate limiting e em memoria.
-- Secret manager, SIEM/WORM, TLS operacional, KMS e Flyway/Liquibase ficam como
+- Secret manager, SIEM/WORM, certificado publico/TLS operacional, KMS e Flyway/Liquibase ficam como
   controlos futuros/operacionais.
 
 ## Documentos relacionados

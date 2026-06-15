@@ -1,32 +1,40 @@
-# Avaliação de configuração de segurança
+# Avaliacao de configuracao de seguranca
 
-## Sumário
+## Sumario
 
-A configuração actual é adequada para validação académica local e baseline
-prod-like, desde que secrets e PostgreSQL sejam fornecidos externamente. Alguns
-controlos continuam a exigir hardening operacional antes de produção real.
+A configuracao actual e adequada para validacao academica local e baseline
+prod-like, desde que secrets, PostgreSQL e TLS/proxy sejam fornecidos
+externamente. Alguns controlos continuam a exigir hardening operacional antes de
+producao real.
 
-## Revisão de configuração
+## Revisao de configuracao
 
-| Área | Configuração actual | Avaliação |
+| Area | Configuracao actual | Avaliacao |
 | --- | --- | --- |
-| Spring Security | Regras centralizadas, filtro JWT e headers de segurança. | Implementado. |
-| Autenticação | BCrypt, JWT e MFA para `ADMIN`, `ANALYST` e `AUDITOR`. | Implementado. |
-| Secrets | Esperados por ambiente/deployment secrets. | Implementado; secret manager é futuro. |
-| Base de dados | PostgreSQL em runtime, H2 em testes. | Implementado; migrações formais são futuro. |
+| Spring Security | Regras centralizadas, filtro JWT, CSP/HSTS/COOP/COEP/CORP, Fetch Metadata/Origin validation e request-boundary filter. | Implementado. |
+| Autenticacao | BCrypt, JWT e MFA para `ADMIN`, `ANALYST` e `AUDITOR`. | Implementado. |
+| Secrets | Esperados por ambiente/deployment secrets; dev/test secrets sao rejeitados em prod-like. | Implementado; secret manager e futuro. |
+| Base de dados | PostgreSQL em runtime, H2 em testes; prod-like exige `sslmode=verify-ca` ou `sslmode=verify-full`. | Implementado; migracoes formais sao futuro. |
+| Transporte TLS | `application-prod.yaml` define modo TLS, TLS 1.2/1.3, cifras modernas e reverse proxy trusted mode. | Implementado/configurado; certificado publico e operacional. |
+| Limites de recursos | Hikari pool, timeouts, Tomcat connections/threads/backlog e header size configurados. | Implementado e validado em prod-like. |
 | Uploads | Tamanho/tipo/assinatura e nomes gerados. | Implementado. |
-| Backups | Manifesto HMAC e verificação. | Implementado; encriptação/retenção externa são futuro. |
-| Rate limiting | Em memória na aplicação. | Adequado ao âmbito; externo/distribuído é futuro. |
-| Logs/auditoria | Auditoria e alertas com metadados de integridade. | Implementado; SIEM/WORM é futuro. |
-| Dependências | Dependency-Check e CycloneDX. | Implementado. |
+| Backups | Manifesto HMAC e verificacao. | Implementado; encriptacao/retencao externa sao futuro. |
+| Rate limiting | Em memoria na aplicacao. | Adequado ao ambito; externo/distribuido e futuro. |
+| Logs/auditoria | Auditoria e alertas com metadados de integridade. | Implementado; SIEM/WORM e futuro. |
+| Dependencias | Dependency-Check e CycloneDX. | Implementado. |
 
-## Acções obrigatórias em produção
+## Accoes obrigatorias em producao
 
 - Definir `JWT_SECRET` e secrets HMAC fortes.
 - Manter `GHOSTREPORT_MFA_EXPOSE_CODE` desligado.
-- Executar atrás de HTTPS.
+- Executar atras de HTTPS por reverse proxy ou activar TLS directo com keystore.
+- Definir `GHOSTREPORT_TRANSPORT_TLS_MODE`.
+- Em reverse proxy, confirmar `GHOSTREPORT_TRUSTED_PROXY_ENABLED=true` e
+  `SERVER_FORWARD_HEADERS_STRATEGY=framework` ou `native`.
 - Usar PostgreSQL com credenciais restritas.
-- Proteger directórios de uploads, evidência e backups ao nível do sistema
+- Usar `DB_URL` PostgreSQL com `sslmode=verify-ca` ou `sslmode=verify-full`.
+- Manter limites Hikari/Tomcat positivos e ajustados ao ambiente.
+- Proteger directorios de uploads, evidencia e backups ao nivel do sistema
   operativo.
 - Rever suppressions do Dependency-Check antes de release.
 - Arquivar artefactos da pipeline mais recente.
@@ -34,7 +42,9 @@ controlos continuam a exigir hardening operacional antes de produção real.
 ## Riscos residuais
 
 - Sem secret manager externo.
-- Sem rotação automática de chaves.
-- Sem framework formal de migrações.
-- Sem armazenamento imutável de auditoria/SIEM.
-- Rate limiting não distribuído.
+- Sem rotacao automatica de chaves.
+- Sem framework formal de migracoes.
+- Sem armazenamento imutavel de auditoria/SIEM.
+- Rate limiting nao distribuido.
+- Certificado publico, OCSP/ECH e rotacao automatica de certificados dependem
+  da infraestrutura de deployment.
