@@ -33,6 +33,10 @@ public class RateLimiterService {
         check("tracking:" + key, properties.getTracking());
     }
 
+    public void checkReportLimit(String key) {
+        check("report:" + key, properties.getReport());
+    }
+
     public void checkUploadLimit(String key) {
         check("upload:" + key, properties.getUpload());
     }
@@ -121,6 +125,9 @@ public class RateLimiterService {
     private RateLimitProperties.Limit resolveLimit(String key) {
         if (key.startsWith("upload:")) {
             return properties.getUpload();
+        }
+        if (key.startsWith("report:")) {
+            return properties.getReport();
         }
         if (key.startsWith("download:")) {
             return properties.getDownload();

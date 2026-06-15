@@ -38,7 +38,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "server.error.include-stacktrace=never",
         "ghostreport.backup-dir=target/test-backups/public-report-flow",
         "app.upload-dir=target/test-uploads/public-report-flow",
-        "ghostreport.backup-enabled=true"
+        "ghostreport.backup-enabled=true",
+        "security.rate-limit.report.max-attempts=100"
 })
 @AutoConfigureMockMvc
 @ActiveProfiles("test")

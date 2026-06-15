@@ -89,6 +89,9 @@ security:
     tracking:
       max-attempts: 10
       window-seconds: 60
+    report:
+      max-attempts: ${RATE_LIMIT_REPORT_MAX_ATTEMPTS:10}
+      window-seconds: ${RATE_LIMIT_REPORT_WINDOW_SECONDS:60}
     upload:
       max-attempts: 10
       window-seconds: 60

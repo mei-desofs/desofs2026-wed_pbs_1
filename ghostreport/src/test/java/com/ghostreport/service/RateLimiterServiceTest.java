@@ -55,6 +55,16 @@ class RateLimiterServiceTest {
     }
 
     @Test
+    void reportSubmissionLimitIsIndependentFromTrackingLimit() {
+        RateLimiterService service = new RateLimiterService(properties(1, 60), new MutableClock());
+
+        service.checkReportLimit("client-a");
+
+        assertDoesNotThrow(() -> service.checkTrackingLimit("client-a"));
+        assertThrows(ResponseStatusException.class, () -> service.checkReportLimit("client-a"));
+    }
+
+    @Test
     void defaultLimitUsesTrackingConfiguration() {
         RateLimiterService service = new RateLimiterService(properties(1, 60), new MutableClock());
 
@@ -165,6 +175,7 @@ class RateLimiterServiceTest {
         RateLimitProperties properties = new RateLimitProperties();
         RateLimitProperties.Limit limit = new RateLimitProperties.Limit(maxAttempts, windowSeconds);
         properties.setTracking(limit);
+        properties.setReport(limit);
         properties.setUpload(limit);
         properties.setDownload(limit);
         properties.setLogin(limit);
