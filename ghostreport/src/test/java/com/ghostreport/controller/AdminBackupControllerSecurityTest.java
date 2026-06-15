@@ -72,19 +72,34 @@ class AdminBackupControllerSecurityTest {
 
     @Test
     void adminCanCreateAndVerifyBackupThroughEndpoints() throws Exception {
-        String body = mockMvc.perform(post("/admin/backups")
-                        .with(csrf())
-                        .header("Authorization", bearerToken("admin", "AdminPassword123!")))
-                .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        String filename = body.replaceAll(".*\"filename\":\"([^\"]+)\".*", "$1");
+        String filename = createBackupAsAdmin();
 
         mockMvc.perform(post("/admin/backups/{filename}/verify", filename)
                         .with(csrf())
                         .header("Authorization", bearerToken("admin", "AdminPassword123!")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void backupRestoreRequiresCurrentAdminPassword() throws Exception {
+        String filename = createBackupAsAdmin();
+        String adminToken = bearerToken("admin", "AdminPassword123!");
+
+        mockMvc.perform(post("/admin/backups/{filename}/restore", filename)
+                        .with(csrf())
+                        .header("Authorization", adminToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/admin/backups/{filename}/restore", filename)
+                        .with(csrf())
+                        .header("Authorization", adminToken)
+                        .header("X-Reauth-Password", "WrongPassword123!"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/admin/backups/{filename}/restore", filename)
+                        .with(csrf())
+                        .header("Authorization", adminToken)
+                        .header("X-Reauth-Password", "AdminPassword123!"))
                 .andExpect(status().isOk());
     }
 
@@ -108,6 +123,18 @@ class AdminBackupControllerSecurityTest {
                 Files.deleteIfExists(path);
             }
         }
+    }
+
+    private String createBackupAsAdmin() throws Exception {
+        String body = mockMvc.perform(post("/admin/backups")
+                        .with(csrf())
+                        .header("Authorization", bearerToken("admin", "AdminPassword123!")))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return body.replaceAll(".*\"filename\":\"([^\"]+)\".*", "$1");
     }
 
     private String bearerToken(String username, String password) throws Exception {

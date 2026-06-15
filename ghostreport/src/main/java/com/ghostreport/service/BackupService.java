@@ -282,7 +282,6 @@ public class BackupService {
             return new BackupRestoreResponse(
                     filename,
                     true,
-                    restoreRoot.toString(),
                     "Backup validated and extracted to controlled staging directory. Live DB/uploads were not overwritten."
             );
         } catch (Exception e) {

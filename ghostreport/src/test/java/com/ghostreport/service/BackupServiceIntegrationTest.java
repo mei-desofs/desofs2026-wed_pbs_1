@@ -194,10 +194,21 @@ class BackupServiceIntegrationTest {
         var restore = backupService.restoreBackup(response.filename());
 
         assertThat(restore.restored()).isTrue();
-        assertThat(restore.restorePath()).contains("restore-staging");
-        assertThat(Path.of(restore.restorePath()).resolve("files/reports/1/attachments/evidence-rs13.txt"))
+        Path restorePath = findRestoredFile(response.filename(), "files/reports/1/attachments/evidence-rs13.txt");
+        assertThat(restorePath)
                 .hasContent("rs13 evidence");
         assertThat(backupService.verifyBackup(response.filename()).valid()).isTrue();
+    }
+
+    private Path findRestoredFile(String filename, String relativePath) throws Exception {
+        Path restoreBase = BACKUP_DIR.resolve("restore-staging").resolve(filename.replace(".zip", ""));
+        try (var paths = Files.walk(restoreBase)) {
+            return paths
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.endsWith(relativePath))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("Restored file not found under " + restoreBase));
+        }
     }
 
     private void createReport() {
