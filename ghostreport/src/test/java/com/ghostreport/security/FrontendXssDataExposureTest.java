@@ -102,6 +102,24 @@ class FrontendXssDataExposureTest {
                 .isEmpty();
     }
 
+    @Test
+    void pagesLoadBrowserSecuritySupportCheck() throws IOException {
+        Map<Path, String> sources = readStaticFiles(".html");
+
+        assertThat(sources)
+                .as("All static HTML pages should load the browser security feature fallback")
+                .allSatisfy((path, html) -> assertThat(html)
+                        .as(relativeStaticPath(path))
+                        .contains("<script src=\"/js/security-support.js\"></script>"));
+
+        String supportScript = Files.readString(staticRoot().resolve("js/security-support.js"), StandardCharsets.UTF_8);
+        assertThat(supportScript)
+                .contains("crypto.getRandomValues")
+                .contains("fetch")
+                .contains("disableInteractiveControls")
+                .doesNotContain("innerHTML");
+    }
+
     private static Map<Path, String> readStaticFiles(String... extensions) throws IOException {
         Path staticRoot = staticRoot();
         List<String> suffixes = List.of(extensions);

@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Configuration
 public class SecurityConfig {
@@ -219,6 +220,13 @@ public class SecurityConfig {
 
         private static final int MAX_AUTHORIZATION_HEADER_LENGTH = 8192;
         private static final int MAX_HEADER_VALUE_LENGTH = 8192;
+        private static final Set<String> CONNECTION_SPECIFIC_HEADERS = Set.of(
+                "connection",
+                "keep-alive",
+                "proxy-connection",
+                "transfer-encoding",
+                "upgrade"
+        );
 
         @Override
         protected void doFilterInternal(
@@ -251,6 +259,9 @@ public class SecurityConfig {
                 if (containsControlCharacters(name)) {
                     return true;
                 }
+                if (isHttp2OrHttp3(request) && CONNECTION_SPECIFIC_HEADERS.contains(name.toLowerCase())) {
+                    return true;
+                }
                 Enumeration<String> values = request.getHeaders(name);
                 while (values != null && values.hasMoreElements()) {
                     String value = values.nextElement();
@@ -264,6 +275,12 @@ public class SecurityConfig {
                 }
             }
             return false;
+        }
+
+        private boolean isHttp2OrHttp3(HttpServletRequest request) {
+            String protocol = request.getProtocol();
+            return protocol != null
+                    && (protocol.startsWith("HTTP/2") || protocol.startsWith("HTTP/3"));
         }
 
         private boolean hasDuplicatedScalarParameter(HttpServletRequest request) {

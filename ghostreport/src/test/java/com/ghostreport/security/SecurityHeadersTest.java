@@ -110,4 +110,16 @@ class SecurityHeadersTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Ambiguous request parameters"));
     }
+
+    @Test
+    void http2ConnectionSpecificHeadersAreRejected() throws Exception {
+        mockMvc.perform(get("/admin/panel")
+                        .with(request -> {
+                            request.setProtocol("HTTP/2.0");
+                            return request;
+                        })
+                        .header("Transfer-Encoding", "chunked"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Invalid request headers"));
+    }
 }
