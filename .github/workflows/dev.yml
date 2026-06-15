@@ -562,6 +562,14 @@ jobs:
               echo "Endpoint smoke evidence was not generated."
             fi
             echo ""
+            echo "## Runtime Probe Summary"
+            echo ""
+            if [ -s target/iast-evidence/runtime-probe-summary.json ]; then
+              python -c 'import json; from pathlib import Path; s=json.loads(Path("target/iast-evidence/runtime-probe-summary.json").read_text()); rows=[("Total probes",s.get("total_probes")),("Passed",s.get("passed")),("Failed",s.get("failed")),("Skipped",s.get("skipped")),("Public endpoint probes",s.get("public_endpoints_tested")),("Admin endpoint probes",s.get("admin_endpoints_tested")),("Analyst endpoint probes",s.get("analyst_endpoints_tested")),("Auditor endpoint probes",s.get("auditor_endpoints_tested")),("Negative-case probes",s.get("negative_cases_tested"))]; print("| Metric | Value |"); print("| --- | --- |"); [print(f"| {name} | {value} |") for name, value in rows]'
+            else
+              echo "Runtime probe JSON summary was not generated."
+            fi
+            echo ""
             echo "## DAST Runtime Traffic"
             echo ""
             echo "ZAP baseline target: http://localhost:8081"

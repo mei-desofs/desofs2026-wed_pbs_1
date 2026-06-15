@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 public class RateLimitProperties {
 
     private Limit tracking = new Limit(10, 60);
+    private Limit report = new Limit(10, 60);
     private Limit upload = new Limit(10, 60);
     private Limit download = new Limit(10, 60);
     private Limit login = new Limit(5, 600);
@@ -18,6 +19,14 @@ public class RateLimitProperties {
 
     public void setTracking(Limit tracking) {
         this.tracking = new Limit(tracking);
+    }
+
+    public Limit getReport() {
+        return new Limit(report);
+    }
+
+    public void setReport(Limit report) {
+        this.report = new Limit(report);
     }
 
     public Limit getUpload() {

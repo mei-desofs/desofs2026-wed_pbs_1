@@ -27,7 +27,6 @@ Os documentos complementares desta pasta funcionam como anexos tecnicos:
 - [SECURITY_CONFIGURATION_ASSESSMENT.md](SECURITY_CONFIGURATION_ASSESSMENT.md)
 - [SECURITY_ASSESSMENT.md](SECURITY_ASSESSMENT.md)
 - [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md)
-- [FINAL_PROJECT_REVIEW.md](FINAL_PROJECT_REVIEW.md)
 - [FINAL_DEMO_GUIDE.md](FINAL_DEMO_GUIDE.md)
 
 ## 2. Relacao com Phase 1 e Sprint 1
@@ -116,7 +115,7 @@ Controlos associados:
 
 - tracking code validado por formato;
 - erros genericos para evitar enumeracao;
-- rate limiting em verificacao/download;
+- rate limiting em submissao publica, verificacao e download;
 - DTOs para impedir mass assignment;
 - descricao e categoria validadas.
 
@@ -164,7 +163,8 @@ O fluxo de autenticacao tem duas fases para roles internas:
 1. `POST /auth/login` valida username/password, aplica rate limiting por
    utilizador/IP e, se a role exigir MFA, devolve `mfaRequired=true` e um
    `mfaChallengeId` sem emitir JWT.
-2. `POST /auth/mfa/verify` valida o codigo de utilizacao unica e curta duracao.
+2. `POST /auth/mfa/verify` valida o codigo de utilizacao unica e curta duracao,
+   com invalidacao do challenge apos tentativas invalidas repetidas.
    So depois da verificacao e emitido o JWT.
 
 Controlos implementados:
@@ -270,14 +270,23 @@ As validacoes principais incluem:
 - formato de tracking code;
 - status e priority por enum/allowlist;
 - roles apenas `ADMIN`, `ANALYST`, `AUDITOR`;
-- password policy e bloqueio de passwords comprometidas/reutilizadas;
+- password policy no servico, incluindo comprimento, complexidade, passwords
+  comprometidas, reutilizacao e palavras contextuais;
 - `attachmentId` positivo e tracking code valido em downloads;
-- content type esperado em endpoints JSON.
+- content type esperado em endpoints JSON;
+- rejeicao de `TRACE`, headers com caracteres de controlo e `Authorization`
+  excessivamente grande antes de chegar aos controllers;
+- rejeicao de parametros escalares duplicados para mitigar HTTP parameter
+  pollution fora de multipart;
+- validacao Fetch Metadata/Origin para bloquear pedidos unsafe cross-site;
+- CSP `report-uri /security/csp-report` para receber relatorios de violacao
+  do browser sem expor tokens ou tracking codes em respostas.
 
 Uploads sao uma superficie critica. Mitigacoes:
 
 - limite de tamanho;
 - limite de ficheiros por pedido;
+- quota acumulada de ficheiros por denuncia;
 - extensoes permitidas;
 - validacao MIME e magic bytes;
 - rejeicao de executaveis renomeados;
@@ -300,6 +309,7 @@ accountability. Eventos cobertos:
 - ownership violations;
 - uploads rejeitados;
 - tracking code enumeration;
+- CSP violations reportadas pelo browser;
 - operacoes de backup;
 - geracao/verificacao de pacotes de evidencia.
 
@@ -332,10 +342,57 @@ quando autorizados.
 | Tampering | Alteracao de logs, backups, packages ou ficheiros. | Hashes, manifestos HMAC, verificacao de backups, integridade em audit/security records, rejeicao de ZIP tampering. | `BackupServiceIntegrationTest`, audit/security DTOs. |
 | Repudiation | Utilizador nega operacao critica. | Audit logs com accao, actor, target, correlationId e integrityHash. | `AuditLogSecurityTest`, `RuntimeSecurityEventLoggingTest`. |
 | Information Disclosure | Exposicao de tracking code, token, password, paths ou dados anonimos. | Erros genericos, redaction de logs, DTOs, ausencia de tokens em browser storage, tracking code nao vai em URL. | `AnonymousDataLoggingTest`, `FrontendXssDataExposureTest`, `ErrorHandlingSecurityTest`. |
-| Denial of Service | Abuso de login, tracking, upload/download ou ficheiros grandes. | Rate limiting por fluxo, limites de upload, max files per request, rejeicao antecipada. | `RateLimiterServiceTest`, upload tests. |
+| Denial of Service | Abuso de login, tracking, upload/download, headers excessivos ou ficheiros grandes. | Rate limiting por fluxo, limites de upload, max files per request, limites Tomcat/Hikari, rejeicao antecipada. | `RateLimiterServiceTest`, upload tests, `SecurityHeadersTest`, `SecurityConfigurationValidatorTest`. |
 | Elevation of Privilege | Analyst tenta agir como admin/auditor ou aceder a caso de outro analyst. | RBAC central, service-level ownership, tests para forbidden routes, proteccao do ultimo admin activo. | `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`, `AdminUserManagementSecurityTest`. |
 
-## 14. Pipeline DevSecOps e automacoes
+## 14. Code review e controlo antes de merge
+
+O processo de revisao usado no projecto e baseado em branches curtas, pull
+requests e validacao automatica. O objectivo nao e apenas rever estilo: cada PR
+deve confirmar que a alteracao continua alinhada com o modelo de seguranca do
+GhostReport.
+
+Fluxo esperado:
+
+1. O developer cria uma branch com ambito claro.
+2. Implementa a alteracao e corre localmente os testes relevantes; para backend,
+   o comando base e `.\mvnw.cmd test`.
+3. Abre pull request com resumo, motivacao, impacto de seguranca e evidencia.
+4. A equipa revê codigo, endpoints, DTOs, validacao, autorizacao, logs e erros.
+5. A pipeline executa build, testes, JaCoCo, SAST, SCA, Gitleaks, SBOM e, quando
+   aplicavel, DAST/runtime evidence.
+6. Findings criticos ou confirmados sao corrigidos antes de merge.
+7. Findings nao exploraveis no ambito academico podem ser aceites apenas com
+   justificacao documentada em triagem ou limitacoes.
+
+Critérios usados na revisao:
+
+| Area | Validacao |
+| --- | --- |
+| Branch/PR | Scope pequeno, descricao clara e impacto de seguranca indicado. |
+| Autorizacao | Novas rotas alinhadas com `SecurityConfig` e, quando necessario, ownership em service. |
+| Inputs/DTOs | Sem binding directo de entidades; Bean Validation, allowlists e limites revistos. |
+| Erros/logs | Sem stack traces, paths internos, passwords, JWTs, secrets ou tracking codes em logs/respostas. |
+| Dependencias | Dependency-Check, SBOM e suppressions revistos quando `pom.xml` muda. |
+| Testes | Testes unitarios/integracao actualizados; JaCoCo e PIT usados como evidencia de qualidade. |
+| Scanners | CodeQL, SpotBugs, SonarCloud, Gitleaks, ZAP e Dependency-Check avaliados de acordo com severidade e explorabilidade. |
+| Documentacao | Claims de seguranca actualizados em `PHASE2_SPRINT2_REPORT.md`, anexos e ASVS quando mudam. |
+
+Os checks mais bloqueantes no codigo actual sao build/testes/JaCoCo, falhas de
+Gitleaks confirmadas e falhas tecnicas dos jobs necessarios para gerar
+evidencia. SAST, SCA, DAST baseline e IAST-like tambem entram na decisao, mas
+alguns resultados sao tratados como triagem: um falso positivo ou risco fora do
+ambito pode ser aceite se ficar justificado em [SCA_TRIAGE.md](SCA_TRIAGE.md),
+[SPOTBUGS_TRIAGE.md](SPOTBUGS_TRIAGE.md), [DEVSECOPS_PIPELINE.md](DEVSECOPS_PIPELINE.md)
+ou nas limitacoes finais.
+
+Esta disciplina evita merge de codigo inseguro porque combina revisao humana,
+testes negativos, gates automaticos, evidencias arquivadas e documentacao de
+risco residual. Nao substitui branch protection configurada no GitHub nem
+aprovacoes obrigatorias formais; essas configuracoes sao operacionais e devem
+ser confirmadas no repositorio remoto.
+
+## 15. Pipeline DevSecOps e automacoes
 
 O workflow principal `dev` corre em `push`, `pull_request` e `workflow_dispatch`.
 Tem `concurrency` para cancelar execucoes antigas da mesma ref. As automacoes
@@ -355,7 +412,7 @@ relevantes em `main`. Gera `target/pit-reports/index.html` e artefacto
 
 A pipeline esta descrita em detalhe em [DEVSECOPS_PIPELINE.md](DEVSECOPS_PIPELINE.md).
 
-## 15. SCA e dependencia Spring Security
+## 16. SCA e dependencia Spring Security
 
 O GitHub Security/Code scanning reportou alertas do OWASP Dependency-Check para
 Spring Security `6.5.10`:
@@ -371,7 +428,15 @@ Spring Security. A decisao evita misturar versoes de `spring-security-core`,
 
 Documentacao de triagem: [SCA_TRIAGE.md](SCA_TRIAGE.md).
 
-## 16. SAST, DAST e IAST-like
+O mesmo ficheiro documenta tambem os findings suprimidos por nao aplicabilidade
+ao componente usado: CVE-2025-15104 para `hibernate-validator` e CVE-2025-7962
+para `angus-activation`.
+
+A execucao local do Dependency-Check em 2026-06-15 gerou relatorios
+HTML/XML/JSON/SARIF e confirmou 0 vulnerabilidades nao suprimidas e 2
+suppressions documentadas.
+
+## 17. SAST, DAST e IAST-like
 
 ### SAST
 
@@ -414,16 +479,28 @@ Na pipeline, os probes live exercitam:
 - upload com extensao proibida;
 - upload com content-type/assinatura suspeita;
 - filename com tentativa de path traversal;
+- paginas publicas (`/`, `/index.html`, `/submit.html`, `/track.html`,
+  `/admin.html`, `/analyst.html`, `/auditor.html`);
 - endpoint admin sem token;
 - endpoint admin com JWT invalido;
 - login real de admin, analyst e auditor com MFA;
 - acesso autorizado e negado com tokens reais por role;
-- CSRF rejection em endpoint state-changing.
+- user lifecycle admin, backups list/download/verify e filename invalido;
+- analyst assign, priority/status/notes, attachments e case-package;
+- auditor logs, alerts, closed cases, backups e package verification;
+- casos negativos para metodo errado, JSON malformado, content type errado,
+  Authorization malformado, JWT invalido e token ausente.
+
+A validacao local expandida do probe confirmou 101 probes: 101 passed, 0 failed
+e 0 skipped. `GET /login.html` e tratado como controlo de exposicao: `401/404`
+confirma que nao existe pagina publica separada. O restore destrutivo de backup
+continua fora do probe runtime; a evidencia executa validacao segura de
+filename/path traversal e os testes automatizados cobrem restore para staging.
 
 JWT expirado, backups, ZIP Slip e tamanho maximo de upload sao cobertos pela
 seleccao de testes Maven executada no mesmo job `dast-scan`.
 
-## 17. Testes automatizados
+## 18. Testes automatizados
 
 A suite local mais recente correu:
 
@@ -432,7 +509,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado: 180 testes, 0 falhas, 0 erros.
+Resultado confirmado em 2026-06-15: 272 testes, 0 falhas, 0 erros, 0 skipped.
 
 Categorias cobertas:
 
@@ -441,17 +518,21 @@ Categorias cobertas:
 - autenticacao, JWT, MFA e password reset;
 - RBAC e endpoint matrix;
 - CSRF e security headers;
+- CSP/HSTS/COOP/COEP/CORP, CSP reporting, Fetch Metadata e request-boundary checks;
 - uploads, MIME, magic bytes, malware/quarantine e traversal;
+- quotas de anexos por pedido e por denuncia;
 - tracking code e enumeracao;
+- tracking codes gerados por `SecureRandom` sob carga academica moderada;
+- rate limit de submissao publica anonima;
 - analista ownership e workflow de casos;
 - auditor read-only;
 - admin user lifecycle;
 - backups, restore e integridade;
-- frontend: XSS sinks, tokens em storage, tracking code em URL, navs escondidas.
+- frontend: XSS sinks, scripts inline, tokens em storage, tracking code em URL, navs escondidas.
 
 Resumo detalhado: [SECURITY_TESTING.md](SECURITY_TESTING.md).
 
-## 18. Instalacao e configuracao segura
+## 19. Instalacao e configuracao segura
 
 Secrets devem vir do ambiente:
 
@@ -459,23 +540,49 @@ Secrets devem vir do ambiente:
 - `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`;
 - `BACKUP_HMAC_SECRET`, `BACKUP_HMAC_KEY_ID`;
 - `GHOSTREPORT_MFA_REQUIRED_ROLES`;
+- `GHOSTREPORT_TRANSPORT_TLS_MODE`;
+- `GHOSTREPORT_TRUSTED_PROXY_ENABLED`;
+- `SERVER_FORWARD_HEADERS_STRATEGY`;
+- `SERVER_SSL_ENABLED`, `SERVER_SSL_KEY_STORE`, `SERVER_SSL_KEY_STORE_PASSWORD`;
+- `SERVER_SSL_ENABLED_PROTOCOLS`, `SERVER_SSL_CIPHERS`;
+- `DB_POOL_MAX_SIZE`, `DB_CONNECTION_TIMEOUT_MS`, `SERVER_MAX_CONNECTIONS`,
+  `SERVER_TOMCAT_THREADS_MAX`;
 - directorios de upload, evidence e backups.
 
 O perfil `dev` pode expor codigo MFA em logs para demonstracao. Isto deve estar
-desligado em ambientes partilhados/prod-like. O perfil prod-like usa PostgreSQL
-e validacao de schema; ainda falta Flyway/Liquibase.
+desligado em ambientes partilhados/prod-like. O perfil prod-like usa PostgreSQL,
+validacao de schema, modo TLS explicito e rejeita `DB_URL` PostgreSQL sem
+`sslmode=verify-ca` ou `sslmode=verify-full`; ainda falta Flyway/Liquibase.
 
 Guias:
 
 - [SECURE_INSTALLATION.md](SECURE_INSTALLATION.md)
 - [SECURITY_CONFIGURATION_ASSESSMENT.md](SECURITY_CONFIGURATION_ASSESSMENT.md)
 
-## 19. ASVS e rastreabilidade
+## 20. ASVS e rastreabilidade
 
-O mapeamento ASVS esta em [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md). O projecto cobre
-de forma implementada ou documentada areas como autenticacao, autorizacao,
-validacao, file handling, logging, configuracao, dependency control e runtime
-testing.
+O tracker ASVS principal esta em
+[ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx](ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx).
+O ficheiro [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md) e apenas o resumo explicativo.
+O projecto cobre de forma implementada ou documentada areas como autenticacao,
+autorizacao, validacao, file handling, logging, configuracao, dependency control
+e runtime testing.
+
+Na revisao L2 adicional foram melhorados ou reclassificados com evidencia
+verificavel controlos de business limits, anti-automation, malware scanning,
+password policy, MFA, JWT audience, tokens self-contained, crypto integrity,
+resource limits, data protection/no-store, producao minima e logging.
+
+Na revisao L3 adicional foram reforcados ou corrigidos controlos com evidencia
+real: CSP violation reporting, HSTS preload, validacao de utilizador activo em
+JWT, comparacao constante de assinatura JWT, superficie estatica limitada,
+no-store em endpoints sensiveis, quota acumulada de uploads, defesa contra HTTP
+parameter pollution, teste de `SecureRandom` sob carga, algoritmos
+criptograficos aprovados e reclassificacao de CSV/spreadsheet injection como
+nao aplicavel por ausencia de exports CSV/XLSX/ODS.
+
+Os capitulos fora do desenho implementado, como OAuth/OIDC e WebRTC, continuam
+marcados como `Not Applicable` no tracker em vez de `Compliant`.
 
 Pontos parciais ou dependentes de operacao:
 
@@ -483,10 +590,11 @@ Pontos parciais ou dependentes de operacao:
 - secret manager externo;
 - SIEM/retencao imutavel;
 - migrations formais;
+- certificado publico/TLS operacional e canal MFA real;
 - IAST agent-based;
 - DAST autenticado completo.
 
-## 20. Avaliacao final
+## 21. Avaliacao final
 
 GhostReport cumpre o objectivo de prototipo academico seguro com evidencia
 tecnica. O sistema nao e apresentado como produto production-ready; e uma base
@@ -504,6 +612,16 @@ Pontos fortes:
 - pipeline com varios tipos de scanning;
 - documentacao organizada e rastreavel.
 
+Claims finais correctamente delimitados:
+
+| Claim | Redaccao correcta para a entrega |
+| --- | --- |
+| MFA | Implementado para `ADMIN`, `ANALYST` e `AUDITOR`; em dev/test o codigo pode ser exposto em logs para demonstracao. |
+| DAST | OWASP ZAP baseline/passivo e probes runtime; nao e pentest autenticado completo. |
+| IAST | Evidencia runtime/IAST-like; nao existe agente IAST com taint tracking. |
+| Producao | Existe guia prod-like com TLS/proxy/PostgreSQL TLS/resource limits validados no arranque; faltam controlos operacionais externos como certificado publico, secret manager, SIEM/WORM e canal MFA real. |
+| ASVS | Tracker Sprint 2 em XLSX actualizado; Markdown funciona como resumo explicativo. |
+
 Limitacoes:
 
 - MFA precisa de canal/IdP real em producao;
@@ -513,7 +631,7 @@ Limitacoes:
 - falta Flyway/Liquibase;
 - falta SIEM/WORM/secret manager externo.
 
-## 21. Conclusao
+## 22. Conclusao
 
 A Phase 2 Sprint 2 fecha o GhostReport como uma entrega final robusta para
 avaliacao: a aplicacao implementa os fluxos principais, os riscos da Phase 1

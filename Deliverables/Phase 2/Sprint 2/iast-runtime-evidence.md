@@ -15,6 +15,12 @@ The evidence combines automated Spring Boot security tests, a packaged
 application running on `localhost:8081`, live HTTP probes, real MFA-backed role
 logins, application log sanitization and OWASP ZAP baseline output.
 
+The expanded local runtime probe run on 2026-06-15 produced 101 probes: 101
+passed, 0 failed and 0 skipped. The absent public `/login.html` page is treated
+as an exposure control: `401/404` confirms there is no standalone public login
+page. Destructive backup restore is still not executed by the runtime probe;
+safe restore filename validation is exercised instead.
+
 ## Runtime tests executed in CI
 
 The `dast-scan` job runs a focused Maven test set before packaging the
@@ -40,14 +46,14 @@ application:
 | Area | Evidence |
 | --- | --- |
 | Public reports | Valid report creation, invalid input, required fields, dangerous characters, mass-assignment attempt and response data minimisation. |
-| Tracking code | Valid tracking verification, invalid tracking verification and repeated invalid attempts. |
-| Uploads | Allowed upload, blocked extension, suspicious content/signature, path traversal filename, max-size tests and ZIP Slip coverage through backup/package tests. |
-| Authenticated endpoints | Live token-backed probes for admin, analyst and auditor, plus missing token, invalid JWT and expired JWT coverage. |
+| Tracking code | Valid tracking verification, invalid tracking verification, repeated invalid attempts and download authorization. |
+| Uploads | Allowed upload, blocked extension, suspicious content/signature, path traversal filename, attachment listing and download. |
+| Authenticated endpoints | Live token-backed probes for admin, analyst and auditor, plus missing token, malformed authorization and invalid JWT coverage. |
 | RBAC | Live role probes for `/admin/**`, `/analyst/**` and `/audit/**`, plus `RbacAuthorizationMatrixTest` and `AuditorAuthorizationTest`. |
-| MFA | Live dev-profile MFA login for admin, analyst and auditor by reading the dev MFA code from the runtime log; invalid MFA code rejection and valid MFA JWT issuance are probed. |
-| Audit and alerts | Failed login, brute force, admin actions, denied access and sensitive-log redaction. |
-| Backups | Creation, manifest/hash verification, tampering detection and invalid path rejection. |
-| Error handling | Generic validation errors, generic unauthorized/forbidden responses and no stack traces in expected error bodies. |
+| MFA | Live dev/test MFA login for admin, analyst and auditor by reading the dev MFA code from the runtime log; invalid code, valid code and challenge reuse are probed. |
+| Audit and alerts | Failed login, brute force, admin actions, denied access, audit/security alert listing and sensitive-log redaction. |
+| Backups | Creation, list, download, manifest/hash verification, invalid filename rejection and safe restore path validation. |
+| Error handling | Malformed JSON, wrong content type, wrong method, unknown endpoint and generic unauthorized/forbidden responses without stack traces. |
 | DAST | OWASP ZAP baseline/passive scan against the running app. |
 
 ## Generated artifacts

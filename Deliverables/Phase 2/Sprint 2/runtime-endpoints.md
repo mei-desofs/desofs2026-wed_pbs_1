@@ -1,52 +1,139 @@
 # Runtime endpoints exercised by CI
 
-This file mirrors the purpose of the generated CI artifact
-`target/iast-evidence/runtime-endpoints.md`. The exact HTTP status values are
-produced during each `dast-scan` run by
-`.github/scripts/runtime_security_probe.py`.
+This file documents the intended shape of the generated CI artifact
+`target/iast-evidence/runtime-endpoints.md`. Exact IDs, backup filenames and
+HTTP statuses can vary per run, so the CI artifact remains the run-specific
+source.
 
-## Live probes
+The expanded local validation on 2026-06-15 produced:
 
-| Endpoint/probe | Runtime purpose | Expected control |
-| --- | --- | --- |
-| `GET /index.html` | Public frontend availability and security headers. | Public page works without authentication. |
-| `GET /login.html` | Unauthenticated frontend request. | Public/static route handling. |
-| `GET /admin/users` without token | Protected endpoint access. | Unauthorized response. |
-| `GET /admin/users` with invalid JWT | Invalid token handling. | Controlled unauthorized response and security alert evidence. |
-| `POST /auth/login` invalid credentials | Failed login. | Generic failure, audit log and rate-limit accounting. |
-| repeated `POST /auth/login` invalid credentials | Brute-force evidence. | Rate limiting/security alert evidence where threshold is reached. |
-| `POST /auth/password/change` without CSRF/auth | Protected state-changing request. | Rejection without sensitive details. |
-| `POST /reports` valid payload | Public anonymous report flow. | Report and tracking code generated. |
-| `POST /reports` invalid payload | Required fields and validation. | Controlled validation error. |
-| `POST /reports` dangerous characters | XSS-style characters in data. | Data accepted/validated as text, not executed. |
-| `POST /reports` mass-assignment attempt | Extra JSON fields such as `role`, `status`, `id`. | DTO binding ignores unauthorised fields. |
-| `POST /reports/verify` valid tracking code | Tracking flow. | Report status returned without internal secrets. |
-| `POST /reports/verify` invalid tracking code | Enumeration resistance. | Controlled error. |
-| repeated invalid `POST /reports/verify` | Tracking abuse. | Rate-limit/enumeration evidence. |
-| `POST /reports/{id}/attachments` allowed file | Upload happy path. | Allowed type stored under generated name. |
-| `POST /reports/{id}/attachments` forbidden extension | Extension allowlist. | Rejection. |
-| `POST /reports/{id}/attachments` suspicious content | MIME/signature validation. | Rejection. |
-| `POST /reports/{id}/attachments` traversal filename | Filename/path validation. | Rejection or safe handling. |
-| `POST /auth/login` admin/analyst/auditor | Real internal login starts MFA. | Password accepted but JWT not issued before MFA. |
-| `POST /auth/mfa/verify` invalid code | MFA rejection. | Controlled rejection. |
-| `POST /auth/mfa/verify` valid dev code | MFA completion. | JWT issued for role. |
-| `GET /admin/users` with admin JWT | Admin authorization. | Access allowed. |
-| `GET /admin/users` with analyst JWT | Analyst boundary. | Access denied. |
-| `GET /admin/users` with auditor JWT | Auditor boundary. | Access denied. |
-| `GET /analyst/panel` with analyst JWT | Analyst authorization. | Access allowed. |
-| `GET /analyst/panel` with auditor JWT | Auditor boundary. | Access denied. |
-| `GET /audit/logs` with auditor JWT | Auditor authorization. | Access allowed. |
-| `GET /audit/logs` with analyst JWT | Analyst boundary. | Access denied. |
-| `GET /definitely-not-a-real-endpoint` | 404/error handling. | No stack trace or framework details expected. |
+| Metric | Value |
+| --- | --- |
+| Total probes | 101 |
+| Passed | 101 |
+| Failed | 0 |
+| Skipped | 0 |
+| Public endpoint probes | 23 |
+| Admin endpoint probes | 22 |
+| Analyst endpoint probes | 17 |
+| Auditor endpoint probes | 13 |
+| Negative-case probes | 6 |
 
-## Covered by runtime-focused tests
+No probes were skipped in the validated local run. `GET /login.html` is treated
+as an exposure check: `401/404` confirms there is no standalone public login
+page. Destructive backup restore remains outside the runtime probe; safe restore
+filename/path traversal validation is exercised, and restore staging remains
+covered by automated tests.
 
-Some flows remain better validated through MockMvc/JUnit than live probes:
+## Generated artifact format
 
-- expired JWT;
-- backup creation/verify/tampering/path rejection;
-- ZIP Slip-style archive tampering;
-- max upload size.
+The generated table uses this schema:
 
-These are included in the `dast-scan` Maven test subset and therefore remain
-part of the runtime security evidence artifact.
+| Area | Endpoint/Probe | Method | Role used | Expected result | Obtained result | Status | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+
+## Public pages
+
+The probe checks:
+
+- `GET /`
+- `GET /index.html`
+- `GET /submit.html`
+- `GET /track.html`
+- `GET /login.html` when present
+- `GET /admin.html`
+- `GET /analyst.html`
+- `GET /auditor.html`
+
+Expected evidence:
+
+- public pages respond without authentication when they exist;
+- browser security headers are present;
+- no obvious bearer token, JWT secret, backup secret or real tracking code is
+  exposed in public HTML.
+
+## Public report and file flow
+
+The probe exercises:
+
+- `POST /reports` valid payload;
+- `POST /reports` invalid payload;
+- `POST /reports` with script-like content;
+- `POST /reports` mass-assignment attempt with `role`, `status`, `id`,
+  `assignedAnalyst` and forced tracking fields;
+- `POST /reports/verify` valid tracking code;
+- `POST /reports/verify` invalid and repeated invalid tracking code;
+- `POST /reports/{id}/attachments` allowed PDF;
+- upload with forbidden extension;
+- upload with traversal filename;
+- upload with MIME/signature mismatch;
+- `POST /reports/{id}/attachments/list`;
+- `POST /reports/download` valid tracking code;
+- download with invalid tracking code;
+- download with invalid attachment id.
+
+## Authentication and MFA
+
+The probe exercises:
+
+- invalid login;
+- repeated invalid login for rate-limit/brute-force evidence;
+- valid password login for `ADMIN`, `ANALYST` and `AUDITOR`;
+- MFA invalid code rejection;
+- MFA valid dev/test code completion;
+- MFA challenge reuse rejection;
+- password change rejection with wrong current password;
+- logout without token;
+- logout with a valid token after role-specific probes;
+- password reset request generic response;
+- password reset confirm with invalid token.
+
+MFA codes are read only from dev/test logs. Tokens, tracking codes and MFA
+challenge IDs are redacted from JSON artifacts.
+
+## Protected role coverage
+
+Admin probes include:
+
+- unauthenticated and invalid-JWT access to admin endpoints;
+- `ANALYST` and `AUDITOR` denied from `/admin/users`;
+- `ADMIN` access to panel, users, audit logs, security alerts and backups;
+- create/update/activate/deactivate/delete internal user;
+- invalid role validation;
+- create/list/download/verify backup;
+- invalid backup filename validation;
+- last-admin deactivation protection when applicable.
+
+Analyst probes include:
+
+- unauthenticated access denied;
+- `AUDITOR` denied;
+- `ANALYST` access to panel, reports and my-cases;
+- assign report;
+- invalid status/priority/notes;
+- valid priority and notes when workflow permits;
+- case-review, internal attachment list/download and case-package request;
+- nonexistent case-review controlled error.
+
+Auditor probes include:
+
+- unauthenticated access denied;
+- `ANALYST` denied;
+- `AUDITOR` access to logs, security alerts, closed cases and backups;
+- evidence-package verification for runtime/nonexistent reports;
+- invalid backup filename validation;
+- backup verify/manifest when a backup was created by the admin probe.
+
+## Cross-cutting negative probes
+
+The probe also checks:
+
+- unknown endpoint;
+- wrong HTTP method;
+- malformed JSON;
+- wrong `Content-Type`;
+- malformed `Authorization` header;
+- invalid JWT.
+
+These checks verify controlled 4xx responses without stack traces or obvious
+internal framework details.

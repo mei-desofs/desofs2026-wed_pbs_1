@@ -36,7 +36,11 @@ public class ReportController {
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public CreateReportResponse createReport(@Valid @RequestBody CreateReportRequest request) {
+    public CreateReportResponse createReport(
+            @Valid @RequestBody CreateReportRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        rateLimiterService.checkReportLimit(httpRequest.getRemoteAddr());
         return reportService.createReport(request);
     }
 

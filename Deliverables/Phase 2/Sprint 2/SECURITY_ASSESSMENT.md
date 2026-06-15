@@ -162,7 +162,7 @@ Evidencia: `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`,
 | Backups | Implementado | Manifestos, hashes, HMAC, verify/restore. |
 | SCA/SBOM | Implementado | Dependency-Check e CycloneDX. |
 | SAST | Implementado como evidencia | CodeQL, SpotBugs, SonarCloud. |
-| DAST | Implementado baseline | ZAP baseline e runtime probes. |
+| DAST | Implementado baseline | ZAP baseline e runtime probes; validacao local expandida com 101 probes, 101 passed, 0 failed e 0 skipped. |
 | IAST | Parcial | Evidencia runtime/IAST-like, nao agente completo. |
 | Instalacao segura | Documentado | Secrets, perfis, PostgreSQL, checklist. |
 
@@ -184,3 +184,30 @@ Para o ambito DESOFS, o projecto demonstra uma abordagem completa: ameacas
 foram identificadas, mitigacoes foram implementadas, testes validam comportamento
 esperado e a pipeline produz evidencia. As limitacoes restantes sao claras e
 maioritariamente operacionais.
+
+## 7. Revisao critica final
+
+Pontos fortes preservados da revisao final:
+
+- dominio claro: denuncia anonima, analise interna e evidencia de auditoria;
+- modelo de roles pequeno e facil de rever: `ADMIN`, `ANALYST`, `AUDITOR` e
+  denunciante anonimo;
+- separacao entre fluxos publicos e APIs internas protegidas;
+- mitigacoes concretas para uploads, path traversal, ZIP Slip, backups e
+  pacotes de evidencia;
+- auditoria, alertas e integridade adicionam rastreabilidade alem de CRUD;
+- pipeline com build/testes, SCA, SAST, DAST baseline, SBOM e secrets scan.
+
+Claims que devem continuar delimitados:
+
+| Claim | Limite correcto |
+| --- | --- |
+| MFA | Implementado para roles internas; canal real de producao ainda e futuro. |
+| DAST | ZAP baseline e probes runtime; nao e pentest autenticado completo. |
+| IAST | Evidencia runtime/IAST-like; sem agente IAST completo. |
+| Producao | Ha guia prod-like, mas faltam controlos operacionais externos. |
+| ASVS | Tracker Sprint 2 em XLSX actualizado; Markdown e resumo explicativo. |
+
+Com esta consolidacao, `FINAL_PROJECT_REVIEW.md` deixou de ser necessario como
+ficheiro solto: o seu conteudo util fica distribuido entre este documento e o
+relatorio principal [PHASE2_SPRINT2_REPORT.md](PHASE2_SPRINT2_REPORT.md).

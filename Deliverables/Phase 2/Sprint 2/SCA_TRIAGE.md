@@ -1,8 +1,8 @@
-# Triagem SCA e dependências
+# Triagem SCA e dependencias
 
 ## Estado actual
 
-GhostReport usa o parent/BOM do Spring Boot para gerir versões Spring Framework
+GhostReport usa o parent/BOM do Spring Boot para gerir versoes Spring Framework
 e Spring Security:
 
 ```xml
@@ -10,23 +10,59 @@ e Spring Security:
 <version>3.5.15</version>
 ```
 
-Os módulos Spring Security resolvem actualmente para `6.5.11`.
+Os modulos Spring Security resolvem actualmente para `6.5.11`.
+
+Validacao local:
+
+```powershell
+cd ghostreport
+.\mvnw.cmd dependency:tree "-Dincludes=org.springframework.security"
+```
+
+Resultado observado:
+
+| Modulo | Versao resolvida |
+| --- | --- |
+| `spring-security-config` | `6.5.11` |
+| `spring-security-web` | `6.5.11` |
+| `spring-security-core` | `6.5.11` |
+| `spring-security-crypto` | `6.5.11` |
+| `spring-security-test` | `6.5.11` |
 
 ## Alertas GitHub remediados
 
-O code scanning reportava alertas dependency-check para
-`org.springframework.security` `6.5.10`:
+O code scanning reportava alertas Dependency-Check para
+`org.springframework.security` `6.5.10`.
 
-| CVE | Módulos afectados | Severidade |
-| --- | --- | --- |
-| CVE-2026-40988 | `spring-security-core`, `spring-security-web` | High |
-| CVE-2026-41694 | `spring-security-core`, `spring-security-web` | Medium |
-| CVE-2026-41003 | `spring-security-core`, `spring-security-web` | Medium |
+| Componente | Versao vulneravel | CVE | Severidade | Origem | Impacto | Estado | Decisao |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `org.springframework.security:spring-security-web` / stack Spring Security | `6.5.10` | CVE-2026-40988 | High | Dependency-Check / GitHub Code Scanning; advisory Spring/NVD | DoS em SAML2 service provider com Redirect binding por inflacao DEFLATE sem limite. GhostReport nao usa SAML2, mas a versao estava na arvore. | Corrigido | Actualizado via Spring Boot BOM `3.5.15`; Spring Security resolvido para `6.5.11`. |
+| `org.springframework.security:spring-security-web` / stack Spring Security | `6.5.10` | CVE-2026-41694 | Low/Medium conforme fonte | Dependency-Check / GitHub Code Scanning; advisory Spring/NVD | Possivel decryption oracle em payloads SAML sem assinatura valida. Nao aplicavel directamente porque GhostReport nao configura SAML. | Corrigido | Actualizado para `6.5.11`; sem suppression. |
+| `org.springframework.security:spring-security-web` / stack Spring Security | `6.5.10` | CVE-2026-41003 | High | Dependency-Check / GitHub Code Scanning; advisory Spring/NVD | XSS em HTML gerado por filtros Spring Security quando `RelyingPartyRegistration` e influenciavel. GhostReport nao usa SAML/OIDC relying party, mas a versao era afectada. | Corrigido | Actualizado para `6.5.11`; frontend continua coberto por testes XSS. |
+| `org.hibernate.validator:hibernate-validator` | `8.0.3.Final` reportado | CVE-2025-15104 | Reportado por SCA; nao aplicavel ao componente usado | Dependency-Check local/configurado | O CVE refere The Nu Html Checker, nao Hibernate Validator. | Suprimido | Suppression especifica por package URL e CVE ate 2026-09-30; rever antes de producao. |
+| `org.eclipse.angus:angus-activation` | `2.0.3` reportado | CVE-2025-7962 | Reportado por SCA; nao aplicavel ao componente usado | Dependency-Check local/configurado | O CVE refere SMTP injection em Jakarta Mail/Angus SMTP; GhostReport nao usa SMTP nem `org.eclipse.angus:smtp`. | Suprimido | Suppression especifica por package URL e CVE ate 2026-09-30; manter monitorizacao. |
 
-A remediação foi actualizar o BOM do Spring Boot, em vez de fixar manualmente
-módulos Spring Security individuais. Isto mantém o conjunto de módulos alinhado.
+A remediacao foi actualizar o BOM do Spring Boot para `3.5.15`, em vez de fixar
+manualmente modulos Spring Security individuais. Isto mantem `spring-security-core`,
+`spring-security-web`, `spring-security-config`, `spring-security-crypto` e
+`spring-security-test` alinhados na mesma linha `6.5.11`.
 
-## Comandos de validação
+## Porque corrigir mesmo sem SAML no projecto
+
+Mesmo que a superficie SAML nao esteja activa no GhostReport, a triagem optou
+por corrigir a versao porque:
+
+- a ferramenta SCA sinalizava a dependencia vulneravel na arvore;
+- manter uma versao afectada obrigaria a justificar risco residual em cada
+  entrega;
+- a actualizacao via BOM e de baixo risco e preserva compatibilidade entre
+  modulos Spring;
+- a aplicacao usa Spring Security em funcionalidades criticas como JWT, filtros,
+  CSRF, headers e autorizacao;
+- a remocao do alerta melhora a postura de supply chain sem depender de
+  suppressions.
+
+## Comandos de validacao
 
 ```powershell
 cd ghostreport
@@ -35,23 +71,69 @@ cd ghostreport
 .\mvnw.cmd -DskipTests org.cyclonedx:cyclonedx-maven-plugin:2.9.1:makeAggregateBom
 ```
 
-A validação local mais recente confirmou que `spring-security-core`,
-`spring-security-web` e `spring-security-config` resolvem para `6.5.11` e que
-`6.5.10` já não surge na árvore de dependências.
+A validacao local mais recente confirmou que `spring-security-core`,
+`spring-security-web`, `spring-security-config`, `spring-security-crypto` e
+`spring-security-test` resolvem para `6.5.11` e que `6.5.10` ja nao surge na
+arvore de dependencias.
+
+O Dependency-Check local executado em 2026-06-15 terminou com build success e
+gerou HTML/XML/JSON/SARIF em `target/dependency-check-report`. O JSON confirmou
+0 vulnerabilidades nao suprimidas e 2 vulnerabilidades suprimidas
+documentadas abaixo.
+
+O comando `.\mvnw.cmd dependency:tree` tambem confirmou:
+
+- `org.hibernate.validator:hibernate-validator:8.0.3.Final` como dependencia de
+  `spring-boot-starter-validation`;
+- `org.eclipse.angus:angus-activation:2.0.3` como dependencia transitiva via
+  `org.glassfish.jaxb:jaxb-core`;
+- `org.postgresql:postgresql:42.7.11`;
+- `org.apache.tomcat.embed:tomcat-embed-core:10.1.55`;
+- `org.springframework:spring-webmvc:6.2.19`.
+
+## Processo de triagem SCA
+
+1. Confirmar o componente e versao exacta na arvore Maven.
+2. Ler a descricao do CVE e o intervalo de versoes afectadas.
+3. Verificar se a funcionalidade vulneravel esta activa no GhostReport.
+4. Preferir actualizacao de versao/BOM quando existir versao corrigida
+   compativel.
+5. Usar suppression apenas para falso positivo ou componente nao aplicavel,
+   sempre com data de expiracao.
+6. Registar risco residual quando o CVE nao puder ser corrigido antes da
+   entrega.
+7. Gerar SBOM CycloneDX para facilitar auditoria futura.
 
 ## Suppressions
 
-O ficheiro de suppressions está limitado a pares componente/CVE específicos:
+O ficheiro de suppressions esta limitado a pares componente/CVE especificos:
 
-| Componente | CVE | Justificação |
+| Componente | CVE | Justificacao |
 | --- | --- | --- |
-| `org.hibernate.validator:hibernate-validator@8.0.3.Final` | CVE-2025-15104 | O CVE refere The Nu Html Checker, não Hibernate Validator. |
-| `org.eclipse.angus:angus-activation@2.0.3` | CVE-2025-7962 | O CVE refere SMTP injection em Jakarta Mail/Angus SMTP; GhostReport não usa o componente SMTP. |
+| `org.hibernate.validator:hibernate-validator@8.0.3.Final` | CVE-2025-15104 | O CVE refere The Nu Html Checker, nao Hibernate Validator. |
+| `org.eclipse.angus:angus-activation@2.0.3` | CVE-2025-7962 | O CVE refere SMTP injection em Jakarta Mail/Angus SMTP; GhostReport nao usa o componente SMTP. |
 
-Suppressions não devem esconder vulnerabilidades reais. Têm data de expiração e
-devem ser revistas antes de submissão final ou produção.
+Suppressions nao devem esconder vulnerabilidades reais. Tem data de expiracao e
+devem ser revistas antes de submissao final ou producao.
 
-## Evidência de pipeline
+## Evidencia de pipeline
 
-O job `dependency-scanning` corre OWASP Dependency-Check, carrega SARIF para code
-scanning e gera SBOM CycloneDX.
+O job `dependency-scanning` corre OWASP Dependency-Check, carrega SARIF para Code
+Scanning quando o ficheiro e gerado, e produz SBOM CycloneDX.
+
+Artefactos esperados:
+
+- `dependency-check-sca-reports`: relatorios HTML/XML/JSON/SARIF;
+- GitHub Code Scanning: SARIF quando gerado;
+- `sbom-cyclonedx`: `bom.json` e `bom.xml`.
+
+## Estado final da triagem
+
+| Item | Estado |
+| --- | --- |
+| Spring Security `6.5.10` | Remediado. |
+| Spring Security `6.5.11` | Versao resolvida actualmente. |
+| CVEs Spring Security listados acima | Sem risco residual conhecido no codigo actual apos upgrade. |
+| Dependency-Check 2026-06-15 | 0 vulnerabilidades nao suprimidas; 2 suppressions documentadas. |
+| Suppressions activas | Mantidas apenas para falso positivo/componente nao usado, com expiracao. |
+| Accao futura | Reexecutar Dependency-Check antes da submissao final e apos qualquer alteracao em `pom.xml`. |
