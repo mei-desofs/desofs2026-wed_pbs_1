@@ -11,6 +11,7 @@ import com.ghostreport.repository.AttachmentRepository;
 import com.ghostreport.repository.CaseReviewRepository;
 import com.ghostreport.repository.ReportRepository;
 import com.ghostreport.security.SecurityUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
@@ -41,6 +42,7 @@ public class ReportService {
     private final AuditLogService auditLogService;
     private final SecurityMonitoringService securityMonitoringService;
     private final ReportWorkflowPolicy reportWorkflowPolicy;
+    private final int maxFilesPerReport;
 
     private final BCryptPasswordEncoder passwordEncoder =
             new BCryptPasswordEncoder();
@@ -52,7 +54,8 @@ public class ReportService {
             CaseReviewRepository caseReviewRepository,
             AuditLogService auditLogService,
             SecurityMonitoringService securityMonitoringService,
-            ReportWorkflowPolicy reportWorkflowPolicy
+            ReportWorkflowPolicy reportWorkflowPolicy,
+            @Value("${app.upload.max-files-per-report:20}") int maxFilesPerReport
     ) {
         this.reportRepository = reportRepository;
         this.attachmentRepository = attachmentRepository;
@@ -61,6 +64,7 @@ public class ReportService {
         this.auditLogService = auditLogService;
         this.securityMonitoringService = securityMonitoringService;
         this.reportWorkflowPolicy = reportWorkflowPolicy;
+        this.maxFilesPerReport = maxFilesPerReport;
     }
 
     @Transactional
@@ -246,6 +250,7 @@ public class ReportService {
                 );
 
         validateTrackingCodeForReport(report, trackingCode);
+        ensureAttachmentQuotaAvailable(reportId, 1);
 
         try {
 
@@ -339,6 +344,7 @@ public class ReportService {
                 );
 
         validateTrackingCodeForReport(report, trackingCode);
+        ensureAttachmentQuotaAvailable(reportId, files.length);
 
         List<AttachmentResponse> responses =
                 new ArrayList<>();
@@ -612,6 +618,18 @@ public class ReportService {
                     HttpStatus.FORBIDDEN,
                     "Upload not authorized"
             );
+        }
+    }
+
+    private void ensureAttachmentQuotaAvailable(Long reportId, int requestedFiles) {
+        if (requestedFiles < 1) {
+            return;
+        }
+
+        long currentFiles = attachmentRepository.countByReportId(reportId);
+        if (currentFiles + requestedFiles > maxFilesPerReport) {
+            recordUploadRejected(reportId, "Attachment quota exceeded");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Attachment quota exceeded");
         }
     }
 

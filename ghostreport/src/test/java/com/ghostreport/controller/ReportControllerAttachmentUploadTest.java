@@ -56,6 +56,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "server.error.include-stacktrace=never",
         "ghostreport.backup-dir=target/test-backups/report-controller-attachment-upload",
         "app.upload-dir=target/test-uploads/report-controller-attachment-upload",
+        "app.upload.max-files-per-report=2",
         "ghostreport.backup-enabled=true",
         "security.rate-limit.upload.max-attempts=100"
 })
@@ -171,6 +172,38 @@ class ReportControllerAttachmentUploadTest {
 
         assertTrue(attachmentRepository.findByReportId(report.getId()).isEmpty());
         assertEquals(0, countRegularFiles(uploadBase));
+    }
+
+    @Test
+    void uploadRejectsFilesThatExceedPerReportQuota() throws Exception {
+        Report report = createReport();
+
+        for (int i = 0; i < 2; i++) {
+            mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
+                            .file(new MockMultipartFile(
+                                    "files",
+                                    "quota-" + i + ".txt",
+                                    "text/plain",
+                                    ("approved evidence " + i).getBytes()
+                            ))
+                            .param("trackingCode", TRACKING_CODE)
+                            .with(csrf()))
+                    .andExpect(status().isOk());
+        }
+
+        mockMvc.perform(multipart("/reports/{id}/attachments", report.getId())
+                        .file(new MockMultipartFile(
+                                "files",
+                                "quota-overflow.txt",
+                                "text/plain",
+                                "approved evidence overflow".getBytes()
+                        ))
+                        .param("trackingCode", TRACKING_CODE)
+                        .with(csrf()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Invalid request"));
+
+        assertEquals(2, attachmentRepository.findByReportId(report.getId()).size());
     }
 
     @Test

@@ -59,6 +59,7 @@ app:
   upload-dir: uploads
   upload:
     max-files-per-request: ${APP_UPLOAD_MAX_FILES_PER_REQUEST:5}
+    max-files-per-report: ${APP_UPLOAD_MAX_FILES_PER_REPORT:20}
 
 ghostreport:
   jwt:

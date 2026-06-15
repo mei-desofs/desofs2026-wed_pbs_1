@@ -39,6 +39,17 @@ class TrackingCodeTest {
     }
 
     @Test
+    void generatedCodesRemainUniqueUnderModerateDemand() {
+        Set<String> generatedCodes = new HashSet<>();
+
+        for (int i = 0; i < 2_000; i++) {
+            generatedCodes.add(TrackingCode.generate().value());
+        }
+
+        assertEquals(2_000, generatedCodes.size());
+    }
+
+    @Test
     void validCodeCanBeRestored() {
 
         String value = "GR-abcdefghijklmnopqrst";

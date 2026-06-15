@@ -103,4 +103,11 @@ class SecurityHeadersTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Invalid request headers"));
     }
+
+    @Test
+    void duplicatedScalarParametersAreRejectedBeforeControllerHandling() throws Exception {
+        mockMvc.perform(get("/admin/panel?role=ADMIN&role=AUDITOR"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Ambiguous request parameters"));
+    }
 }

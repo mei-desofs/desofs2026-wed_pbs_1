@@ -236,6 +236,11 @@ public class SecurityConfig {
                 return;
             }
 
+            if (hasDuplicatedScalarParameter(request)) {
+                writeFilterError(response, 400, "Ambiguous request parameters");
+                return;
+            }
+
             filterChain.doFilter(request, response);
         }
 
@@ -259,6 +264,18 @@ public class SecurityConfig {
                 }
             }
             return false;
+        }
+
+        private boolean hasDuplicatedScalarParameter(HttpServletRequest request) {
+            String contentType = request.getContentType();
+            if (contentType != null && contentType.toLowerCase().startsWith(MediaType.MULTIPART_FORM_DATA_VALUE)) {
+                return false;
+            }
+
+            return request.getParameterMap()
+                    .values()
+                    .stream()
+                    .anyMatch(values -> values != null && values.length > 1);
         }
 
         private boolean containsControlCharacters(String value) {
