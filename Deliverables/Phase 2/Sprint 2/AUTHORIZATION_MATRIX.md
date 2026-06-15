@@ -91,6 +91,7 @@ constraint e a aplicacao usam apenas `ADMIN`, `ANALYST` e `AUDITOR`.
 | PATCH | `/admin/users/{id}/activate` | `ADMIN` | Activar utilizador. | Audit log. |
 | PATCH | `/admin/users/{id}/deactivate` | `ADMIN` | Desactivar utilizador. | Proteccao ultimo admin activo. |
 | DELETE | `/admin/users/{id}` | `ADMIN` | Remocao logica. | Desactivacao em vez de delete fisico. |
+| POST | `/admin/users/{id}/password-reset` | `ADMIN` | Iniciar reset de password. | Admin nao escolhe nem ve a nova password. |
 | GET | `/admin/audit-logs` | `ADMIN` | Consultar logs. | DTO com integrity hash. |
 | GET | `/admin/security-alerts` | `ADMIN` | Consultar alertas. | DTO com integrity hash. |
 

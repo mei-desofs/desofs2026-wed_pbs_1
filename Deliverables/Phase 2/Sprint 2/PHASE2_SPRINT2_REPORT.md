@@ -253,6 +253,7 @@ Os endpoints principais estao agrupados abaixo.
 | PATCH | `/admin/users/{id}/activate` | `ADMIN` | Activar utilizador. |
 | PATCH | `/admin/users/{id}/deactivate` | `ADMIN` | Desactivar utilizador. |
 | DELETE | `/admin/users/{id}` | `ADMIN` | Remocao logica por desactivacao. |
+| POST | `/admin/users/{id}/password-reset` | `ADMIN` | Iniciar reset sem escolher password. |
 | GET | `/admin/audit-logs` | `ADMIN` | Consultar logs. |
 | GET | `/admin/security-alerts` | `ADMIN` | Consultar alertas. |
 | POST | `/admin/backups` | `ADMIN` | Criar backup. |
@@ -288,6 +289,8 @@ As validacoes principais incluem:
   `fetch`, `crypto.getRandomValues`, `TextEncoder` e APIs DOM seguras.
 - bloqueio explicito de caminhos `/.git` e `/.svn` para impedir exposicao de
   metadados de controlo de versao.
+- reset de password iniciado por administrador sem permitir que o administrador
+  escolha ou veja a nova password do utilizador.
 
 Uploads sao uma superficie critica. Mitigacoes:
 
@@ -516,7 +519,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 281 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 283 testes, 0 falhas, 0 erros, 0 skipped.
 
 Categorias cobertas:
 
@@ -535,7 +538,8 @@ Categorias cobertas:
 - auditor read-only;
 - admin user lifecycle;
 - backups, restore e integridade;
-- frontend: XSS sinks, scripts inline, tokens em storage, tracking code em URL, navs escondidas.
+- frontend: DOM clobbering, XSS sinks, scripts inline, tokens em storage,
+  tracking code em URL, navs escondidas.
 - inventario criptografico: rastreabilidade de BCrypt, SecureRandom,
   HMAC-SHA-256, SHA-256, JWT e backups.
 
@@ -595,6 +599,9 @@ Depois da revisao adicional nesta branch, o tracker tambem passou a reflectir
 passwords sem regras de composicao obrigatoria (`V6.2.5`), bloqueio de
 metadados `.git`/`.svn` (`V13.4.1`) e inventario criptografico verificavel
 (`V11.1.1`, `V11.1.3`, `V11.1.4`).
+Nova revisao adicional adicionou reset de password iniciado por admin sem
+definicao de password (`V6.4.6`) e teste contra DOM clobbering no frontend
+(`V3.2.3`).
 
 Os capitulos fora do desenho implementado, como OAuth/OIDC e WebRTC, continuam
 marcados como `Not Applicable` no tracker em vez de `Compliant`.

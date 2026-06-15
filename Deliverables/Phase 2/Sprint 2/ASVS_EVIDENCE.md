@@ -13,7 +13,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 
 | Evidencia | Resultado confirmado |
 | --- | --- |
-| Testes Maven | `281` testes, `0` falhas, `0` erros, `0` skipped. |
+| Testes Maven | `283` testes, `0` falhas, `0` erros, `0` skipped. |
 | Runtime probes locais | `101` probes, `101` passed, `0` failed, `0` skipped. |
 | Spring Security | `6.5.11` via Spring Boot `3.5.15`. |
 | SCA CVEs remediados | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003. |
@@ -76,6 +76,12 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 - `CRYPTOGRAPHIC_INVENTORY.md` e `CryptographicInventoryTest` passaram a
   manter evidencia de inventario criptografico e deteccao estatica de usos
   esperados de criptografia no codigo.
+- `AdminController` passou a disponibilizar
+  `POST /admin/users/{id}/password-reset`, permitindo ao admin iniciar reset de
+  password sem escolher nem conhecer a nova password.
+- `FrontendXssDataExposureTest` passou a cobrir padroes de DOM clobbering,
+  garantindo ausencia de `name` em controlos e de acesso `document.<id>` aos
+  elementos da pagina.
 
 ## Melhorias L2 adicionais
 
@@ -131,6 +137,10 @@ real ou que puderam ser reforcados sem alterar radicalmente a aplicacao:
 - `V11.1.1`, `V11.1.3` e `V11.1.4` passaram a `Compliant` com inventario
   criptografico documentado, politica de alteracao e teste estatico que garante
   que os mecanismos criptograficos principais continuam mapeados.
+- `V6.4.6` passou a `Compliant` porque admins podem iniciar reset de password
+  sem definir a password do utilizador.
+- `V3.2.3` passou a `Compliant` com teste automatico contra padroes de DOM
+  clobbering no frontend estatico.
 
 Capitulos fora do escopo implementado, como OAuth/OIDC e WebRTC, permanecem
 `Not Applicable`; nao foram convertidos em `Compliant` para evitar claims
