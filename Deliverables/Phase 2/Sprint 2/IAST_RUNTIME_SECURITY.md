@@ -31,6 +31,11 @@ com varias camadas:
 9. Publica artefactos `iast-runtime-security-evidence` e
    `dast-zap-baseline-reports`.
 
+Na validacao local expandida de 2026-06-15, o probe gerou 101 checks: 99
+passed, 0 failed e 2 skipped. Os skips foram `GET /login.html`, porque nao
+existe pagina publica separada de login, e restore de backup, que nao e
+exercitado de forma destrutiva pelo probe.
+
 ## Testes runtime executados
 
 O workflow selecciona testes que validam controlos observaveis em runtime:
@@ -60,15 +65,15 @@ A evidencia live inclui:
 
 | Area | Exemplos |
 | --- | --- |
-| Frontend publico | `GET /index.html` e verificacao de disponibilidade. |
-| Auth | `POST /auth/login`, `POST /auth/mfa/verify`, falhas de login e MFA invalido. |
+| Frontend publico | `GET /`, `/index.html`, `/submit.html`, `/track.html`, `/admin.html`, `/analyst.html`, `/auditor.html`. |
+| Auth/MFA | Login invalido, brute force, login valido das tres roles, MFA invalido/valido/reutilizado, logout e password reset. |
 | Denuncia anonima | `POST /reports` valido, invalido, com caracteres perigosos e tentativa de mass assignment. |
-| Tracking | `POST /reports/verify` valido, invalido e repetido. |
+| Tracking/download | `POST /reports/verify`, `POST /reports/{id}/attachments/list` e `POST /reports/download`. |
 | Uploads | upload permitido, extensao proibida, assinatura/conteudo suspeito e filename com traversal. |
-| Admin | `/admin/users` sem token, com JWT invalido, com admin JWT e com roles erradas. |
-| Analyst | `/analyst/panel` com analyst/admin e negado a auditor. |
-| Auditor | `/audit/logs` com auditor/admin e negado a analyst. |
-| Erros | endpoint inexistente para confirmar resposta sem stack trace. |
+| Admin | painel, users, audit logs, security alerts, backups, user lifecycle, role invalida e filename invalido. |
+| Analyst | painel, reports, my-cases, assign, status/priority/notes, case-review, attachments e case-package. |
+| Auditor | logs, security alerts, closed cases, evidence-package verify, backups verify/manifest. |
+| Negativos | endpoint inexistente, metodo errado, JSON malformado, content type errado, Authorization malformado, JWT invalido, role errada e token ausente. |
 
 Detalhe complementar: [runtime-endpoints.md](runtime-endpoints.md).
 
@@ -124,6 +129,8 @@ documentados como hardening futuro.
 - Nao existe agente IAST externo.
 - Nao existe taint tracking nem correlacao automatica source-to-sink.
 - ZAP baseline e nao autenticado.
+- O probe runtime nao executa restore destrutivo de backup; a validacao de
+  restore para staging fica coberta por testes automatizados.
 - A probe de MFA usa codigo exposto em logs apenas no perfil `dev`; em producao,
   `ghostreport.mfa.expose-code` deve ficar `false`.
 - Pattern scanning de logs nao equivale a DLP formal.

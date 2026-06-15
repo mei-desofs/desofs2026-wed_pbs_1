@@ -417,6 +417,14 @@ Spring Security. A decisao evita misturar versoes de `spring-security-core`,
 
 Documentacao de triagem: [SCA_TRIAGE.md](SCA_TRIAGE.md).
 
+O mesmo ficheiro documenta tambem os findings suprimidos por nao aplicabilidade
+ao componente usado: CVE-2025-15104 para `hibernate-validator` e CVE-2025-7962
+para `angus-activation`.
+
+A execucao local do Dependency-Check em 2026-06-15 gerou relatorios
+HTML/XML/JSON/SARIF e confirmou 0 vulnerabilidades nao suprimidas e 2
+suppressions documentadas.
+
 ## 17. SAST, DAST e IAST-like
 
 ### SAST
@@ -460,11 +468,21 @@ Na pipeline, os probes live exercitam:
 - upload com extensao proibida;
 - upload com content-type/assinatura suspeita;
 - filename com tentativa de path traversal;
+- paginas publicas (`/`, `/index.html`, `/submit.html`, `/track.html`,
+  `/admin.html`, `/analyst.html`, `/auditor.html`);
 - endpoint admin sem token;
 - endpoint admin com JWT invalido;
 - login real de admin, analyst e auditor com MFA;
 - acesso autorizado e negado com tokens reais por role;
-- CSRF rejection em endpoint state-changing.
+- user lifecycle admin, backups list/download/verify e filename invalido;
+- analyst assign, priority/status/notes, attachments e case-package;
+- auditor logs, alerts, closed cases, backups e package verification;
+- casos negativos para metodo errado, JSON malformado, content type errado,
+  Authorization malformado, JWT invalido e token ausente.
+
+A validacao local expandida do probe confirmou 101 probes: 99 passed, 0 failed
+e 2 skipped. Os skips foram `GET /login.html`, porque nao existe pagina publica
+separada, e restore de backup, que nao e exercitado destrutivamente pelo probe.
 
 JWT expirado, backups, ZIP Slip e tamanho maximo de upload sao cobertos pela
 seleccao de testes Maven executada no mesmo job `dast-scan`.
@@ -478,7 +496,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado: 180 testes, 0 falhas, 0 erros.
+Resultado confirmado em 2026-06-15: 250 testes, 0 falhas, 0 erros, 0 skipped.
 
 Categorias cobertas:
 
@@ -518,10 +536,12 @@ Guias:
 
 ## 20. ASVS e rastreabilidade
 
-O mapeamento ASVS esta em [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md). O projecto cobre
-de forma implementada ou documentada areas como autenticacao, autorizacao,
-validacao, file handling, logging, configuracao, dependency control e runtime
-testing.
+O tracker ASVS principal esta em
+[ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx](ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx).
+O ficheiro [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md) e apenas o resumo explicativo.
+O projecto cobre de forma implementada ou documentada areas como autenticacao,
+autorizacao, validacao, file handling, logging, configuracao, dependency control
+e runtime testing.
 
 Pontos parciais ou dependentes de operacao:
 
@@ -558,7 +578,7 @@ Claims finais correctamente delimitados:
 | DAST | OWASP ZAP baseline/passivo e probes runtime; nao e pentest autenticado completo. |
 | IAST | Evidencia runtime/IAST-like; nao existe agente IAST com taint tracking. |
 | Producao | Existe guia prod-like, mas faltam controlos operacionais externos como secret manager, SIEM/WORM e canal MFA real. |
-| ASVS | Mapeamento Sprint 2 em Markdown; spreadsheet Sprint 1 permanece historica. |
+| ASVS | Tracker Sprint 2 em XLSX actualizado; Markdown funciona como resumo explicativo. |
 
 Limitacoes:
 

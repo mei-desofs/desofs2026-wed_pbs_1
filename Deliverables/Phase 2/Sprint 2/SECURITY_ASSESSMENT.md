@@ -162,7 +162,7 @@ Evidencia: `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`,
 | Backups | Implementado | Manifestos, hashes, HMAC, verify/restore. |
 | SCA/SBOM | Implementado | Dependency-Check e CycloneDX. |
 | SAST | Implementado como evidencia | CodeQL, SpotBugs, SonarCloud. |
-| DAST | Implementado baseline | ZAP baseline e runtime probes. |
+| DAST | Implementado baseline | ZAP baseline e runtime probes; validacao local expandida com 101 probes, 99 passed, 0 failed e 2 skipped. |
 | IAST | Parcial | Evidencia runtime/IAST-like, nao agente completo. |
 | Instalacao segura | Documentado | Secrets, perfis, PostgreSQL, checklist. |
 
@@ -206,7 +206,7 @@ Claims que devem continuar delimitados:
 | DAST | ZAP baseline e probes runtime; nao e pentest autenticado completo. |
 | IAST | Evidencia runtime/IAST-like; sem agente IAST completo. |
 | Producao | Ha guia prod-like, mas faltam controlos operacionais externos. |
-| ASVS | Mapa Sprint 2 em Markdown; spreadsheet Sprint 1 e historica. |
+| ASVS | Tracker Sprint 2 em XLSX actualizado; Markdown e resumo explicativo. |
 
 Com esta consolidacao, `FINAL_PROJECT_REVIEW.md` deixou de ser necessario como
 ficheiro solto: o seu conteudo util fica distribuido entre este documento e o

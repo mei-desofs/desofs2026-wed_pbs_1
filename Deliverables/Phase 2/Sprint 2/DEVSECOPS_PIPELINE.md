@@ -155,8 +155,9 @@ Automacoes:
 - empacota a aplicacao;
 - arranca GhostReport em `localhost:8081`;
 - espera readiness;
-- exercita endpoints runtime para reports, tracking code, uploads, JWT invalido,
-  CSRF rejection e endpoints protegidos;
+- exercita paginas publicas, reports, tracking code, uploads, download/listagem
+  de anexos, login/MFA/logout/password reset, endpoints admin, analyst e auditor,
+  JWT invalido, Authorization malformado e outros casos negativos;
 - verifica logs para fuga de dados sensiveis;
 - corre OWASP ZAP baseline;
 - prepara sumario IAST-like/runtime;
@@ -166,6 +167,24 @@ Automacoes:
 
 O ZAP baseline e evidencia passiva/nao autenticada. A parte runtime cobre mais
 do que o ZAP sozinho, porque combina testes, app real, HTTP probes e logs.
+
+Validacao local expandida do probe em 2026-06-15:
+
+| Metrica | Valor |
+| --- | --- |
+| Total probes | 101 |
+| Passed | 99 |
+| Failed | 0 |
+| Skipped | 2 |
+| Public endpoint probes | 22 |
+| Admin endpoint probes | 21 |
+| Analyst endpoint probes | 17 |
+| Auditor endpoint probes | 13 |
+| Negative-case probes | 6 |
+
+Skipped: `GET /login.html` porque nao existe pagina publica separada, e restore
+de backup porque o probe nao executa restore destrutivo. O workflow publica o
+JSON `runtime-probe-summary.json` para confirmar estes numeros por run.
 
 Artefactos documentados na entrega:
 

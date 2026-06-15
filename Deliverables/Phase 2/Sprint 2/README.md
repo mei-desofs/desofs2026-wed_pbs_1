@@ -8,9 +8,13 @@ renomeacoes ou reorganizacao agressiva.
 
 - [PHASE2_SPRINT2_REPORT.md](PHASE2_SPRINT2_REPORT.md) - relatorio principal da Sprint 2, cobrindo arquitectura, seguranca, testes, pipeline, ASVS, limitacoes e conclusao.
 
+## ASVS
+
+- [ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx](ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx) - tracker ASVS principal da Sprint 2 em Excel, actualizado com a evidencia factual do projecto.
+- [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md) - resumo explicativo do tracker ASVS e links para a evidencia de suporte.
+
 ## Anexos tecnicos
 
-- [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md) - evidencia de conformidade ASVS e estado dos requisitos de seguranca.
 - [AUTHORIZATION_MATRIX.md](AUTHORIZATION_MATRIX.md) - matriz de acesso por role, endpoint e controlo adicional.
 - [DEVSECOPS_PIPELINE.md](DEVSECOPS_PIPELINE.md) - fluxo CI/CD, code review, gates, artefactos e ferramentas de seguranca.
 - [IAST_RUNTIME_SECURITY.md](IAST_RUNTIME_SECURITY.md) - documento principal de seguranca runtime e evidencia IAST-like.
@@ -27,6 +31,10 @@ renomeacoes ou reorganizacao agressiva.
 - [runtime-endpoints.md](runtime-endpoints.md) - endpoints e probes exercitados durante a validacao runtime.
 - [runtime-log-sanitization.md](runtime-log-sanitization.md) - verificacao de logs contra passwords, tokens, secrets e stack traces.
 
+Validacao runtime expandida confirmada localmente: 101 probes, 99 passed, 0
+failed e 2 skipped. Os artefactos exactos sao gerados em `target/iast-evidence/`
+por cada run do workflow.
+
 ## Guia de demonstracao
 
 - [FINAL_DEMO_GUIDE.md](FINAL_DEMO_GUIDE.md) - guiao pratico para demonstrar a aplicacao e apontar para as evidencias principais.
@@ -34,6 +42,7 @@ renomeacoes ou reorganizacao agressiva.
 ## Notas de organizacao
 
 - `PHASE2_SPRINT2_REPORT.md` e a fonte narrativa principal.
+- `ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx` e a fonte ASVS principal.
 - `DEVSECOPS_PIPELINE.md` e a fonte principal para pipeline, code review e artefactos.
 - `IAST_RUNTIME_SECURITY.md` e a fonte principal para IAST/runtime; os restantes ficheiros runtime sao anexos de evidencia.
 - A revisao final antiga foi incorporada em [PHASE2_SPRINT2_REPORT.md](PHASE2_SPRINT2_REPORT.md) e [SECURITY_ASSESSMENT.md](SECURITY_ASSESSMENT.md), para evitar um ficheiro solto redundante.
