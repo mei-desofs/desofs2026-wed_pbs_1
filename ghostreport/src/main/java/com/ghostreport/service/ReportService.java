@@ -441,7 +441,7 @@ public class ReportService {
                 .toList();
     }
 
-    public List<AttachmentListResponse> listAttachmentsSecure(
+    public AttachmentSummaryResponse attachmentSummarySecure(
             Long reportId,
             String trackingCode
     ) {
@@ -475,15 +475,7 @@ public class ReportService {
             );
         }
 
-        return attachmentRepository.findByReportId(reportId)
-                .stream()
-                .map(a -> new AttachmentListResponse(
-                        a.getId(),
-                        a.getOriginalName(),
-                        a.getMimeType(),
-                        a.getSize()
-                ))
-                .toList();
+        return new AttachmentSummaryResponse(attachmentRepository.countByReportId(reportId));
     }
 
     public ResponseEntity<Resource> downloadAttachment(
@@ -699,7 +691,8 @@ public class ReportService {
                 report.getTitle(),
                 report.getStatus().name(),
                 report.getCategory(),
-                report.getDescription()
+                report.getDescription(),
+                attachmentRepository.countByReportId(report.getId())
         );
     }
 
@@ -715,7 +708,8 @@ public class ReportService {
                 report.getCategory(),
                 analystOwnsReport(report, currentUsername)
                         ? report.getDescription()
-                        : null
+                        : null,
+                attachmentRepository.countByReportId(report.getId())
         );
     }
 

@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static com.ghostreport.validation.ValidationConstants.REPORT_CATEGORY_ALLOWLIST;
 
 class FrontendXssDataExposureTest {
 
@@ -25,6 +26,7 @@ class FrontendXssDataExposureTest {
             "(?:/track\\.html\\?|[?&](?:code|trackingCode)=|URLSearchParams\\s*\\(|trackingCode[^\\n;]*window\\.location|window\\.location[^\\n;]*trackingCode)");
     private static final Pattern FORM_CONTROL_NAME = Pattern.compile("(?is)<(?:form|input|button|select|textarea)\\b[^>]*\\sname\\s*=");
     private static final Pattern HTML_ID = Pattern.compile("\\bid\\s*=\\s*\"([A-Za-z_$][\\w$-]*)\"");
+    private static final Pattern REPORT_CATEGORY_OPTION = Pattern.compile("<option\\s+value=\"([^\"]+)\"");
 
     @Test
     void frontendDoesNotUseDangerousHtmlParsingSinks() throws IOException {
@@ -149,6 +151,33 @@ class FrontendXssDataExposureTest {
         assertThat(documentIdAccessOffenders)
                 .as("Frontend should use explicit DOM lookup APIs instead of document.<id/name> property access")
                 .isEmpty();
+    }
+
+    @Test
+    void publicReportFormUsesBackendAcceptedCategoryValues() throws IOException {
+        String submitHtml = Files.readString(staticRoot().resolve("submit.html"), StandardCharsets.UTF_8);
+
+        List<String> optionValues = REPORT_CATEGORY_OPTION.matcher(submitHtml)
+                .results()
+                .map(match -> match.group(1))
+                .filter(value -> !value.isBlank())
+                .toList();
+
+        assertThat(optionValues)
+                .as("Category option values sent by submit.js must match CreateReportRequest allowlist")
+                .containsExactly("Fraud", "Corruption", "Harassment", "Security", "Other")
+                .allSatisfy(value -> assertThat(value).matches(REPORT_CATEGORY_ALLOWLIST));
+    }
+
+    @Test
+    void publicTrackingPageDoesNotFetchAttachmentMetadata() throws IOException {
+        String trackJs = Files.readString(staticRoot().resolve("js/track.js"), StandardCharsets.UTF_8);
+
+        assertThat(trackJs)
+                .doesNotContain("attachments/list")
+                .doesNotContain("originalName")
+                .doesNotContain("mimeType")
+                .doesNotContain("attachment.id");
     }
 
     private static Map<Path, String> readStaticFiles(String... extensions) throws IOException {
