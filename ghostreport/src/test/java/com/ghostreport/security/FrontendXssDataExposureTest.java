@@ -21,7 +21,8 @@ class FrontendXssDataExposureTest {
             "\\b(?:innerHTML|outerHTML|insertAdjacentHTML)\\b|document\\.write\\s*\\(");
     private static final Pattern INLINE_SCRIPT_OR_HANDLER = Pattern.compile(
             "(?is)<script(?![^>]+\\bsrc=)[^>]*>|\\son[a-z]+\\s*=");
-    private static final Pattern PERSISTENT_BROWSER_STORAGE = Pattern.compile("\\b(?:localStorage|sessionStorage)\\b");
+    private static final Pattern LOCAL_STORAGE = Pattern.compile("\\blocalStorage\\b");
+    private static final Pattern SESSION_STORAGE = Pattern.compile("\\bsessionStorage\\b");
     private static final Pattern TRACKING_CODE_QUERY = Pattern.compile(
             "(?:/track\\.html\\?|[?&](?:code|trackingCode)=|URLSearchParams\\s*\\(|trackingCode[^\\n;]*window\\.location|window\\.location[^\\n;]*trackingCode)");
     private static final Pattern FORM_CONTROL_NAME = Pattern.compile("(?is)<(?:form|input|button|select|textarea)\\b[^>]*\\sname\\s*=");
@@ -43,17 +44,40 @@ class FrontendXssDataExposureTest {
     }
 
     @Test
-    void bearerTokensAreNotPersistedInBrowserStorage() throws IOException {
+    void bearerTokensAreNotPersistedInLocalStorage() throws IOException {
         Map<Path, String> sources = readStaticFiles(".js");
 
         List<String> offenders = sources.entrySet().stream()
-                .filter(entry -> PERSISTENT_BROWSER_STORAGE.matcher(entry.getValue()).find())
+                .filter(entry -> LOCAL_STORAGE.matcher(entry.getValue()).find())
                 .map(entry -> relativeStaticPath(entry.getKey()))
                 .toList();
 
         assertThat(offenders)
-                .as("Bearer tokens must remain in memory only; browser storage persists token exposure after XSS or shared-device access")
+                .as("Bearer tokens must never be persisted in localStorage")
                 .isEmpty();
+    }
+
+    @Test
+    void sessionStorageTokenHandlingIsCentralizedInAuthHelper() throws IOException {
+        Map<Path, String> sources = readStaticFiles(".js");
+
+        List<String> sessionStorageUsers = sources.entrySet().stream()
+                .filter(entry -> SESSION_STORAGE.matcher(entry.getValue()).find())
+                .map(entry -> relativeStaticPath(entry.getKey()).replace('\\', '/'))
+                .toList();
+        String authJs = Files.readString(staticRoot().resolve("js/auth.js"), StandardCharsets.UTF_8);
+
+        assertThat(sessionStorageUsers)
+                .as("sessionStorage is allowed only in the centralized browser-session auth helper")
+                .containsExactly("js/auth.js");
+        assertThat(authJs)
+                .contains("SESSION_KEY")
+                .contains("setSession")
+                .contains("getAuthHeader")
+                .contains("\"Authorization\"")
+                .contains("clearSession")
+                .doesNotContain("password")
+                .doesNotContain("mfaCode");
     }
 
     @Test
@@ -151,6 +175,30 @@ class FrontendXssDataExposureTest {
         assertThat(documentIdAccessOffenders)
                 .as("Frontend should use explicit DOM lookup APIs instead of document.<id/name> property access")
                 .isEmpty();
+    }
+
+    @Test
+    void internalPagesLoadCentralAuthHelperBeforeRoleScripts() throws IOException {
+        Map<Path, String> htmlSources = readStaticFiles(".html");
+
+        assertThat(htmlSources.get(staticRoot().resolve("admin.html")))
+                .containsSubsequence(
+                        "<script src=\"/js/api.js\"></script>",
+                        "<script src=\"/js/auth.js\"></script>",
+                        "<script src=\"/js/admin.js\"></script>"
+                );
+        assertThat(htmlSources.get(staticRoot().resolve("analyst.html")))
+                .containsSubsequence(
+                        "<script src=\"/js/api.js\"></script>",
+                        "<script src=\"/js/auth.js\"></script>",
+                        "<script src=\"/js/analyst.js\"></script>"
+                );
+        assertThat(htmlSources.get(staticRoot().resolve("auditor.html")))
+                .containsSubsequence(
+                        "<script src=\"/js/api.js\"></script>",
+                        "<script src=\"/js/auth.js\"></script>",
+                        "<script src=\"/js/auditor.js\"></script>"
+                );
     }
 
     @Test
