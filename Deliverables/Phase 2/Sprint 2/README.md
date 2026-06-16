@@ -3,18 +3,6 @@
 Esta pasta contem a documentacao final do GhostReport para a Phase 2 Sprint 2.
 O objectivo deste README e servir como indice rapido da entrega para avaliacao.
 
-## Leitura recomendada
-
-| Pergunta | Ficheiro principal |
-| --- | --- |
-| Onde esta o relatorio principal? | [PHASE2_SPRINT2_REPORT.md](PHASE2_SPRINT2_REPORT.md) |
-| Onde esta o tracker ASVS? | [ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx](ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx) |
-| Onde estao os testes? | [SECURITY_TESTING.md](SECURITY_TESTING.md) |
-| Onde esta a pipeline? | [DEVSECOPS_PIPELINE.md](DEVSECOPS_PIPELINE.md) |
-| Onde esta a SCA/CVEs? | [SCA_TRIAGE.md](SCA_TRIAGE.md) |
-| Onde esta a evidencia runtime/IAST-like? | [IAST_RUNTIME_SECURITY.md](IAST_RUNTIME_SECURITY.md) |
-| Onde esta a seguranca/configuracao? | [SECURITY_CONFIGURATION_ASSESSMENT.md](SECURITY_CONFIGURATION_ASSESSMENT.md) |
-
 ## 1. Relatorio principal
 
 - [PHASE2_SPRINT2_REPORT.md](PHASE2_SPRINT2_REPORT.md) - relatorio principal e narrativa final da Sprint 2, cobrindo arquitectura, dominio, roles, autenticacao/MFA/JWT, RBAC, validacao, uploads, auditoria, backups, pipeline, scanners, testes, ASVS, limitacoes e conclusao.
