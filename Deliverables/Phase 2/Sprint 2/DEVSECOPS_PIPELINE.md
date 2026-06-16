@@ -487,20 +487,125 @@ estejam configurados no GitHub Actions.
 | Denial of Service | Rate limiter tests, upload limits, ZAP baseline como sinal passivo. |
 | Elevation of Privilege | RBAC/ownership tests no build; CodeQL/SpotBugs como apoio. |
 
-## 16. Governacao e code review
+## Code review process
 
-As antigas notas separadas de branch protection, code review e coding standards
-foram consolidadas aqui:
+O fluxo de revisao pretendido no GhostReport e branch-based: as alteracoes sao
+isoladas em branches, revistas por pull request e validadas por workflows antes
+de serem integradas. A evidencia local do repositorio confirma merges de PRs,
+branches `feature/*`, `fix/*`, `docs/*`, `security/*`/`ci-*`, o template
+`.github/pull_request_template.md`, Dependabot e os workflows `dev.yml` e
+`pit.yml`. A metadata detalhada de aprovacoes/reviewers deve ser confirmada na
+interface GitHub, porque nao fica totalmente disponivel no clone local.
 
-- branches curtas por tema;
-- PR deve explicar impacto de seguranca;
-- pelo menos uma revisao humana deve confirmar que a alteracao nao quebra RBAC,
-  validacao, logging seguro ou claims ASVS;
-- claims de relatorio precisam de evidencia;
-- novas rotas exigem actualizacao da matriz;
-- alteracoes em controlos exigem testes;
-- artefactos gerados ficam em CI/`target`, nao no repo;
-- secrets nunca sao commitados.
+O code review nao e apenas leitura manual. Ele combina revisao humana, testes,
+analise estatica, analise de dependencias, runtime evidence, ZAP baseline,
+artefactos e revisao de documentacao.
+
+Fluxo de revisao:
+
+1. Criar branch curta com ambito claro.
+2. Implementar a alteracao mantendo a arquitectura existente.
+3. Correr testes locais relevantes; para backend, o minimo recomendado e
+   `cd ghostreport; .\mvnw.cmd test`.
+4. Abrir pull request com resumo, motivo e impacto de seguranca.
+5. Preencher a checklist do template de PR quando aplicavel.
+6. Validar a run de `dev.yml`: build/testes/JaCoCo, Gitleaks, SAST,
+   Dependency-Check, SBOM, runtime evidence e ZAP baseline.
+7. Executar ou rever `pit.yml` quando a alteracao toca codigo/testes Java e o
+   custo temporal se justifica.
+8. Triar findings: corrigir, aceitar com justificacao, suprimir com prazo de
+   revisao ou documentar limitacao.
+9. Actualizar testes, matriz de autorizacao, ASVS ou anexos quando uma claim de
+   seguranca muda.
+10. Integrar apenas quando os checks e riscos confirmados forem aceitaveis.
+
+### Code review responsibilities
+
+| Area revista | O que e verificado | Evidencia |
+| --- | --- | --- |
+| Funcionalidade | Alteracao cumpre o objectivo e nao quebra fluxos existentes. | Testes Maven, runtime probes e revisao manual. |
+| Seguranca | Autenticacao, autorizacao, validacao, logging, uploads, backups, errors e secrets. | Security tests, SAST, DAST/runtime, Gitleaks e [AUTHORIZATION_MATRIX.md](AUTHORIZATION_MATRIX.md). |
+| Dependencias | CVEs, versoes vulneraveis, suppressions e SBOM. | Dependency-Check, Dependabot, CycloneDX e [SCA_TRIAGE.md](SCA_TRIAGE.md). |
+| Qualidade | Code smells, duplicacao, complexidade, cobertura e mutacoes quando aplicavel. | SonarCloud, SpotBugs, JaCoCo e PIT. |
+| Documentacao | Claims tecnicos alinhados com codigo, outputs e artefactos. | README, relatorio principal, ASVS XLSX e anexos. |
+
+### Security review checklist
+
+- A alteracao muda autenticacao, autorizacao, roles ou ownership?
+- A alteracao cria ou altera endpoint?
+- O endpoint foi adicionado a [AUTHORIZATION_MATRIX.md](AUTHORIZATION_MATRIX.md)?
+- Existem testes positivos e negativos para roles relevantes?
+- Ha validacao de input por DTO, Bean Validation, enum ou allowlist?
+- Ha risco de mass assignment por binding indevido?
+- Ha risco de path traversal, ZIP Slip ou acesso indevido ao filesystem?
+- Ha risco de expor passwords, JWTs, tracking codes, MFA codes, secrets,
+  stack traces ou paths internos?
+- A alteracao afecta uploads, backups, evidence packages ou logs?
+- A alteracao adiciona ou actualiza dependencias?
+- O impacto em SCA/SBOM foi revisto?
+- A documentacao e a evidencia ASVS foram actualizadas quando a claim mudou?
+
+### Coding standards and naming conventions
+
+O projecto segue convencoes leves alinhadas com a estrutura real do codigo:
+
+| Area | Regra | Validacao |
+| --- | --- | --- |
+| Controllers | Recebem HTTP, aplicam validacao inicial/DTOs e devolvem respostas; nao devem concentrar regras de negocio. | Code review, MockMvc e testes de controller/security. |
+| Services | Centralizam regras de negocio, ownership, workflow, filesystem seguro e decisoes sensiveis. | Testes unitarios/integracao em `service` e `security`. |
+| Repositories | Limitados a persistencia Spring Data/JPA. | Revisao de codigo e testes de integracao. |
+| DTOs | Requests/responses evitam expor entidades JPA directamente e reduzem mass assignment. | API tests, review e checklist do PR. |
+| Validacao | Usar Bean Validation, enums, allowlists e domain primitives quando fizer sentido. | `ApiValidationContractTest`, testes de dominio e security tests. |
+| Frontend | Nao guardar tokens em storage, nao colocar logica sensivel no browser e evitar sinks XSS. | `FrontendXssDataExposureTest` e runtime probes. |
+| Logs/erros | Nao escrever passwords, JWTs, tracking codes, MFA codes ou secrets; nao devolver stack traces/paths internos. | Runtime log sanitization, `ErrorHandlingSecurityTest` e audit/logging tests. |
+| Endpoints | Novas rotas devem seguir agrupamento por contexto e ter RBAC positivo/negativo. | [AUTHORIZATION_MATRIX.md](AUTHORIZATION_MATRIX.md) e `RbacAuthorizationMatrixTest`. |
+| Dependencias | CVEs devem ser triados e SBOM actualizado. | [SCA_TRIAGE.md](SCA_TRIAGE.md), Dependency-Check e CycloneDX. |
+| Documentacao | Numeros e claims devem vir de outputs reais ou artefactos verificaveis. | README, relatorio, ASVS XLSX e anexos. |
+
+Convencoes observadas:
+
+| Tipo | Convencao usada |
+| --- | --- |
+| Controllers | `*Controller.java`, por exemplo `AdminController` e `AdminBackupController`. |
+| Services | `*Service.java`, por exemplo `JwtService`, `MfaChallengeService`, `BackupService`. |
+| Repositories | `*Repository.java`. |
+| DTO/request/response | `*Request.java`, `*Response.java` ou `*Dto.java`. |
+| Security/config | Nome associado ao controlo, como `SecurityConfig`, `JwtAuthenticationFilter`, `SecurityConfigurationValidator`. |
+| Testes | `*Test.java`, `*IntegrationTest.java` ou nomes descritivos de security tests. |
+| Documentacao principal | Anexos principais em `UPPER_SNAKE_CASE.md`. |
+| Evidencia gerada/espelhada | Artefactos runtime em `kebab-case.md`, como `runtime-endpoints.md`. |
+
+Rotas novas devem respeitar o agrupamento actual:
+
+- publico: `/reports`, `/reports/verify`, `/reports/download`;
+- autenticacao: `/auth/**`;
+- administracao: `/admin/**`;
+- analista: `/analyst/**`;
+- auditoria: `/audit/**`.
+
+Endpoints publicos nao devem expor dados internos, paths, hashes, stack traces,
+tokens ou tracking codes em URL. Operacoes sensiveis devem exigir role adequada
+e, quando aplicavel, validacao adicional como tracking code, ownership, CSRF ou
+reautenticacao.
+
+### Branch and commit naming
+
+O historico local mostra branches `feature/*`, `fix/*`, `docs/*`, `security/*`
+e `ci`/pipeline-oriented, mas os commits antigos nao sao totalmente uniformes.
+Por isso, as convencoes abaixo devem ser tratadas como pratica recomendada e
+evolucao do processo, nao como regra historica absoluta:
+
+| Prefixo | Uso recomendado |
+| --- | --- |
+| `feature/...` ou `feat/...` | Novas funcionalidades. |
+| `fix/...` | Correcao funcional, seguranca ou regressao. |
+| `docs/...` | Documentacao e evidencia. |
+| `test/...` | Testes, probes e evidencia automatizada. |
+| `security/...` | Alteracoes directamente relacionadas com controlos de seguranca. |
+| `ci/...` | Workflows, automacoes e artefactos. |
+
+Commits devem preferir Conventional Commits simples: `feat:`, `fix:`, `docs:`,
+`test:`, `refactor:`, `security:` e `ci:`.
 
 Critérios de triagem:
 
@@ -511,6 +616,45 @@ Critérios de triagem:
 | Falso positivo SCA/SAST | Documentar componente, regra/CVE, motivo e data de revisao. |
 | ZAP baseline informativo | Avaliar impacto; corrigir se expuser controlos reais ou documentar como hardening futuro. |
 | Evidencia incompleta por ambiente | Repetir workflow ou documentar limitação operacional sem transformar em claim. |
+
+Tabela de decisao operacional:
+
+| Tipo de finding | Decisao esperada |
+| --- | --- |
+| Build, testes ou JaCoCo falham | Corrigir antes de merge. |
+| Secret confirmado | Remover, rodar secret quando aplicavel e bloquear merge ate remediacao. |
+| CVE aplicavel/exploravel | Actualizar dependencia/BOM ou documentar mitigacao temporaria. |
+| CVE nao aplicavel/falso positivo | Documentar suppression especifica, motivo e prazo de revisao. |
+| CodeQL/Sonar/SpotBugs critico confirmado | Corrigir antes de merge ou documentar risco se nao for exploravel. |
+| ZAP baseline informativo | Triar e aceitar com justificacao se nao representar risco real. |
+| Runtime probe falha | Corrigir endpoint, teste ou evidencia antes de aceitar a entrega. |
+| PIT fraco em area critica | Adicionar testes quando fizer sentido para o risco. |
+| Evidencia incompleta por ambiente | Repetir workflow ou documentar limitacao sem transformar em claim. |
+
+### Code review evidence
+
+| Evidencia local | Objectivo | Checks relevantes | Limite da evidencia |
+| --- | --- | --- | --- |
+| Merge PR `#53` de `fix/asvs-final-l1-l2-l3-hardening` | Hardening ASVS e SecurityConfig. | Build/testes, docs ASVS e triagem ZAP. | Aprovacoes/reviewers devem ser vistos no GitHub. |
+| Merge PR `#52` de `docs/complete-sprint2-documentation` | Consolidacao de documentacao Sprint 2 e evidencia runtime/SCA/ASVS. | Docs, runtime probes, SCA e ASVS. | Metadata detalhada de review nao esta no clone local. |
+| Merge PR `#51` de `docs/finalize-phase2-sprint2-documentation` | Finalizacao Sprint 2, MFA, PIT/runtime e coverage. | Maven, PIT, DAST/runtime e docs. | Resultado exacto dos checks deve ser consultado no run GitHub. |
+| Merge PR `#50` de `fix/spring-security-dependency-alerts` | Remediacao CVEs Spring Security via BOM. | SCA, dependency tree e testes. | Aprovacoes formais nao sao visiveis localmente. |
+| Merge PR `#48` de `feat/project-final-review` | Revisao final, MFA/admin e documentacao. | Testes, docs e security review. | Metadata de reviewer nao fica preservada no log local. |
+| `.github/pull_request_template.md` | Checklist de seguranca para PRs. | DTOs, validacao, erros/logs, dependencies, workflows e ASVS. | O preenchimento de cada PR deve ser verificado no GitHub. |
+| `.github/dependabot.yml` | PRs semanais para Maven e GitHub Actions. | Dependency review, SCA e workflows. | Dependabot nao substitui triagem humana. |
+
+Local repository evidence confirms branch-based development, automated security
+workflows and documented triage gates. GitHub pull request approval metadata
+must be checked in the GitHub interface because it is not fully available from
+the local repository clone.
+
+### Relationship with ASVS
+
+O code review suporta evidencias ASVS em secure coding, autenticacao,
+autorizacao, validacao, logging, configuracao, dependency management, error
+handling e runtime testing. Quando uma alteracao muda uma claim ASVS, o tracker
+Excel continua a ser a fonte principal e [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md)
+funciona como resumo explicativo.
 
 ### Triagem ZAP actual
 
