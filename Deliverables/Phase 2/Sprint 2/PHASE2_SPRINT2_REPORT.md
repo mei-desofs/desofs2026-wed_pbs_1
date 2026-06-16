@@ -63,16 +63,16 @@ configuração, documentação ASVS e revisão final.
 
 Resumo da evolução:
 
-| Area                 | Sprint 1                                   | Sprint 2                                                                                              |
-|----------------------|--------------------------------------------|-------------------------------------------------------------------------------------------------------|
-| Autenticação interna | Login JWT base para utilizadores internos. | Password + MFA antes da emissão de JWT para `ADMIN`, `ANALYST` e `AUDITOR`.                           |
-| RBAC                 | Regras base por role.                      | Matriz completa por endpoint, testes negativos e ownership em fluxos de analista.                     |
-| Denúncias anónimas   | Submissão e tracking code implementados.   | Tracking, anexos, downloads e enumeração exercitados por testes e runtime probes.                     |
-| Uploads/backups      | Controlos de filesystem implementados.     | Quotas, manifestos, HMAC, restore com reautenticação e minimização de respostas reforcados.           |
-| SCA/SBOM             | Dependency-Check base.                     | CVEs Spring Security triados/remediados, suppressions justificadas e SBOM CycloneDX.                  |
-| Runtime evidence     | Evidência inicial limitada.                | 101 probes runtime/IAST-like: 101 passed, 0 failed, 0 skipped; sem afirmar IAST agent-based completo. |
-| Testes               | Suite de seguranca base.                   | 286 testes Maven confirmados, incluindo ASVS hardening e cenarios negativos.                          |
-| ASVS                 | Tracker Sprint 1 como base.                | XLSX Sprint 2 copiado estruturalmente e atualizado com evidência factual.                             |
+| Area | Sprint 1 | Sprint 2 |
+| --- | --- | --- |
+| Autenticacao interna | Login JWT base para utilizadores internos. | Password + MFA antes da emissao de JWT para `ADMIN`, `ANALYST` e `AUDITOR`. |
+| RBAC | Regras base por role. | Matriz completa por endpoint, testes negativos e ownership em fluxos de analista. |
+| Denuncias anonimas | Submissao e tracking code implementados. | Tracking, anexos, downloads e enumeracao exercitados por testes e runtime probes. |
+| Uploads/backups | Controlos de filesystem implementados. | Quotas, manifestos, HMAC, restore com reautenticacao e minimizacao de respostas reforcados. |
+| SCA/SBOM | Dependency-Check base. | CVEs Spring Security triados/remediados, suppressions justificadas e SBOM CycloneDX. |
+| Runtime evidence | Evidencia inicial limitada. | 101 probes runtime/IAST-like: 101 passed, 0 failed, 0 skipped. |
+| Testes | Suite de seguranca base. | 292 testes Maven confirmados, incluindo ASVS hardening e cenarios negativos. |
+| ASVS | Tracker Sprint 1 como base. | XLSX Sprint 2 copiado estruturalmente e actualizado com evidencia factual. |
 
 ## 3. Objetivos da Sprint 2
 
@@ -200,16 +200,18 @@ O fluxo de autenticação para as roles internas é composto por duas fases:
 2. `POST /auth/mfa/verify` valida o código de utilização única e de curta duração, invalidando o challenge após várias tentativas inválidas. Apenas após a verificação é emitido o JWT.
 
 **Controlos implementados:**
-
-* Passwords protegidas com BCrypt;
-* JWT stateless com claims de role;
-* Validação de issuer, audience e kid nos testes de JWT;
-* Revogação do token no logout;
-* MFA para `ADMIN`, `ANALYST` e `AUDITOR`;
-* Os desafios MFA expiram e não podem ser reutilizados;
-* Em ambiente de desenvolvimento e testes, o código pode ser apresentado nos logs para efeitos de demonstração;
-* Em produção, o canal de entrega do código deve ser externo.
-
+- BCrypt para passwords;
+- JWT stateless com claims de role;
+- validacao de issuer/audience/kid nos testes de JWT;
+- revogacao de token em logout;
+- no frontend academico, o JWT e mantido apenas em `sessionStorage` durante a
+  sessao do browser para propagar `Authorization: Bearer <token>` entre paginas
+  internas; logout limpa a sessao. Uma opcao de hardening futuro seria cookie
+  HttpOnly SameSite ou IdP/session manager externo;
+- MFA para `ADMIN`, `ANALYST`, `AUDITOR`;
+- desafios MFA expiram e nao podem ser reutilizados;
+- em ambiente dev/test, o codigo pode ser exposto em log para demonstracao;
+- em producao, o canal real de entrega deve ser externo.
 
 ## 9. Autorização e endpoints
 
@@ -235,16 +237,13 @@ Os principais endpoints estão agrupados abaixo.
 | POST   | `/auth/password-reset/confirm` | Público             | Confirmar a reposição da password através de um token.                            |
 
 
-### 9.2 Denúncia pública
-
-| Método | Endpoint                         | Acesso                    | Finalidade                                                |
-| ------ | -------------------------------- | ------------------------- | --------------------------------------------------------- |
-| POST   | `/reports`                       | Público                   | Criar uma denúncia anónima.                               |
-| POST   | `/reports/verify`                | Público                   | Validar o tracking code e consultar o estado da denúncia. |
-| POST   | `/reports/{id}/attachments`      | Público com tracking code | Enviar anexos.                                            |
-| POST   | `/reports/{id}/attachments/list` | Público com tracking code | Listar os metadados dos anexos.                           |
-| POST   | `/reports/download`              | Público com tracking code | Descarregar um anexo autorizado.                          |
-
+| Metodo | Endpoint | Acesso | Finalidade |
+| --- | --- | --- | --- |
+| POST | `/reports` | Publico | Criar denuncia anonima. |
+| POST | `/reports/verify` | Publico | Validar tracking code e consultar estado. |
+| POST | `/reports/{id}/attachments` | Publico com tracking code | Enviar anexos. |
+| POST | `/reports/{id}/attachments/list` | Publico com tracking code | Devolver apenas contagem de anexos, sem nomes/IDs/paths. |
+| POST | `/reports/download` | Publico com tracking code | Descarregar anexo autorizado. |
 
 ### 9.3 Analista
 
@@ -365,14 +364,14 @@ Os auditores podem verificar evidências; os administradores podem criar, descar
 
 ## 13. STRIDE aplicado ao GhostReport
 
-| STRIDE                     | Ameaça no GhostReport                                                                             | Mitigações implementadas                                                                                                                                | Evidência                                                                                                |
-| -------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| **Spoofing**               | Um atacante tenta autenticar-se como `ADMIN`, `ANALYST` ou `AUDITOR`.                             | BCrypt, MFA para as roles internas, JWT assinado, validação de issuer, audience e kid, utilizadores inativos bloqueados e rate limiting.                | `AdminMfaAuthenticationTest`, `JwtServiceSecurityTest`, `LoginRateLimitSecurityTest`.                    |
-| **Tampering**              | Alteração de logs, backups, pacotes de evidências ou ficheiros.                                   | Hashes, manifestos HMAC, verificação de backups, mecanismos de integridade em registos de auditoria e segurança e rejeição de ZIP tampering.            | `BackupServiceIntegrationTest`, DTOs de auditoria e segurança.                                           |
-| **Repudiation**            | Um utilizador nega ter realizado uma operação crítica.                                            | Logs de auditoria com ação, ator, alvo, `correlationId` e `integrityHash`.                                                                              | `AuditLogSecurityTest`, `RuntimeSecurityEventLoggingTest`.                                               |
-| **Information Disclosure** | Exposição de tracking codes, tokens, passwords, paths ou dados anónimos.                          | Erros genéricos, redaction de logs, DTOs, ausência de tokens no armazenamento do browser e tracking code não incluído na URL.                           | `AnonymousDataLoggingTest`, `FrontendXssDataExposureTest`, `ErrorHandlingSecurityTest`.                  |
-| **Denial of Service**      | Abuso de login, tracking, upload/download, headers excessivos ou ficheiros de grandes dimensões.  | Rate limiting por fluxo, limites de upload, limite de ficheiros por pedido, limites do Tomcat e do HikariCP e rejeição antecipada de pedidos inválidos. | `RateLimiterServiceTest`, testes de upload, `SecurityHeadersTest`, `SecurityConfigurationValidatorTest`. |
-| **Elevation of Privilege** | Um `ANALYST` tenta agir como `ADMIN` ou `AUDITOR`, ou aceder a casos atribuídos a outro analista. | RBAC centralizado, controlo de ownership ao nível dos serviços, testes para rotas proibidas e proteção do último administrador ativo.                   | `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`, `AdminUserManagementSecurityTest`.            |
+| STRIDE | Ameaça no GhostReport | Mitigacoes implementadas | Evidencia |
+| --- | --- | --- | --- |
+| Spoofing | Atacante tenta autenticar-se como admin/analyst/auditor. | BCrypt, MFA para roles internas, JWT assinado, issuer/audience/kid, inactive users bloqueados, rate limiting. | `AdminMfaAuthenticationTest`, `JwtServiceSecurityTest`, `LoginRateLimitSecurityTest`. |
+| Tampering | Alteracao de logs, backups, packages ou ficheiros. | Hashes, manifestos HMAC, verificacao de backups, integridade em audit/security records, rejeicao de ZIP tampering. | `BackupServiceIntegrationTest`, audit/security DTOs. |
+| Repudiation | Utilizador nega operacao critica. | Audit logs com accao, actor, target, correlationId e integrityHash. | `AuditLogSecurityTest`, `RuntimeSecurityEventLoggingTest`. |
+| Information Disclosure | Exposicao de tracking code, token, password, paths ou dados anonimos. | Erros genericos, redaction de logs, DTOs, JWT apenas em `sessionStorage` de sessao e nao em `localStorage`, tracking code nao vai em URL. | `AnonymousDataLoggingTest`, `FrontendXssDataExposureTest`, `ErrorHandlingSecurityTest`. |
+| Denial of Service | Abuso de login, tracking, upload/download, headers excessivos ou ficheiros grandes. | Rate limiting por fluxo, limites de upload, max files per request, limites Tomcat/Hikari, rejeicao antecipada. | `RateLimiterServiceTest`, upload tests, `SecurityHeadersTest`, `SecurityConfigurationValidatorTest`. |
+| Elevation of Privilege | Analyst tenta agir como admin/auditor ou aceder a caso de outro analyst. | RBAC central, service-level ownership, tests para forbidden routes, proteccao do ultimo admin activo. | `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`, `AdminUserManagementSecurityTest`. |
 
 ## 14. Code review e controlo antes do merge
 
@@ -520,28 +519,32 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em **2026-06-15**: **286 testes, 0 falhas, 0 erros e 0 skipped**.
+Resultado confirmado em 2026-06-16: 292 testes, 0 falhas, 0 erros, 0 skipped.
 
 **Categorias cobertas:**
 
-* Contexto Spring Boot;
-* Validação de configuração;
-* Autenticação, JWT, MFA e reposição de password;
-* RBAC e matriz de endpoints;
-* CSRF e security headers;
-* CSP, HSTS, COOP, COEP, CORP, CSP Reporting, Fetch Metadata, fallback de browser e verificações de request boundary;
-* Uploads, MIME, magic bytes, malware/quarantine e path traversal;
-* Quotas de anexos por pedido e por denúncia;
-* Tracking code e enumeração;
-* Tracking codes gerados por `SecureRandom` sob carga académica moderada;
-* Rate limiting da submissão pública anónima;
-* Ownership do analista e workflow de casos;
-* Auditor em modo read-only;
-* Ciclo de vida dos utilizadores administrados;
-* Backups, restauro com reautenticação, integridade e minimização da exposição de paths internos;
-* Frontend: DOM clobbering, XSS sinks, scripts inline, tokens em storage, tracking codes na URL e navegação oculta;
-* Inventário criptográfico: rastreabilidade de BCrypt, SecureRandom, HMAC-SHA-256, SHA-256, JWT e backups;
-* Inventário de dangerous functionality: restore, uploads, packages, password reset, JWT, logging, criptografia e respetivos testes.
+- contexto Spring Boot;
+- validacao de configuracao;
+- autenticacao, JWT, MFA e password reset;
+- RBAC e endpoint matrix;
+- CSRF e security headers;
+- CSP/HSTS/COOP/COEP/CORP, CSP reporting, Fetch Metadata, fallback de browser e request-boundary checks;
+- uploads, MIME, magic bytes, malware/quarantine e traversal;
+- quotas de anexos por pedido e por denuncia;
+- tracking code e enumeracao;
+- tracking codes gerados por `SecureRandom` sob carga academica moderada;
+- rate limit de submissao publica anonima;
+- analista ownership e workflow de casos;
+- auditor read-only;
+- admin user lifecycle;
+- backups, restore com reautenticacao, integridade e minimizacao de paths internos;
+- frontend: DOM clobbering, XSS sinks, scripts inline, JWT em `sessionStorage`
+  apenas durante a sessao e ausencia de `localStorage`,
+  tracking code em URL, navs escondidas.
+- inventario criptografico: rastreabilidade de BCrypt, SecureRandom,
+  HMAC-SHA-256, SHA-256, JWT e backups.
+- inventario de dangerous functionality: restore, uploads, packages, password
+  reset, JWT/logging/crypto e respetivos testes.
 
 Resumo detalhado: `SECURITY_TESTING.md`.
 

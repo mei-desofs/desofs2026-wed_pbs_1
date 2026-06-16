@@ -17,7 +17,7 @@ O objetivo deste README é servir como índice rápido da entrega para avaliaç�
 * [SECURITY_TESTING.md](SECURITY_TESTING.md) - estratégia de testes, classes JUnit/MockMvc e validação dos controlos de segurança.
 * [SPOTBUGS_TRIAGE.md](SPOTBUGS_TRIAGE.md) - papel de SpotBugs no SAST e regras de triagem.
 
-Validação factual documentada: 286 testes Maven, 0 falhas, 0 erros e 0 skipped.
+Validacao factual documentada: 292 testes Maven, 0 falhas, 0 erros e 0 skipped.
 
 ## 4. Pipeline DevSecOps
 

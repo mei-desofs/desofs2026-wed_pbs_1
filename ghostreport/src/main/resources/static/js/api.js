@@ -36,6 +36,37 @@ function csrfFetchOptions(options = {}) {
     };
 }
 
+function isUnsafeRequest(options = {}) {
+    const method = (options.method || "GET").toUpperCase();
+    return !["GET", "HEAD", "OPTIONS", "TRACE"].includes(method);
+}
+
+async function ensureCsrfCookie(options = {}) {
+    if (!isUnsafeRequest(options)) {
+        return;
+    }
+
+    const headers = options.headers || {};
+    if (headers[CSRF_HEADER_NAME] || readCookie(CSRF_COOKIE_NAME)) {
+        return;
+    }
+
+    try {
+        await fetch(`${API_BASE}/`, {
+            method: "GET",
+            credentials: "same-origin",
+            cache: "no-store"
+        });
+    } catch {
+        // The unsafe request below will still fail closed if the CSRF cookie cannot be obtained.
+    }
+}
+
+async function csrfFetch(url, options = {}) {
+    await ensureCsrfCookie(options);
+    return fetch(url, csrfFetchOptions(options));
+}
+
 async function handleJsonResponse(response) {
     const contentType = response.headers.get("content-type");
 
@@ -47,11 +78,21 @@ async function handleJsonResponse(response) {
     }
 
     if (!response.ok) {
+        const rawMessage = data?.error || data?.message || JSON.stringify(data);
         const fieldMessage = data?.fields
             ? " " + Object.entries(data.fields).map(([field, message]) => `${field}: ${message}`).join("; ")
             : "";
-        const errorMessage = (data?.error || data?.message || JSON.stringify(data)) + fieldMessage;
-        throw new Error(errorMessage);
+        const statusMessages = {
+            400: "Pedido inválido ou transição não permitida.",
+            401: "Sessão expirada. Faz login novamente.",
+            403: "Sem permissões para executar esta ação.",
+            409: "Conflito de estado. Atualiza a lista e tenta novamente."
+        };
+        const errorMessage = statusMessages[response.status] || rawMessage || "Erro no pedido.";
+        const error = new Error(errorMessage + fieldMessage);
+        error.status = response.status;
+        error.apiError = rawMessage;
+        throw error;
     }
 
     return data;

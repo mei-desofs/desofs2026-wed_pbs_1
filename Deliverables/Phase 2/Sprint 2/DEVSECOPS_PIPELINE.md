@@ -446,18 +446,18 @@ O code review não é apenas leitura manual. Ele combina revisão humana, testes
 
 O projeto segue convenções leves alinhadas com a estrutura real do código:
 
-| Área         | Regra                                                                                                         | Validação                                                                    |
-| ------------ | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Controllers  | Recebem HTTP, aplicam validação inicial/DTOs e devolvem respostas; não devem concentrar regras de negócio.    | Code review, MockMvc e testes de controller/security.                        |
-| Services     | Centralizam regras de negócio, ownership, workflow, filesystem seguro e decisões sensíveis.                   | Testes unitários/integração em `service` e `security`.                       |
-| Repositories | Limitados à persistência Spring Data/JPA.                                                                     | Revisão de código e testes de integração.                                    |
-| DTOs         | Requests/responses evitam expor entidades JPA diretamente e reduzem mass assignment.                          | API tests, review e checklist de segurança desta secção.                     |
-| Validação    | Usar Bean Validation, enums, allowlists e domain primitives quando fizer sentido.                             | `ApiValidationContractTest`, testes de domínio e security tests.             |
-| Frontend     | Não guardar tokens em storage, não colocar lógica sensível no browser e evitar sinks XSS.                     | `FrontendXssDataExposureTest` e runtime probes.                              |
-| Logs/erros   | Não escrever passwords, JWTs, tracking codes, MFA codes ou secrets; não devolver stack traces/paths internos. | Runtime log sanitization, `ErrorHandlingSecurityTest` e audit/logging tests. |
-| Endpoints    | Novas rotas devem seguir o agrupamento por contexto e ter RBAC positivo/negativo.                             | `AUTHORIZATION_MATRIX.md` e `RbacAuthorizationMatrixTest`.                   |
-| Dependências | CVEs devem ser triados e a SBOM atualizada.                                                                   | `SCA_TRIAGE.md`, Dependency-Check e CycloneDX.                               |
-| Documentação | Números e claims devem vir de outputs reais ou artefactos verificáveis.                                       | README, relatório, ASVS XLSX e anexos.                                       |
+| Area | Regra | Validacao |
+| --- | --- | --- |
+| Controllers | Recebem HTTP, aplicam validacao inicial/DTOs e devolvem respostas; nao devem concentrar regras de negocio. | Code review, MockMvc e testes de controller/security. |
+| Services | Centralizam regras de negocio, ownership, workflow, filesystem seguro e decisoes sensiveis. | Testes unitarios/integracao em `service` e `security`. |
+| Repositories | Limitados a persistencia Spring Data/JPA. | Revisao de codigo e testes de integracao. |
+| DTOs | Requests/responses evitam expor entidades JPA directamente e reduzem mass assignment. | API tests, review e checklist de seguranca desta seccao. |
+| Validacao | Usar Bean Validation, enums, allowlists e domain primitives quando fizer sentido. | `ApiValidationContractTest`, testes de dominio e security tests. |
+| Frontend | Guardar JWT apenas em `sessionStorage` durante a sessao academica, nunca em `localStorage`, limpar no logout e evitar sinks XSS. | `FrontendXssDataExposureTest` e runtime probes. |
+| Logs/erros | Nao escrever passwords, JWTs, tracking codes, MFA codes ou secrets; nao devolver stack traces/paths internos. | Runtime log sanitization, `ErrorHandlingSecurityTest` e audit/logging tests. |
+| Endpoints | Novas rotas devem seguir agrupamento por contexto e ter RBAC positivo/negativo. | [AUTHORIZATION_MATRIX.md](AUTHORIZATION_MATRIX.md) e `RbacAuthorizationMatrixTest`. |
+| Dependencias | CVEs devem ser triados e SBOM actualizado. | [SCA_TRIAGE.md](SCA_TRIAGE.md), Dependency-Check e CycloneDX. |
+| Documentacao | Numeros e claims devem vir de outputs reais ou artefactos verificaveis. | README, relatorio, ASVS XLSX e anexos. |
 
 **Convenções observadas:**
 

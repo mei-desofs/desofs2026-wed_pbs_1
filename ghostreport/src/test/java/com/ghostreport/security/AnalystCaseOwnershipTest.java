@@ -1,6 +1,7 @@
 package com.ghostreport.security;
 
 import com.ghostreport.dto.ReportResponse;
+import com.ghostreport.dto.CaseReviewResponse;
 import com.ghostreport.dto.UpdateReportStatusRequest;
 import com.ghostreport.model.Attachment;
 import com.ghostreport.model.CasePriority;
@@ -221,6 +222,38 @@ class AnalystCaseOwnershipTest {
         );
 
         assertThat(exception.getStatusCode().value()).isEqualTo(403);
+    }
+
+    @Test
+    @WithMockUser(username = "owner_analyst", roles = "ANALYST")
+    void analystCanResolveOwnCaseAfterTakingItForReview() {
+        CaseReviewResponse assigned = caseReviewService.assignAnalystToCurrentUser(unassignedReport.getId());
+        assertThat(assigned.getReportStatus()).isEqualTo("UNDER_REVIEW");
+
+        UpdateReportStatusRequest request = new UpdateReportStatusRequest();
+        request.setStatus("resolved");
+
+        ReportResponse response = reportService.updateReportStatus(unassignedReport.getId(), request);
+
+        assertThat(response.getStatus()).isEqualTo("RESOLVED");
+        assertThat(reportRepository.findById(unassignedReport.getId()).orElseThrow().getStatus())
+                .isEqualTo(ReportStatus.RESOLVED);
+    }
+
+    @Test
+    @WithMockUser(username = "owner_analyst", roles = "ANALYST")
+    void analystCannotResolveSubmittedCaseWithoutReviewTransition() {
+        UpdateReportStatusRequest request = new UpdateReportStatusRequest();
+        request.setStatus("RESOLVED");
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> reportService.updateReportStatus(ownerReport.getId(), request)
+        );
+
+        assertThat(exception.getStatusCode().value()).isEqualTo(400);
+        assertThat(reportRepository.findById(ownerReport.getId()).orElseThrow().getStatus())
+                .isEqualTo(ReportStatus.SUBMITTED);
     }
 
     @Test

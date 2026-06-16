@@ -247,6 +247,10 @@ class AuditorAuthorizationTest {
                         .header("Authorization", bearerToken(auditorUsername, "password")))
                 .andExpect(status().isOk());
 
+        mockMvc.perform(get("/audit/backups/{filename}/verify", "ghostreport-backup-20260507-165524..zip")
+                        .header("Authorization", bearerToken(auditorUsername, "password")))
+                .andExpect(status().isBadRequest());
+
         mockMvc.perform(post("/admin/backups")
                         .with(csrf())
                         .header("Authorization", bearerToken(auditorUsername, "password")))

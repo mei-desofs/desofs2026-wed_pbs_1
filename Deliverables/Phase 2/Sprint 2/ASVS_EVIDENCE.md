@@ -8,28 +8,28 @@ O ficheiro foi criado como cópia estrutural do tracker ASVS da Phase 2 Sprint 1
 
 ## Base factual usada
 
-| Evidência             | Resultado confirmado                                                                                       |
-| --------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Testes Maven          | `286` testes, `0` falhas, `0` erros, `0` skipped.                                                          |
-| Runtime probes locais | `101` probes, `101` passed, `0` failed, `0` skipped.                                                       |
-| Spring Security       | `6.5.11` via Spring Boot `3.5.15`.                                                                         |
-| SCA CVEs remediados   | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003.                                                            |
-| Suppressions SCA      | CVE-2025-15104 e CVE-2025-7962 documentados como não aplicáveis/falso positivo para os componentes usados. |
+| Evidencia | Resultado confirmado |
+| --- | --- |
+| Testes Maven | `292` testes, `0` falhas, `0` erros, `0` skipped. |
+| Runtime probes locais | `101` probes, `101` passed, `0` failed, `0` skipped. |
+| Spring Security | `6.5.11` via Spring Boot `3.5.15`. |
+| SCA CVEs remediados | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003. |
+| Suppressions SCA | CVE-2025-15104 e CVE-2025-7962 documentados como nao aplicaveis/falso positivo para os componentes usados. |
 
 ## Evolução Sprint 1 -> Sprint 2
 
 O XLSX continua a ser a fonte principal para estados, classificações e percentagens. Esta tabela resume apenas as mudanças qualitativas mais relevantes para leitura rápida; não introduz percentagens adicionais fora do tracker.
 
-| Área ASVS              | Sprint 1                                            | Sprint 2                                                                                                         |
-| ---------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Autenticação e sessões | Login/JWT base e primeiros controlos de sessão.     | MFA obrigatório para roles internas, revogação, inactive user checks e MFA de uso único reforçados.              |
-| Autorização            | RBAC por grupos principais.                         | Matriz por endpoint, testes negativos por role e ownership em casos de analista.                                 |
-| Validação e API        | DTOs e Bean Validation base.                        | Rejeição adicional de mass assignment, HPP, headers anormais, content type errado e contratos de erro genéricos. |
-| Ficheiros e backups    | Upload seguro e backups/evidence packages iniciais. | Quotas acumuladas, HMAC/manifestos, restore com reautenticação e minimização de paths internos.                  |
-| Browser/frontend       | Páginas estáticas funcionais.                       | CSP reporting, headers modernos, ausência de tokens em storage, DOM clobbering/XSS checks e fallback de browser. |
-| Supply chain           | Dependency-Check base.                              | Spring Security atualizado para `6.5.11`, CVEs triados, suppressions justificadas e SBOM.                        |
-| Runtime evidence       | Cobertura runtime limitada.                         | 101 probes IAST-like/runtime, sem falhas ou skipped na validação local.                                          |
-| Fora de âmbito         | Capítulos não usados tratados com menor detalhe.    | OAuth/OIDC e WebRTC mantidos como `Not Applicable` quando não fazem parte do produto.                            |
+| Area ASVS | Sprint 1 | Sprint 2 |
+| --- | --- | --- |
+| Autenticacao e sessoes | Login/JWT base e primeiros controlos de sessao. | MFA obrigatorio para roles internas, revogacao, inactive user checks e MFA de uso unico reforcados. |
+| Autorizacao | RBAC por grupos principais. | Matriz por endpoint, testes negativos por role e ownership em casos de analista. |
+| Validacao e API | DTOs e Bean Validation base. | Rejeicao adicional de mass assignment, HPP, headers anormais, content type errado e contratos de erro genericos. |
+| Ficheiros e backups | Upload seguro e backups/evidence packages iniciais. | Quotas acumuladas, HMAC/manifestos, restore com reautenticacao e minimizacao de paths internos. |
+| Browser/frontend | Paginas estaticas funcionais. | CSP reporting, headers modernos, JWT limitado a `sessionStorage` de sessao, ausencia de `localStorage`, DOM clobbering/XSS checks e fallback de browser. |
+| Supply chain | Dependency-Check base. | Spring Security actualizado para `6.5.11`, CVEs triados, suppressions justificadas e SBOM. |
+| Runtime evidence | Cobertura runtime limitada. | 101 probes IAST-like/runtime, sem falhas ou skipped na validacao local. |
+| Fora de ambito | Capitulos nao usados tratados com menor detalhe. | OAuth/OIDC e WebRTC mantidos como `Not Applicable` quando nao fazem parte do produto. |
 
 ## Mapa de evidência
 

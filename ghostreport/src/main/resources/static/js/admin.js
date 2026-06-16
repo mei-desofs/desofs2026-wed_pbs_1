@@ -11,6 +11,7 @@ let adminSessionAuth = null;
 let adminUsername = null;
 let adminMfaChallengeId = null;
 let adminUsersCache = [];
+const ADMIN_ALLOWED_ROLES = ["ADMIN"];
 
 function getApiBase() {
     return typeof API_BASE !== "undefined" ? API_BASE : "";
@@ -104,9 +105,7 @@ function showAdminPage(pageId) {
 }
 
 function adminAuthHeaders(extra = {}) {
-    if (!adminSessionAuth) {
-        throw new Error("Sessão inválida. Faz login novamente.");
-    }
+    adminSessionAuth = window.GhostReportAuth.getAuthHeader(ADMIN_ALLOWED_ROLES);
 
     return {
         "Authorization": adminSessionAuth,
@@ -115,17 +114,21 @@ function adminAuthHeaders(extra = {}) {
 }
 
 async function adminSafeFetch(url, options = {}) {
-    const fetchOptions = typeof csrfFetchOptions === "function"
-        ? csrfFetchOptions(options)
-        : options;
-    const response = await fetch(url, fetchOptions);
+    const response = typeof csrfFetch === "function"
+        ? await csrfFetch(url, options)
+        : await fetch(url, typeof csrfFetchOptions === "function" ? csrfFetchOptions(options) : options);
     const authFlowRequest = String(url).includes("/auth/login") || String(url).includes("/auth/mfa/verify");
 
-    if (!authFlowRequest && (response.status === 401 || response.status === 403)) {
+    if (!authFlowRequest && response.status === 401) {
         adminSessionAuth = null;
         adminUsername = null;
         adminMfaChallengeId = null;
-        throw new Error("Sessão expirada ou sem permissões de administrador.");
+        window.GhostReportAuth.clearSession();
+        throw new Error("Sessão expirada. Faz login novamente.");
+    }
+
+    if (!authFlowRequest && response.status === 403) {
+        throw new Error("Sem permissões de administrador para executar esta ação.");
     }
 
     return response;
@@ -178,6 +181,7 @@ async function adminLogin() {
         const loginData = await adminHandleJsonResponse(loginResponse);
         if (loginData.mfaRequired) {
             adminSessionAuth = null;
+            window.GhostReportAuth.clearSession();
             adminUsername = loginData.username;
             adminMfaChallengeId = loginData.mfaChallengeId;
             hideElement("loginSection");
@@ -187,7 +191,8 @@ async function adminLogin() {
             return;
         }
 
-        adminSessionAuth = `${loginData.tokenType} ${loginData.token}`;
+        window.GhostReportAuth.setSession(loginData);
+        adminSessionAuth = window.GhostReportAuth.getAuthHeader(ADMIN_ALLOWED_ROLES);
 
         await adminValidateSession();
         adminUsername = loginData.username;
@@ -196,6 +201,7 @@ async function adminLogin() {
     } catch (error) {
         adminSessionAuth = null;
         adminUsername = null;
+        window.GhostReportAuth.clearSession();
         setText("loginError", error.message || "Login inválido.");
     }
 }
@@ -221,7 +227,8 @@ async function verifyAdminMfa() {
             })
         });
         const data = await adminHandleJsonResponse(response);
-        adminSessionAuth = `${data.tokenType} ${data.token}`;
+        window.GhostReportAuth.setSession(data);
+        adminSessionAuth = window.GhostReportAuth.getAuthHeader(ADMIN_ALLOWED_ROLES);
         adminUsername = data.username;
         adminMfaChallengeId = null;
         document.getElementById("mfaCode").value = "";
@@ -230,6 +237,7 @@ async function verifyAdminMfa() {
         showAdminDashboard();
     } catch (error) {
         adminSessionAuth = null;
+        window.GhostReportAuth.clearSession();
         setText("mfaError", error.message || "Codigo invalido ou expirado.");
     }
 }
@@ -238,6 +246,7 @@ function cancelAdminMfa() {
     adminSessionAuth = null;
     adminUsername = null;
     adminMfaChallengeId = null;
+    window.GhostReportAuth.clearSession();
     document.getElementById("mfaCode").value = "";
     hideElement("mfaSection");
     showElement("loginSection", "flex");
@@ -246,9 +255,7 @@ function cancelAdminMfa() {
 }
 
 async function adminLogout(reload = true) {
-    if (typeof revokeCurrentToken === "function") {
-        await revokeCurrentToken(adminSessionAuth);
-    }
+    await window.GhostReportAuth.logout(adminSessionAuth);
 
     adminSessionAuth = null;
     adminUsername = null;
@@ -263,6 +270,24 @@ async function adminLogout(reload = true) {
         hideElement("mfaSection");
         showElement("adminLoginPanel");
         showElement("loginSection", "flex");
+    }
+}
+
+async function restoreAdminSession() {
+    const session = window.GhostReportAuth.getSession(ADMIN_ALLOWED_ROLES);
+    if (!session) {
+        return;
+    }
+
+    try {
+        adminSessionAuth = window.GhostReportAuth.getAuthHeader(ADMIN_ALLOWED_ROLES);
+        adminUsername = session.username;
+        await adminValidateSession();
+        showAdminDashboard();
+    } catch {
+        adminSessionAuth = null;
+        adminUsername = null;
+        window.GhostReportAuth.clearSession();
     }
 }
 
@@ -662,12 +687,22 @@ async function restoreBackup(filename) {
     clearAdminMessages();
 
     try {
+        const passwordInput = document.getElementById("backupRestorePassword");
+        const password = passwordInput ? passwordInput.value : "";
+        if (!password) {
+            setText("backupError", "Introduz a password atual de administrador para executar restore em staging.");
+            return;
+        }
+
         const response = await adminSafeFetch(`${getApiBase()}/admin/backups/${encodeURIComponent(filename)}/restore`, {
             method: "POST",
-            headers: adminAuthHeaders()
+            headers: adminAuthHeaders({
+                "X-Reauth-Password": password
+            })
         });
 
         const data = await adminHandleJsonResponse(response);
+        passwordInput.value = "";
         setText("backupResult", `${data.filename} validado e extraído para staging.`);
     } catch (error) {
         setText("backupError", error.message);
@@ -704,3 +739,9 @@ document.addEventListener("click", event => {
     const action = actions[button.dataset.action];
     if (action) action();
 });
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", restoreAdminSession);
+} else {
+    restoreAdminSession();
+}

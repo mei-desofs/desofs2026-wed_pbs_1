@@ -9,7 +9,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 286 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-16: 292 testes, 0 falhas, 0 erros, 0 skipped.
 
 ## 2. Estrategia
 
@@ -28,11 +28,11 @@ menos uma mitigacao implementada e, sempre que possivel, um teste que a prove.
 | RBAC | `RbacAuthorizationMatrixTest`, `AdminAuthorizationTest`, `AuditorAuthorizationTest` | Endpoints permitidos/negados por role. |
 | Admin lifecycle | `AdminUserManagementSecurityTest` | Activar/desactivar, editar roles, ultimo admin activo, audit logs. |
 | Analyst ownership | `AnalystCaseOwnershipTest`, `BusinessLogicWorkflowSecurityTest` | Ownership, casos de outro analista, transitions, optimistic locking. |
-| Public reports | `PublicReportFlowIntegrationTest`, `TrackingCodeEnumerationTest`, `RateLimiterServiceTest` | Criacao anonima, tracking code, erros seguros, enumeracao e rate limit de submissao. |
+| Public reports | `PublicReportFlowIntegrationTest`, `TrackingCodeEnumerationTest`, `RateLimiterServiceTest` | Criacao anonima, tracking code, erros seguros, minimizacao de anexos no tracking publico, enumeracao e rate limit de submissao. |
 | Uploads/files | `ReportControllerAttachmentUploadTest`, `FileStorageServiceTest`, `SafeFilenameSecurityTest`, `SafeFilenameTest` | MIME, magic bytes, traversal, malware/quarantine, limites, paths. |
 | Auditoria/logging | `AuditLogSecurityTest`, `AnonymousDataLoggingTest`, `RuntimeSecurityEventLoggingTest` | Nao guardar passwords/tokens/tracking code, alertas e correlationId. |
 | Backups/packages | `BackupServiceIntegrationTest`, `AdminBackupControllerSecurityTest`, `CasePackageServiceIntegrationTest` | Manifestos, tampering, restore com reautenticacao, traversal, packages e respostas sem paths internos. |
-| Frontend | `FrontendXssDataExposureTest`, `FrontendNavbarVisibilityTest`, `CsrfCookieAttributesTest` | DOM clobbering, XSS sinks, scripts inline, tokens em storage, tracking code em URL, navs escondidas, CSRF cookie. |
+| Frontend | `FrontendXssDataExposureTest`, `FrontendNavbarVisibilityTest`, `CsrfCookieAttributesTest` | DOM clobbering, XSS sinks, scripts inline, JWT apenas em `sessionStorage` durante a sessao do browser, ausencia de `localStorage`, tracking code em URL, categorias compativeis com o backend, tracking publico sem metadados de anexos, navs escondidas, CSRF cookie. |
 | Headers/erros | `SecurityHeadersTest`, `SecurityMonitoringServiceTest`, `ErrorHandlingSecurityTest`, `ApiValidationContractTest` | CSP/HSTS/COOP/COEP/CORP, CSP report endpoint, Fetch Metadata, headers anormais, metadata `.git`/`.svn`, JSON errors genericos, validacao de contratos e alerta sanitizado. |
 | Criptografia/arquitectura sensivel | `CryptographicInventoryTest`, `DangerousFunctionalityInventoryTest`, `ResponseDataMinimizationTest`, `JwtServiceSecurityTest`, `TrackingCodeTest`, `BackupServiceIntegrationTest` | Inventario criptografico, dangerous functionality, minimizacao de respostas, algoritmos aprovados, ausencia de algoritmos obsoletos, JWT HMAC, SecureRandom e integridade de backups. |
 | Rate limiting | `RateLimiterServiceTest`, `LoginRateLimitSecurityTest` | Limites, reset de janela, brute force alert. |
@@ -72,7 +72,8 @@ O frontend e estatico, mas tambem foi validado:
 - nao usa `innerHTML`/sinks perigosos para dados externos;
 - renderiza dados atraves de text nodes/helpers;
 - nao usa scripts inline nem event handlers inline;
-- nao guarda bearer tokens em `localStorage`/`sessionStorage`;
+- guarda o JWT apenas em `sessionStorage` durante a sessao do browser no
+  frontend academico, limpa-o no logout e nao usa `localStorage`;
 - nao coloca tracking code em URLs;
 - navs autenticadas começam escondidas;
 - MFA existe em admin, analyst e auditor.

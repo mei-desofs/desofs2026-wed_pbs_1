@@ -91,7 +91,7 @@ public class ReportController {
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public List<AttachmentListResponse> listAttachments(
+    public AttachmentSummaryResponse listAttachments(
             @PathVariable Long id,
             @Valid @RequestBody VerifyTrackingCodeRequest request,
             HttpServletRequest httpRequest
@@ -100,7 +100,7 @@ public class ReportController {
 
         rateLimiterService.checkTrackingLimit(ip);
 
-        return reportService.listAttachmentsSecure(id, request.getTrackingCode());
+        return reportService.attachmentSummarySecure(id, request.getTrackingCode());
     }
 
     @PostMapping(

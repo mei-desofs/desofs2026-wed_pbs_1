@@ -18,25 +18,10 @@ public class DataInitializer {
     @ConditionalOnProperty(prefix = "ghostreport.seed-users", name = "enabled", havingValue = "true")
     CommandLineRunner initUsers(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         return args -> {
-            if (userRepository.findByUsername("admin").isEmpty()) {
-                User admin = new User();
-                admin.setUsername("admin");
-                admin.setEmail("admin@ghostreport.local");
-                admin.setPasswordHash(passwordEncoder.encode("AdminPassword123!"));
-                admin.setRole(UserRole.ADMIN);
-                admin.setActive(true);
-                userRepository.save(admin);
-            }
-
-            if (userRepository.findByUsername("analyst").isEmpty()) {
-                User analyst = new User();
-                analyst.setUsername("analyst");
-                analyst.setEmail("analyst@ghostreport.local");
-                analyst.setPasswordHash(passwordEncoder.encode("AnalystPassword123!"));
-                analyst.setRole(UserRole.ANALYST);
-                analyst.setActive(true);
-                userRepository.save(analyst);
-            }
+            upsertSeedUser(userRepository, passwordEncoder, "admin",
+                    "admin@ghostreport.local", "AdminPassword123!", UserRole.ADMIN);
+            upsertSeedUser(userRepository, passwordEncoder, "analyst",
+                    "analyst@ghostreport.local", "AnalystPassword123!", UserRole.ANALYST);
         };
     }
 
@@ -45,15 +30,25 @@ public class DataInitializer {
     @ConditionalOnProperty(prefix = "ghostreport.seed-users", name = "enabled", havingValue = "true")
     CommandLineRunner initAuditor(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         return args -> {
-            if (userRepository.findByUsername("auditor").isEmpty()) {
-                User auditor = new User();
-                auditor.setUsername("auditor");
-                auditor.setEmail("auditor@ghostreport.local");
-                auditor.setPasswordHash(passwordEncoder.encode("AuditorPassword123!"));
-                auditor.setRole(UserRole.AUDITOR);
-                auditor.setActive(true);
-                userRepository.save(auditor);
-            }
+            upsertSeedUser(userRepository, passwordEncoder, "auditor",
+                    "auditor@ghostreport.local", "AuditorPassword123!", UserRole.AUDITOR);
         };
+    }
+
+    private void upsertSeedUser(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            String username,
+            String email,
+            String password,
+            UserRole role
+    ) {
+        User user = userRepository.findByUsername(username).orElseGet(User::new);
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setPasswordHash(passwordEncoder.encode(password));
+        user.setRole(role);
+        user.setActive(true);
+        userRepository.save(user);
     }
 }
