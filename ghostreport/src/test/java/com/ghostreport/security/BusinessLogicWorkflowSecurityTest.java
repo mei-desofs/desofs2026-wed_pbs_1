@@ -136,6 +136,77 @@ class BusinessLogicWorkflowSecurityTest {
     }
 
     @Test
+    void owningAnalystCanResolveCaseAndRepeatResolvedRequestIdempotently() throws Exception {
+        long reportId = createReportThroughApi();
+
+        assignToCurrentAnalyst(reportId, analystUsername).andExpect(status().isOk());
+
+        mockMvc.perform(patch("/analyst/reports/{id}/status", reportId)
+                        .with(csrf())
+                        .header("Authorization", bearerToken(analystUsername))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "RESOLVED"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RESOLVED"));
+
+        mockMvc.perform(patch("/analyst/reports/{id}/status", reportId)
+                        .with(csrf())
+                        .header("Authorization", bearerToken(analystUsername))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "RESOLVED"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RESOLVED"));
+
+        assertThat(reportRepository.findById(reportId).orElseThrow().getStatus())
+                .isEqualTo(ReportStatus.RESOLVED);
+    }
+
+    @Test
+    void invalidStatusPayloadReturnsBadRequestAndDoesNotChangeCase() throws Exception {
+        long reportId = createReportThroughApi();
+
+        assignToCurrentAnalyst(reportId, analystUsername).andExpect(status().isOk());
+
+        mockMvc.perform(patch("/analyst/reports/{id}/status", reportId)
+                        .with(csrf())
+                        .header("Authorization", bearerToken(analystUsername))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "DONE"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Invalid request"));
+
+        assertThat(reportRepository.findById(reportId).orElseThrow().getStatus())
+                .isEqualTo(ReportStatus.UNDER_REVIEW);
+    }
+
+    @Test
+    void statusUpdateRequiresAuthentication() throws Exception {
+        long reportId = createReportThroughApi();
+
+        mockMvc.perform(patch("/analyst/reports/{id}/status", reportId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "RESOLVED"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void forbiddenStatusTransitionFailsAndKeepsPreviousState() throws Exception {
         long reportId = createReportThroughApi();
 

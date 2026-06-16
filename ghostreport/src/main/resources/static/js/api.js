@@ -78,11 +78,21 @@ async function handleJsonResponse(response) {
     }
 
     if (!response.ok) {
+        const rawMessage = data?.error || data?.message || JSON.stringify(data);
         const fieldMessage = data?.fields
             ? " " + Object.entries(data.fields).map(([field, message]) => `${field}: ${message}`).join("; ")
             : "";
-        const errorMessage = (data?.error || data?.message || JSON.stringify(data)) + fieldMessage;
-        throw new Error(errorMessage);
+        const statusMessages = {
+            400: "Pedido inválido ou transição não permitida.",
+            401: "Sessão expirada. Faz login novamente.",
+            403: "Sem permissões para executar esta ação.",
+            409: "Conflito de estado. Atualiza a lista e tenta novamente."
+        };
+        const errorMessage = statusMessages[response.status] || rawMessage || "Erro no pedido.";
+        const error = new Error(errorMessage + fieldMessage);
+        error.status = response.status;
+        error.apiError = rawMessage;
+        throw error;
     }
 
     return data;
