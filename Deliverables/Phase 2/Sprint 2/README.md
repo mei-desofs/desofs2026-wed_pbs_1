@@ -46,3 +46,15 @@ Validação runtime expandida confirmada localmente: 101 probes, 101 passed, 0 f
 * [SECURE_INSTALLATION.md](SECURE_INSTALLATION.md) - instalação segura, perfis, secrets, base de dados, TLS/proxy e storage.
 * [CRYPTOGRAPHIC_INVENTORY.md](CRYPTOGRAPHIC_INVENTORY.md) - inventário dos usos criptográficos, material de chave/segredo e política de alteração.
 * [DANGEROUS_FUNCTIONALITY.md](DANGEROUS_FUNCTIONALITY.md) - inventário de operações sensíveis/perigosas e respetivas mitigações/testes.
+
+## 7. Evidencia visual
+
+As imagens em [imagens/](imagens/) são anexos visuais para apoio à apresentação. Não substituem os relatórios, testes ou artefactos gerados pela pipeline; servem para tornar a leitura rápida mais clara:
+
+* [imagens/asvs.png](imagens/asvs.png) - snapshot do resumo ASVS por capítulo e nível.
+* [imagens/asvs2.png](imagens/asvs2.png) - gráfico visual da evolução/cobertura ASVS.
+* [imagens/dependency_check.png](imagens/dependency_check.png) - resumo do Dependency-Check.
+* [imagens/jacoco.png](imagens/jacoco.png) - resumo de cobertura JaCoCo.
+* [imagens/pit.png](imagens/pit.png) - resumo PIT de mutation testing e test strength.
+* [imagens/pl.png](imagens/pl.png) - evidência visual de pull request/checks.
+* [imagens/zap.png](imagens/zap.png) - resumo do ZAP baseline.

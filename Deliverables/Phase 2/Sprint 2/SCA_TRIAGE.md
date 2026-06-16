@@ -65,6 +65,12 @@ A validação local mais recente confirmou que `spring-security-core`, `spring-s
 
 O Dependency-Check local executado em 2026-06-15 terminou com **build success** e gerou relatórios HTML/XML/JSON/SARIF em `target/dependency-check-report`. O JSON confirmou **0 vulnerabilidades não suprimidas** e **2 vulnerabilidades suprimidas**, documentadas abaixo.
 
+### Evidencia visual Dependency-Check
+
+O screenshot seguinte resume a execução local do Dependency-Check: 85 dependências analisadas, 0 dependências vulneráveis, 0 vulnerabilidades não suprimidas e 2 suppressions justificadas nesta triagem.
+
+![Resumo OWASP Dependency-Check](imagens/dependency_check.png)
+
 O comando `.\mvnw.cmd dependency:tree` também confirmou:
 
 * `org.hibernate.validator:hibernate-validator:8.0.3.Final` como dependência de `spring-boot-starter-validation`;

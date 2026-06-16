@@ -16,6 +16,14 @@ O ficheiro foi criado como cópia estrutural do tracker ASVS da Phase 2 Sprint 1
 | SCA CVEs remediados | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003. |
 | Suppressions SCA | CVE-2025-15104 e CVE-2025-7962 documentados como nao aplicaveis/falso positivo para os componentes usados. |
 
+## Evidencia visual ASVS
+
+As imagens seguintes são snapshots do tracker ASVS Sprint 2 e ajudam a apresentar rapidamente a distribuição por capítulo, L1, L2, L3 e percentagem global. O XLSX continua a ser a fonte principal.
+
+![Resumo ASVS por capitulo e nivel](imagens/asvs.png)
+
+![Grafico de cobertura ASVS por capitulo](imagens/asvs2.png)
+
 ## Evolução Sprint 1 -> Sprint 2
 
 O XLSX continua a ser a fonte principal para estados, classificações e percentagens. Esta tabela resume apenas as mudanças qualitativas mais relevantes para leitura rápida; não introduz percentagens adicionais fora do tracker.

@@ -523,7 +523,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-17: 299 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-16: 299 testes, 0 falhas, 0 erros, 0 skipped.
 
 **Categorias cobertas:**
 
