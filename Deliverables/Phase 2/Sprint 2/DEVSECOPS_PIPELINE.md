@@ -534,6 +534,10 @@ Os commits devem preferir Conventional Commits simples: `feat:`, `fix:`, `docs:`
 
 Local repository evidence confirms branch-based development, automated security workflows and documented triage gates. GitHub pull request approval metadata must be checked in the GitHub interface because it is not fully available from the local repository clone.
 
+Como apoio visual à apresentação, o screenshot abaixo mostra um exemplo de pull request com branch dedicada, commits associados, checks e estado de merge. A imagem não deve ser lida como prova de aprovação formal; essa metadata deve ser confirmada no GitHub.
+
+![Exemplo visual de pull request e checks](imagens/pl.png)
+
 ### Relationship with ASVS
 
 O code review suporta evidências ASVS em secure coding, autenticação, autorização, validação, logging, configuração, dependency management, error handling e runtime testing. Quando uma alteração muda uma claim ASVS, o tracker Excel continua a ser a fonte principal e `ASVS_EVIDENCE.md` funciona como resumo explicativo.

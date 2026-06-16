@@ -10,11 +10,19 @@ O ficheiro foi criado como cópia estrutural do tracker ASVS da Phase 2 Sprint 1
 
 | Evidencia | Resultado confirmado |
 | --- | --- |
-| Testes Maven | `292` testes, `0` falhas, `0` erros, `0` skipped. |
+| Testes Maven | `299` testes, `0` falhas, `0` erros, `0` skipped. |
 | Runtime probes locais | `101` probes, `101` passed, `0` failed, `0` skipped. |
 | Spring Security | `6.5.11` via Spring Boot `3.5.15`. |
 | SCA CVEs remediados | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003. |
 | Suppressions SCA | CVE-2025-15104 e CVE-2025-7962 documentados como nao aplicaveis/falso positivo para os componentes usados. |
+
+## Evidencia visual ASVS
+
+As imagens seguintes são snapshots do tracker ASVS Sprint 2 e ajudam a apresentar rapidamente a distribuição por capítulo, L1, L2, L3 e percentagem global. O XLSX continua a ser a fonte principal.
+
+![Resumo ASVS por capitulo e nivel](imagens/asvs.png)
+
+![Grafico de cobertura ASVS por capitulo](imagens/asvs2.png)
 
 ## Evolução Sprint 1 -> Sprint 2
 
