@@ -43,6 +43,28 @@ O fluxo esperado da equipa e:
     em triagem/documentacao.
 15. So depois de revisao humana e checks aceitaveis o PR deve ser merged.
 
+Visao rapida do mesmo fluxo:
+
+```mermaid
+flowchart LR
+    A["Developer cria branch"] --> B["Implementa alteracao"]
+    B --> C["Testes locais"]
+    C --> D["Pull Request"]
+    D --> E["dev.yml"]
+    E --> F["build-test: Maven verify + JaCoCo"]
+    E --> G["security-secrets: Gitleaks"]
+    F --> H["sast: SpotBugs + CodeQL + SonarCloud"]
+    G --> H
+    F --> I["dependency-scanning: Dependency-Check + CycloneDX SBOM"]
+    F --> J["dast-scan: runtime evidence + ZAP baseline"]
+    H --> K["Artefactos e Step Summary"]
+    I --> K
+    J --> K
+    K --> L["Triagem de findings"]
+    L --> M["Code review"]
+    M --> N["Merge quando aceitavel"]
+```
+
 ## 4. Quando corre e em que branches
 
 | Evento | Branches/paths | Resultado esperado |
