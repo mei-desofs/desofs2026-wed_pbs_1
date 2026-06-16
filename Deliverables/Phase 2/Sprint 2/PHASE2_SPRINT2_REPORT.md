@@ -62,7 +62,7 @@ Resumo da evolucao:
 | Uploads/backups | Controlos de filesystem implementados. | Quotas, manifestos, HMAC, restore com reautenticacao e minimizacao de respostas reforcados. |
 | SCA/SBOM | Dependency-Check base. | CVEs Spring Security triados/remediados, suppressions justificadas e SBOM CycloneDX. |
 | Runtime evidence | Evidencia inicial limitada. | 101 probes runtime/IAST-like: 101 passed, 0 failed, 0 skipped. |
-| Testes | Suite de seguranca base. | 286 testes Maven confirmados, incluindo ASVS hardening e cenarios negativos. |
+| Testes | Suite de seguranca base. | 292 testes Maven confirmados, incluindo ASVS hardening e cenarios negativos. |
 | ASVS | Tracker Sprint 1 como base. | XLSX Sprint 2 copiado estruturalmente e actualizado com evidencia factual. |
 
 ## 3. Objectivos da Sprint 2
@@ -202,6 +202,10 @@ Controlos implementados:
 - JWT stateless com claims de role;
 - validacao de issuer/audience/kid nos testes de JWT;
 - revogacao de token em logout;
+- no frontend academico, o JWT e mantido apenas em `sessionStorage` durante a
+  sessao do browser para propagar `Authorization: Bearer <token>` entre paginas
+  internas; logout limpa a sessao. Uma opcao de hardening futuro seria cookie
+  HttpOnly SameSite ou IdP/session manager externo;
 - MFA para `ADMIN`, `ANALYST`, `AUDITOR`;
 - desafios MFA expiram e nao podem ser reutilizados;
 - em ambiente dev/test, o codigo pode ser exposto em log para demonstracao;
@@ -240,7 +244,7 @@ Os endpoints principais estao agrupados abaixo.
 | POST | `/reports` | Publico | Criar denuncia anonima. |
 | POST | `/reports/verify` | Publico | Validar tracking code e consultar estado. |
 | POST | `/reports/{id}/attachments` | Publico com tracking code | Enviar anexos. |
-| POST | `/reports/{id}/attachments/list` | Publico com tracking code | Listar metadados de anexos. |
+| POST | `/reports/{id}/attachments/list` | Publico com tracking code | Devolver apenas contagem de anexos, sem nomes/IDs/paths. |
 | POST | `/reports/download` | Publico com tracking code | Descarregar anexo autorizado. |
 
 ### 9.3 Analista
@@ -380,7 +384,7 @@ quando autorizados.
 | Spoofing | Atacante tenta autenticar-se como admin/analyst/auditor. | BCrypt, MFA para roles internas, JWT assinado, issuer/audience/kid, inactive users bloqueados, rate limiting. | `AdminMfaAuthenticationTest`, `JwtServiceSecurityTest`, `LoginRateLimitSecurityTest`. |
 | Tampering | Alteracao de logs, backups, packages ou ficheiros. | Hashes, manifestos HMAC, verificacao de backups, integridade em audit/security records, rejeicao de ZIP tampering. | `BackupServiceIntegrationTest`, audit/security DTOs. |
 | Repudiation | Utilizador nega operacao critica. | Audit logs com accao, actor, target, correlationId e integrityHash. | `AuditLogSecurityTest`, `RuntimeSecurityEventLoggingTest`. |
-| Information Disclosure | Exposicao de tracking code, token, password, paths ou dados anonimos. | Erros genericos, redaction de logs, DTOs, ausencia de tokens em browser storage, tracking code nao vai em URL. | `AnonymousDataLoggingTest`, `FrontendXssDataExposureTest`, `ErrorHandlingSecurityTest`. |
+| Information Disclosure | Exposicao de tracking code, token, password, paths ou dados anonimos. | Erros genericos, redaction de logs, DTOs, JWT apenas em `sessionStorage` de sessao e nao em `localStorage`, tracking code nao vai em URL. | `AnonymousDataLoggingTest`, `FrontendXssDataExposureTest`, `ErrorHandlingSecurityTest`. |
 | Denial of Service | Abuso de login, tracking, upload/download, headers excessivos ou ficheiros grandes. | Rate limiting por fluxo, limites de upload, max files per request, limites Tomcat/Hikari, rejeicao antecipada. | `RateLimiterServiceTest`, upload tests, `SecurityHeadersTest`, `SecurityConfigurationValidatorTest`. |
 | Elevation of Privilege | Analyst tenta agir como admin/auditor ou aceder a caso de outro analyst. | RBAC central, service-level ownership, tests para forbidden routes, proteccao do ultimo admin activo. | `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`, `AdminUserManagementSecurityTest`. |
 
@@ -571,7 +575,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 286 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-16: 292 testes, 0 falhas, 0 erros, 0 skipped.
 
 Categorias cobertas:
 
@@ -590,7 +594,8 @@ Categorias cobertas:
 - auditor read-only;
 - admin user lifecycle;
 - backups, restore com reautenticacao, integridade e minimizacao de paths internos;
-- frontend: DOM clobbering, XSS sinks, scripts inline, tokens em storage,
+- frontend: DOM clobbering, XSS sinks, scripts inline, JWT em `sessionStorage`
+  apenas durante a sessao e ausencia de `localStorage`,
   tracking code em URL, navs escondidas.
 - inventario criptografico: rastreabilidade de BCrypt, SecureRandom,
   HMAC-SHA-256, SHA-256, JWT e backups.

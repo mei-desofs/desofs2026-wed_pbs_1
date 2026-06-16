@@ -10,6 +10,10 @@ const {
 let analystAuth = null;
 let analystUsername = null;
 let analystMfaChallengeId = null;
+let selectedCaseStatus = null;
+let statusUpdateInFlight = false;
+const ANALYST_ALLOWED_ROLES = ["ANALYST", "ADMIN"];
+const TERMINAL_REPORT_STATUSES = ["RESOLVED", "REJECTED"];
 
 function clearMessages() {
     ["loginError", "mfaError", "globalResult", "globalError", "caseResult", "caseError"].forEach(id => setText(id, ""));
@@ -66,9 +70,7 @@ function showPage(pageId) {
 }
 
 function authHeaders(extra = {}) {
-    if (!analystAuth) {
-        throw new Error("Sessão inválida. Faz login novamente.");
-    }
+    analystAuth = window.GhostReportAuth.getAuthHeader(ANALYST_ALLOWED_ROLES);
 
     return {
         "Authorization": analystAuth,
@@ -77,16 +79,20 @@ function authHeaders(extra = {}) {
 }
 
 async function safeFetch(url, options = {}) {
-    const fetchOptions = typeof csrfFetchOptions === "function"
-        ? csrfFetchOptions(options)
-        : options;
-    const response = await fetch(url, fetchOptions);
+    const response = typeof csrfFetch === "function"
+        ? await csrfFetch(url, options)
+        : await fetch(url, typeof csrfFetchOptions === "function" ? csrfFetchOptions(options) : options);
     const authFlowRequest = String(url).includes("/auth/login") || String(url).includes("/auth/mfa/verify");
 
-    if (!authFlowRequest && (response.status === 401 || response.status === 403)) {
+    if (!authFlowRequest && response.status === 401) {
         analystAuth = null;
         analystUsername = null;
-        throw new Error("Sessão expirada ou credenciais inválidas.");
+        window.GhostReportAuth.clearSession();
+        throw new Error("Sessão expirada. Faz login novamente.");
+    }
+
+    if (!authFlowRequest && response.status === 403) {
+        throw new Error("Sem permissões para executar esta ação.");
     }
 
     return response;
@@ -139,6 +145,7 @@ async function login() {
 
         if (loginData.mfaRequired) {
             analystAuth = null;
+            window.GhostReportAuth.clearSession();
             analystUsername = loginData.username;
             analystMfaChallengeId = loginData.mfaChallengeId;
             hideElement("loginSection");
@@ -146,7 +153,8 @@ async function login() {
             return;
         }
 
-        analystAuth = `${loginData.tokenType} ${loginData.token}`;
+        window.GhostReportAuth.setSession(loginData);
+        analystAuth = window.GhostReportAuth.getAuthHeader(ANALYST_ALLOWED_ROLES);
 
         await validateSession();
         analystUsername = loginData.username;
@@ -155,6 +163,7 @@ async function login() {
     } catch (error) {
         analystAuth = null;
         analystUsername = null;
+        window.GhostReportAuth.clearSession();
         setText("loginError", error.message || "Login inválido.");
     }
 }
@@ -180,7 +189,8 @@ async function verifyAnalystMfa() {
             })
         });
         const data = await handleJsonResponse(response);
-        analystAuth = `${data.tokenType} ${data.token}`;
+        window.GhostReportAuth.setSession(data);
+        analystAuth = window.GhostReportAuth.getAuthHeader(ANALYST_ALLOWED_ROLES);
         analystUsername = data.username;
         analystMfaChallengeId = null;
         document.getElementById("mfaCode").value = "";
@@ -189,6 +199,7 @@ async function verifyAnalystMfa() {
         showDashboard();
     } catch (error) {
         analystAuth = null;
+        window.GhostReportAuth.clearSession();
         setText("mfaError", error.message || "Codigo invalido ou expirado.");
     }
 }
@@ -196,15 +207,14 @@ async function verifyAnalystMfa() {
 function cancelAnalystMfa() {
     analystMfaChallengeId = null;
     analystUsername = null;
+    window.GhostReportAuth.clearSession();
     document.getElementById("mfaCode").value = "";
     hideElement("mfaSection");
     showElement("loginSection");
 }
 
 async function logout(reload = true) {
-    if (typeof revokeCurrentToken === "function") {
-        await revokeCurrentToken(analystAuth);
-    }
+    await window.GhostReportAuth.logout(analystAuth);
 
     analystAuth = null;
     analystUsername = null;
@@ -222,6 +232,24 @@ async function logout(reload = true) {
     }
 }
 
+async function restoreAnalystSession() {
+    const session = window.GhostReportAuth.getSession(ANALYST_ALLOWED_ROLES);
+    if (!session) {
+        return;
+    }
+
+    try {
+        analystAuth = window.GhostReportAuth.getAuthHeader(ANALYST_ALLOWED_ROLES);
+        analystUsername = session.username;
+        await validateSession();
+        showDashboard();
+    } catch {
+        analystAuth = null;
+        analystUsername = null;
+        window.GhostReportAuth.clearSession();
+    }
+}
+
 function formatBytes(size) {
     const value = Number(size || 0);
     if (value < 1024) return `${value} B`;
@@ -229,21 +257,37 @@ function formatBytes(size) {
     return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function selectCase(reportId, priority = "MEDIUM", notes = "") {
+function selectCase(reportId, priority = "MEDIUM", notes = "", reportStatus = "") {
     clearMessages();
-    setManageReadonly(false);
+    const normalizedStatus = normalizeStatus(reportStatus);
+    selectedCaseStatus = normalizedStatus;
 
     document.getElementById("selectedReportId").value = reportId;
     setText("selectedReportLabel", reportId);
     document.getElementById("newNotes").value = notes || "";
 
+    if (normalizedStatus && document.getElementById("newStatus").value !== normalizedStatus) {
+        document.getElementById("newStatus").value = normalizedStatus === "SUBMITTED"
+            ? "UNDER_REVIEW"
+            : normalizedStatus;
+    }
+
     if (priority) {
         document.getElementById("newPriority").value = priority;
     }
 
+    setManageReadonly(TERMINAL_REPORT_STATUSES.includes(normalizedStatus));
     setText("caseResult", `Caso ${reportId} selecionado.`);
     showPage("managePage");
+    if (normalizedStatus === "SUBMITTED") {
+        setChildren("attachments", message("result", "Assume o caso antes de consultar anexos ou alterar estado."));
+        return;
+    }
     loadAttachmentsForReport(reportId);
+}
+
+function normalizeStatus(status) {
+    return String(status || "").trim().toUpperCase();
 }
 
 function renderSubmittedReport(report) {
@@ -254,8 +298,7 @@ function renderSubmittedReport(report) {
         metaLine("Estado", report.status),
         metaLine("Descrição", report.description),
         element("div", { className: "case-actions" },
-            actionButton("Assumir caso", "assignToMe", { reportId: report.id }),
-            actionButton("Selecionar", "selectCase", { reportId: report.id })
+            actionButton("Assumir caso", "assignToMe", { reportId: report.id })
         )
     );
 }
@@ -275,7 +318,8 @@ function renderCase(caseReview, readonly = false) {
             actionButton(label, action, {
                 reportId: caseReview.reportId,
                 priority: caseReview.priority || "MEDIUM",
-                notes: caseReview.notes || ""
+                notes: caseReview.notes || "",
+                status: caseReview.reportStatus || ""
             }),
             readonly ? actionButton("Gerar pacote", "generateCasePackage", { reportId: caseReview.reportId }, "package-btn") : null
         ),
@@ -426,9 +470,33 @@ function selectedReportIdOrFail() {
 async function updateStatus() {
     clearMessages();
 
+    if (statusUpdateInFlight) {
+        return;
+    }
+
     try {
         const reportId = selectedReportIdOrFail();
-        const status = document.getElementById("newStatus").value;
+        const status = normalizeStatus(document.getElementById("newStatus").value);
+
+        if (TERMINAL_REPORT_STATUSES.includes(selectedCaseStatus)) {
+            setManageReadonly(true);
+            setText("caseResult", `Caso já se encontra ${selectedCaseStatus}.`);
+            return;
+        }
+
+        if (selectedCaseStatus === status) {
+            setText("caseResult", `Caso já se encontra ${status}.`);
+            return;
+        }
+
+        if (selectedCaseStatus === "SUBMITTED" && status === "RESOLVED") {
+            document.getElementById("newStatus").value = "UNDER_REVIEW";
+            setText("caseError", "Atualiza primeiro o caso para UNDER_REVIEW antes de o resolver.");
+            return;
+        }
+
+        statusUpdateInFlight = true;
+        setStatusButtonBusy(true);
 
         const response = await safeFetch(`${API_BASE}/analyst/reports/${encodeURIComponent(reportId)}/status`, {
             method: "PATCH",
@@ -438,15 +506,46 @@ async function updateStatus() {
             body: JSON.stringify({ status })
         });
 
-        await handleJsonResponse(response);
+        const updatedReport = await handleJsonResponse(response);
+        selectedCaseStatus = normalizeStatus(updatedReport.status);
 
-        setText("caseResult", "Estado atualizado.");
-        loadSubmittedReports();
-        loadMyCases();
-        loadHistory();
+        setText("caseResult", `Estado atualizado para ${selectedCaseStatus}.`);
+        if (TERMINAL_REPORT_STATUSES.includes(selectedCaseStatus)) {
+            setManageReadonly(true);
+        }
+        await Promise.all([
+            loadSubmittedReports(),
+            loadMyCases(),
+            loadHistory()
+        ]);
     } catch (error) {
-        setText("caseError", error.message);
+        setText("caseError", analystActionErrorMessage(error));
+    } finally {
+        statusUpdateInFlight = false;
+        setStatusButtonBusy(false);
     }
+}
+
+function setStatusButtonBusy(busy) {
+    const statusBtn = document.getElementById("updateStatusBtn");
+    if (!statusBtn) return;
+    statusBtn.disabled = busy || TERMINAL_REPORT_STATUSES.includes(selectedCaseStatus);
+}
+
+function analystActionErrorMessage(error) {
+    if (error?.status === 400) {
+        return "Pedido inválido ou transição de estado não permitida. Atualiza a lista e confirma o estado atual do caso.";
+    }
+    if (error?.status === 401) {
+        return "Sessão expirada. Faz login novamente.";
+    }
+    if (error?.status === 403) {
+        return "Sem permissões para este caso.";
+    }
+    if (error?.status === 409) {
+        return "O caso foi alterado entretanto. Atualiza a lista e tenta novamente.";
+    }
+    return error.message || "Erro no pedido.";
 }
 
 function setManageReadonly(readonly) {
@@ -458,13 +557,16 @@ function setManageReadonly(readonly) {
     const priorityBtn = document.getElementById("updatePriorityBtn");
     const notesBtn = document.getElementById("updateNotesBtn");
 
-    if (statusBtn) statusBtn.style.display = readonly ? "none" : "inline-block";
+    if (statusBtn) {
+        statusBtn.style.display = readonly ? "none" : "inline-block";
+        statusBtn.disabled = readonly || statusUpdateInFlight;
+    }
     if (priorityBtn) priorityBtn.style.display = readonly ? "none" : "inline-block";
     if (notesBtn) notesBtn.style.display = readonly ? "none" : "inline-block";
 }
 
-function viewCaseOnly(reportId, priority = "MEDIUM", notes = "") {
-    selectCase(reportId, priority, notes);
+function viewCaseOnly(reportId, priority = "MEDIUM", notes = "", reportStatus = "") {
+    selectCase(reportId, priority, notes, reportStatus);
     setManageReadonly(true);
 }
 
@@ -593,8 +695,8 @@ document.addEventListener("click", event => {
         updateNotes,
         loadHistory,
         assignToMe: () => assignToMe(Number(button.dataset.reportId)),
-        selectCase: () => selectCase(Number(button.dataset.reportId), button.dataset.priority, button.dataset.notes || ""),
-        viewCaseOnly: () => viewCaseOnly(Number(button.dataset.reportId), button.dataset.priority, button.dataset.notes || ""),
+        selectCase: () => selectCase(Number(button.dataset.reportId), button.dataset.priority, button.dataset.notes || "", button.dataset.status || ""),
+        viewCaseOnly: () => viewCaseOnly(Number(button.dataset.reportId), button.dataset.priority, button.dataset.notes || "", button.dataset.status || ""),
         generateCasePackage: () => generateCasePackage(Number(button.dataset.reportId)),
         downloadAttachment: () => downloadAttachment(Number(button.dataset.attachmentId))
     };
@@ -602,3 +704,9 @@ document.addEventListener("click", event => {
     const action = actions[button.dataset.action];
     if (action) action();
 });
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", restoreAnalystSession);
+} else {
+    restoreAnalystSession();
+}

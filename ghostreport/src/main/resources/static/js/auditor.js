@@ -10,6 +10,7 @@ const {
 let auditorAuth = null;
 let auditorUsername = null;
 let auditorMfaChallengeId = null;
+const AUDITOR_ALLOWED_ROLES = ["AUDITOR", "ADMIN"];
 
 function showElement(id, display = "block") {
     const node = document.getElementById(id);
@@ -48,9 +49,7 @@ async function auditorHandleJsonResponse(response) {
 }
 
 function auditorAuthHeaders(extra = {}) {
-    if (!auditorAuth) {
-        throw new Error("Sessão inválida. Faz login novamente.");
-    }
+    auditorAuth = window.GhostReportAuth.getAuthHeader(AUDITOR_ALLOWED_ROLES);
 
     return {
         "Authorization": auditorAuth,
@@ -59,16 +58,20 @@ function auditorAuthHeaders(extra = {}) {
 }
 
 async function auditorSafeFetch(url, options = {}) {
-    const fetchOptions = typeof csrfFetchOptions === "function"
-        ? csrfFetchOptions(options)
-        : options;
-    const response = await fetch(url, fetchOptions);
+    const response = typeof csrfFetch === "function"
+        ? await csrfFetch(url, options)
+        : await fetch(url, typeof csrfFetchOptions === "function" ? csrfFetchOptions(options) : options);
     const authFlowRequest = String(url).includes("/auth/login") || String(url).includes("/auth/mfa/verify");
 
-    if (!authFlowRequest && (response.status === 401 || response.status === 403)) {
+    if (!authFlowRequest && response.status === 401) {
         auditorAuth = null;
         auditorUsername = null;
-        throw new Error("Sessão expirada ou sem permissões de auditoria.");
+        window.GhostReportAuth.clearSession();
+        throw new Error("Sessão expirada. Faz login novamente.");
+    }
+
+    if (!authFlowRequest && response.status === 403) {
+        throw new Error("Sem permissões de auditoria para executar esta ação.");
     }
 
     return response;
@@ -107,6 +110,7 @@ async function auditorLogin() {
 
         if (loginData.mfaRequired) {
             auditorAuth = null;
+            window.GhostReportAuth.clearSession();
             auditorUsername = loginData.username;
             auditorMfaChallengeId = loginData.mfaChallengeId;
             hideElement("loginSection");
@@ -114,7 +118,8 @@ async function auditorLogin() {
             return;
         }
 
-        auditorAuth = `${loginData.tokenType} ${loginData.token}`;
+        window.GhostReportAuth.setSession(loginData);
+        auditorAuth = window.GhostReportAuth.getAuthHeader(AUDITOR_ALLOWED_ROLES);
 
         await validateAuditorSession();
         auditorUsername = loginData.username;
@@ -123,6 +128,7 @@ async function auditorLogin() {
     } catch (error) {
         auditorAuth = null;
         auditorUsername = null;
+        window.GhostReportAuth.clearSession();
         setText("loginError", error.message || "Login inválido.");
     }
 }
@@ -148,7 +154,8 @@ async function verifyAuditorMfa() {
             })
         });
         const data = await auditorHandleJsonResponse(response);
-        auditorAuth = `${data.tokenType} ${data.token}`;
+        window.GhostReportAuth.setSession(data);
+        auditorAuth = window.GhostReportAuth.getAuthHeader(AUDITOR_ALLOWED_ROLES);
         auditorUsername = data.username;
         auditorMfaChallengeId = null;
         document.getElementById("mfaCode").value = "";
@@ -157,6 +164,7 @@ async function verifyAuditorMfa() {
         showAuditorDashboard();
     } catch (error) {
         auditorAuth = null;
+        window.GhostReportAuth.clearSession();
         setText("mfaError", error.message || "Codigo invalido ou expirado.");
     }
 }
@@ -164,6 +172,7 @@ async function verifyAuditorMfa() {
 function cancelAuditorMfa() {
     auditorMfaChallengeId = null;
     auditorUsername = null;
+    window.GhostReportAuth.clearSession();
     document.getElementById("mfaCode").value = "";
     hideElement("mfaSection");
     showElement("loginSection");
@@ -183,9 +192,7 @@ function showAuditorDashboard() {
 }
 
 async function auditorLogout(reload = true) {
-    if (typeof revokeCurrentToken === "function") {
-        await revokeCurrentToken(auditorAuth);
-    }
+    await window.GhostReportAuth.logout(auditorAuth);
 
     auditorAuth = null;
     auditorUsername = null;
@@ -200,6 +207,24 @@ async function auditorLogout(reload = true) {
         hideElement("mfaSection");
         showElement("auditorLoginPanel");
         showElement("loginSection", "flex");
+    }
+}
+
+async function restoreAuditorSession() {
+    const session = window.GhostReportAuth.getSession(AUDITOR_ALLOWED_ROLES);
+    if (!session) {
+        return;
+    }
+
+    try {
+        auditorAuth = window.GhostReportAuth.getAuthHeader(AUDITOR_ALLOWED_ROLES);
+        auditorUsername = session.username;
+        await validateAuditorSession();
+        showAuditorDashboard();
+    } catch {
+        auditorAuth = null;
+        auditorUsername = null;
+        window.GhostReportAuth.clearSession();
     }
 }
 
@@ -523,3 +548,9 @@ document.addEventListener("click", event => {
     const action = actions[button.dataset.action];
     if (action) action();
 });
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", restoreAuditorSession);
+} else {
+    restoreAuditorSession();
+}

@@ -68,6 +68,8 @@ class ResponseDtoCoverageTest {
                 new AttachmentResponse(1L, "evidence.pdf", "application/pdf", 128L);
         AttachmentListResponse listResponse =
                 new AttachmentListResponse(2L, "image.png", "image/png", 256L);
+        AttachmentSummaryResponse summaryResponse =
+                new AttachmentSummaryResponse(5L);
 
         assertEquals(1L, response.getId());
         assertEquals("evidence.pdf", response.getOriginalName());
@@ -77,6 +79,7 @@ class ResponseDtoCoverageTest {
         assertEquals("image.png", listResponse.getOriginalName());
         assertEquals("image/png", listResponse.getMimeType());
         assertEquals(256L, listResponse.getSize());
+        assertEquals(5L, summaryResponse.getAttachmentCount());
 
         response.setId(3L);
         response.setOriginalName("notes.txt");
@@ -86,6 +89,7 @@ class ResponseDtoCoverageTest {
         listResponse.setOriginalName("audio.wav");
         listResponse.setMimeType("audio/wav");
         listResponse.setSize(512L);
+        summaryResponse.setAttachmentCount(6L);
 
         assertEquals(3L, response.getId());
         assertEquals("notes.txt", response.getOriginalName());
@@ -95,6 +99,7 @@ class ResponseDtoCoverageTest {
         assertEquals("audio.wav", listResponse.getOriginalName());
         assertEquals("audio/wav", listResponse.getMimeType());
         assertEquals(512L, listResponse.getSize());
+        assertEquals(6L, summaryResponse.getAttachmentCount());
     }
 
     @Test
@@ -113,6 +118,7 @@ class ResponseDtoCoverageTest {
         assertEquals("SUBMITTED", report.getStatus());
         assertEquals("Fraud", report.getCategory());
         assertEquals("Description", report.getDescription());
+        assertEquals(0L, report.getAttachmentCount());
         assertEquals(2L, audit.id());
         assertEquals(timestamp, audit.timestamp());
         assertEquals("cid", audit.correlationId());

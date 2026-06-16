@@ -21,7 +21,7 @@ renomeacoes ou reorganizacao agressiva.
 - [SECURITY_TESTING.md](SECURITY_TESTING.md) - estrategia de testes, classes de teste e validacao de controlos.
 - [SPOTBUGS_TRIAGE.md](SPOTBUGS_TRIAGE.md) - papel de SpotBugs no SAST e regras de triagem.
 
-Validacao factual documentada: 286 testes Maven, 0 falhas, 0 erros e 0 skipped.
+Validacao factual documentada: 292 testes Maven, 0 falhas, 0 erros e 0 skipped.
 
 ## 4. Pipeline DevSecOps
 

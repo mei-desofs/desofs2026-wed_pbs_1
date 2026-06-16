@@ -92,6 +92,8 @@ public class CaseReviewService {
             caseReview.setPriority(CasePriority.MEDIUM);
         }
 
+        markSubmittedReportUnderReview(report, reportId);
+
         CaseReview saved = caseReviewRepository.save(caseReview);
 
         auditLogService.log(
@@ -153,6 +155,8 @@ public class CaseReviewService {
         if (caseReview.getPriority() == null) {
             caseReview.setPriority(CasePriority.MEDIUM);
         }
+
+        markSubmittedReportUnderReview(report, reportId);
 
         CaseReview saved = caseReviewRepository.save(caseReview);
 
@@ -237,6 +241,21 @@ public class CaseReviewService {
         CaseReview caseReview = getAccessibleCaseReview(reportId);
 
         return toResponse(caseReview);
+    }
+
+    private void markSubmittedReportUnderReview(Report report, Long reportId) {
+        if (report.getStatus() != ReportStatus.SUBMITTED) {
+            return;
+        }
+
+        report.setStatus(ReportStatus.UNDER_REVIEW);
+        reportRepository.save(report);
+        auditLogService.log(
+                "REPORT_STATUS_CHANGED",
+                "REPORT",
+                reportId,
+                "Report status changed from SUBMITTED to UNDER_REVIEW after analyst assignment"
+        );
     }
 
     @Transactional(readOnly = true)
