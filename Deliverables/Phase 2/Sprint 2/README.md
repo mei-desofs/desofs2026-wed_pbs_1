@@ -1,70 +1,48 @@
-# Documentacao final Phase 2 Sprint 2
+# Documentação final Phase 2 Sprint 2
 
-Esta pasta contem a documentacao final do GhostReport para a Phase 2 Sprint 2.
-A estrutura foi mantida como relatorio principal com anexos tecnicos, evitando
-renomeacoes ou reorganizacao agressiva.
+Esta pasta contém a documentação final do GhostReport para a Phase 2 Sprint 2.
+O objetivo deste README é servir como índice rápido da entrega para avaliação.
 
-## 1. Relatorio principal
+## 1. Relatório principal
 
-- [PHASE2_SPRINT2_REPORT.md](PHASE2_SPRINT2_REPORT.md) - relatorio principal da Sprint 2, cobrindo arquitectura, seguranca, testes, pipeline, ASVS, limitacoes e conclusao.
+* [PHASE2_SPRINT2_REPORT.md](PHASE2_SPRINT2_REPORT.md) - relatório principal e narrativa final da Sprint 2, cobrindo arquitetura, domínio, roles, autenticação/MFA/JWT, RBAC, validação, uploads, auditoria, backups, pipeline, scanners, testes, ASVS, limitações e conclusão.
 
-## 2. Seguranca, arquitectura e autorizacao
+## 2. ASVS
 
-- [SECURITY_ASSESSMENT.md](SECURITY_ASSESSMENT.md) - avaliacao final de seguranca, STRIDE, riscos residuais, cenarios demonstraveis e revisao critica.
-- [AUTHORIZATION_MATRIX.md](AUTHORIZATION_MATRIX.md) - matriz de acesso por role, endpoint e controlo adicional.
-- [SECURITY_CONFIGURATION_ASSESSMENT.md](SECURITY_CONFIGURATION_ASSESSMENT.md) - avaliacao de configuracao segura e diferencas dev/prod-like.
-- [CRYPTOGRAPHIC_INVENTORY.md](CRYPTOGRAPHIC_INVENTORY.md) - inventario dos usos criptograficos, material de chave/segredo e politica de alteracao.
-- [DANGEROUS_FUNCTIONALITY.md](DANGEROUS_FUNCTIONALITY.md) - inventario de operacoes sensiveis/perigosas e respetivas mitigacoes/testes.
+* [ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx](ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx) - tracker ASVS principal da Sprint 2. Este ficheiro é a fonte principal para estados, classificações e percentagens ASVS.
+* [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md) - resumo explicativo do tracker ASVS, da evolução Sprint 1 -> Sprint 2 e dos links para evidência de suporte. Não substitui o XLSX.
 
-## 3. Testes e validacao
+## 3. Testes e qualidade
 
-- [SECURITY_TESTING.md](SECURITY_TESTING.md) - estrategia de testes, classes de teste e validacao de controlos.
-- [SPOTBUGS_TRIAGE.md](SPOTBUGS_TRIAGE.md) - papel de SpotBugs no SAST e regras de triagem.
+* [SECURITY_TESTING.md](SECURITY_TESTING.md) - estratégia de testes, classes JUnit/MockMvc e validação dos controlos de segurança.
+* [SPOTBUGS_TRIAGE.md](SPOTBUGS_TRIAGE.md) - papel de SpotBugs no SAST e regras de triagem.
 
 Validacao factual documentada: 292 testes Maven, 0 falhas, 0 erros e 0 skipped.
 
 ## 4. Pipeline DevSecOps
 
-- [DEVSECOPS_PIPELINE.md](DEVSECOPS_PIPELINE.md) - fluxo CI/CD, code review, regras de codificacao/naming, gates, artefactos, ferramentas de seguranca e diagrama do workflow.
+* [DEVSECOPS_PIPELINE.md](DEVSECOPS_PIPELINE.md) - fluxo CI/CD, code review, naming/coding standards leves, gates, artefactos, ferramentas de segurança e diagrama do workflow.
 
 Workflows principais:
 
-- `.github/workflows/dev.yml` - build/testes, JaCoCo, Gitleaks, SAST, SCA/SBOM, runtime evidence e ZAP baseline.
-- `.github/workflows/pit.yml` - mutation testing PIT em workflow dedicado.
+* `.github/workflows/dev.yml` - build/testes, JaCoCo, Gitleaks, SAST, SCA/SBOM, runtime evidence e ZAP baseline.
+* `.github/workflows/pit.yml` - mutation testing PIT em workflow dedicado.
 
-## 5. SCA, DAST e runtime evidence
+## 5. SCA, CVEs, DAST e runtime evidence
 
-- [SCA_TRIAGE.md](SCA_TRIAGE.md) - triagem SCA, CVEs Spring Security, suppressions e SBOM.
-- [IAST_RUNTIME_SECURITY.md](IAST_RUNTIME_SECURITY.md) - documento principal de seguranca runtime e evidencia IAST-like.
-- [iast-runtime-evidence.md](iast-runtime-evidence.md) - espelho documental do sumario runtime gerado pela CI.
-- [runtime-endpoints.md](runtime-endpoints.md) - endpoints e probes exercitados durante a validacao runtime.
-- [runtime-log-sanitization.md](runtime-log-sanitization.md) - verificacao de logs contra passwords, tokens, secrets e stack traces.
+* [SCA_TRIAGE.md](SCA_TRIAGE.md) - triagem SCA, CVEs Spring Security, suppressions justificadas e SBOM.
+* [IAST_RUNTIME_SECURITY.md](IAST_RUNTIME_SECURITY.md) - documento principal de segurança runtime e evidência IAST-like. A entrega não afirma IAST agent-based completo.
+* [iast-runtime-evidence.md](iast-runtime-evidence.md) - espelho documental do sumário runtime gerado pela CI.
+* [runtime-endpoints.md](runtime-endpoints.md) - endpoints e probes exercitados durante a validação runtime.
+* [runtime-log-sanitization.md](runtime-log-sanitization.md) - verificação de logs contra passwords, tokens, secrets e stack traces.
 
-Validacao runtime expandida confirmada localmente: 101 probes, 101 passed, 0
-failed e 0 skipped. Os artefactos exactos sao gerados em `target/iast-evidence/`
-por cada run do workflow.
+Validação runtime expandida confirmada localmente: 101 probes, 101 passed, 0 failed e 0 skipped. Os artefactos exatos são gerados em `target/iast-evidence/` por cada run do workflow.
 
-## 6. ASVS
+## 6. Segurança, arquitetura e autorização
 
-- [ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx](ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx) - tracker ASVS principal da Sprint 2 em Excel, copiado estruturalmente do tracker Sprint 1 e actualizado com a evidencia factual do projecto.
-- [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md) - resumo explicativo do tracker ASVS, evolucao Sprint 1 -> Sprint 2 e links para evidencia de suporte.
-
-O XLSX e a fonte principal para estados e percentagens ASVS; o Markdown e apenas
-o resumo narrativo.
-
-## 7. Demonstracao
-
-- [FINAL_DEMO_GUIDE.md](FINAL_DEMO_GUIDE.md) - guiao pratico para demonstrar a aplicacao e apontar para as evidencias principais.
-
-## 8. Instalacao segura
-
-- [SECURE_INSTALLATION.md](SECURE_INSTALLATION.md) - instalacao segura, perfis, secrets, base de dados e storage.
-
-## Notas de organizacao
-
-- `PHASE2_SPRINT2_REPORT.md` e a fonte narrativa principal.
-- `ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx` e a fonte ASVS principal.
-- `DEVSECOPS_PIPELINE.md` e a fonte principal para pipeline, code review, standards leves de codigo e artefactos.
-- `IAST_RUNTIME_SECURITY.md` e a fonte principal para runtime security evidence / IAST-like academic evidence; os restantes ficheiros runtime sao anexos de evidencia.
-- A revisao final antiga foi incorporada em [PHASE2_SPRINT2_REPORT.md](PHASE2_SPRINT2_REPORT.md) e [SECURITY_ASSESSMENT.md](SECURITY_ASSESSMENT.md), para evitar um ficheiro solto redundante.
-- Os relatorios de Phase 1 e Sprint 1 permanecem fora desta pasta e devem ser usados apenas como contexto historico.
+* [SECURITY_ASSESSMENT.md](SECURITY_ASSESSMENT.md) - avaliação final de segurança, STRIDE, riscos residuais, cenários demonstráveis e revisão crítica.
+* [AUTHORIZATION_MATRIX.md](AUTHORIZATION_MATRIX.md) - matriz de acesso por role, endpoint e controlo adicional.
+* [SECURITY_CONFIGURATION_ASSESSMENT.md](SECURITY_CONFIGURATION_ASSESSMENT.md) - avaliação de configuração segura e diferenças dev/prod-like.
+* [SECURE_INSTALLATION.md](SECURE_INSTALLATION.md) - instalação segura, perfis, secrets, base de dados, TLS/proxy e storage.
+* [CRYPTOGRAPHIC_INVENTORY.md](CRYPTOGRAPHIC_INVENTORY.md) - inventário dos usos criptográficos, material de chave/segredo e política de alteração.
+* [DANGEROUS_FUNCTIONALITY.md](DANGEROUS_FUNCTIONALITY.md) - inventário de operações sensíveis/perigosas e respetivas mitigações/testes.
