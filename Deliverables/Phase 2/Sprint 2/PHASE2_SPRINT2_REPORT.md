@@ -69,9 +69,9 @@ Resumo da evolução:
 | RBAC | Regras base por role. | Matriz completa por endpoint, testes negativos e ownership em fluxos de analista. |
 | Denuncias anonimas | Submissao e tracking code implementados. | Tracking, anexos, downloads e enumeracao exercitados por testes e runtime probes. |
 | Uploads/backups | Controlos de filesystem implementados. | Quotas, manifestos, HMAC, restore com reautenticacao e minimizacao de respostas reforcados. |
-| SCA/SBOM | Dependency-Check base. | CVEs Spring Security triados/remediados, suppressions justificadas e SBOM CycloneDX. |
+| SCA/SBOM | Dependency-Check base. | CVEs Spring Security triados/remediados, suppressions justificadas, SBOM CycloneDX em job separado e Trivy image scan. |
 | Runtime evidence | Evidencia inicial limitada. | 101 probes runtime/IAST-like: 101 passed, 0 failed, 0 skipped. |
-| Testes | Suite de seguranca base. | 292 testes Maven confirmados, incluindo ASVS hardening e cenarios negativos. |
+| Testes | Suite de seguranca base. | 299 testes Maven confirmados, incluindo ASVS hardening e cenarios negativos. |
 | ASVS | Tracker Sprint 1 como base. | XLSX Sprint 2 copiado estruturalmente e actualizado com evidencia factual. |
 
 ## 3. Objetivos da Sprint 2
@@ -414,13 +414,17 @@ Esta disciplina evita o merge de código inseguro porque combina revisão humana
 
 O workflow principal `dev` é executado em `push`, `pull_request` e `workflow_dispatch`. Utiliza `concurrency` para cancelar execuções antigas da mesma referência (*ref*). As principais automações são:
 
-| Job                   | Automação                                                       | Resultado esperado                                                                 |
-| --------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `build-test`          | `./mvnw verify`                                                 | Build, testes e JaCoCo; publica os relatórios do Surefire e a cobertura de código. |
-| `security-secrets`    | Gitleaks em Docker                                              | Deteta secrets comprometidos e publica um relatório em formato JSON.               |
-| `sast`                | CodeQL init/analyze, SpotBugs, SonarCloud                       | Produz evidências SAST e faz o upload dos artefactos.                              |
-| `dependency-scanning` | Dependency-Check + CycloneDX                                    | Gera SARIF para code scanning, relatórios HTML/XML/JSON e SBOM.                    |
-| `dast-scan`           | Runtime tests, arranque da aplicação, probes HTTP, ZAP baseline | Produz evidências de runtime/IAST-like e DAST baseline.                            |
+| Job | Automacao | Resultado esperado |
+| --- | --- | --- |
+| `config-validation` | Ficheiros essenciais, Java 17 e Dockerfile Temurin 17 | Falha cedo se a base do pipeline estiver incoerente. |
+| `build` | `./mvnw -DskipTests clean package` | Compila e empacota a aplicacao; publica o JAR. |
+| `tests` | `./mvnw verify` | Executa testes, JaCoCo e publica Surefire/cobertura. |
+| `security-secrets` | Gitleaks em Docker | Deteta secrets comprometidos e publica relatorio redigido. |
+| `sast` | CodeQL init/analyze, SpotBugs, SonarCloud | Produz evidencias SAST e faz upload dos artefactos. |
+| `dependency-scanning` | Dependency-Check com `failBuildOnCVSS=9` | Gera SARIF/HTML/XML/JSON e bloqueia CVEs criticos nao suprimidos. |
+| `sbom` | CycloneDX | Gera `bom.json` e `bom.xml` em artefacto dedicado. |
+| `artifact-scan` | Docker build + Trivy image scan | Analisa a imagem Docker; bloqueia CRITICAL e publica a imagem para DAST. |
+| `dast-scan` | Runtime tests, imagem Docker, probes HTTP, ZAP baseline | Produz evidencias runtime/IAST-like e DAST baseline. |
 
 O workflow `pit-mutation-testing` é executado através de `workflow_dispatch`, em pull requests e em alterações relevantes na branch `main`. Gera `target/pit-reports/index.html` e o artefacto `pit-mutation-testing-report`.
 
@@ -519,7 +523,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-16: 292 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-17: 299 testes, 0 falhas, 0 erros, 0 skipped.
 
 **Categorias cobertas:**
 

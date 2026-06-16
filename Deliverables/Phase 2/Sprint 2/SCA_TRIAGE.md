@@ -57,7 +57,7 @@ Mesmo que a superfície SAML não esteja ativa no GhostReport, a triagem optou p
 ```powershell
 cd ghostreport
 .\mvnw.cmd dependency:tree
-.\mvnw.cmd org.owasp:dependency-check-maven:12.1.0:check -Dformat=ALL -DossindexAnalyzerEnabled=false -DfailOnError=false -DfailBuildOnCVSS=11
+.\mvnw.cmd org.owasp:dependency-check-maven:12.1.0:check -Dformat=ALL -DossindexAnalyzerEnabled=false -DfailOnError=false -DfailBuildOnCVSS=9
 .\mvnw.cmd -DskipTests org.cyclonedx:cyclonedx-maven-plugin:2.9.1:makeAggregateBom
 ```
 
@@ -81,7 +81,8 @@ O comando `.\mvnw.cmd dependency:tree` também confirmou:
 4. Preferir a atualização da versão/BOM quando existir uma versão corrigida compatível.
 5. Usar suppression apenas para falso positivo ou componente não aplicável, sempre com data de expiração.
 6. Registar risco residual quando o CVE não puder ser corrigido antes da entrega.
-7. Gerar SBOM CycloneDX para facilitar auditorias futuras.
+7. Gerar SBOM CycloneDX em job separado para facilitar auditorias futuras.
+8. Construir a imagem Docker e rever o Trivy image scan como camada adicional de supply chain/runtime artifact review.
 
 ## Suppressions
 

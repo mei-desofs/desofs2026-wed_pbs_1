@@ -11,9 +11,7 @@ sensor or source-to-sink telemetry. The correct claim is:
 
 > IAST-like academic runtime security evidence / runtime security testing evidence.
 
-The evidence combines automated Spring Boot security tests, a packaged
-application running on `localhost:8081`, live HTTP probes, real MFA-backed role
-logins, application log sanitization and OWASP ZAP baseline output.
+The evidence combines automated Spring Boot security tests, the Docker image `ghostreport:ci` produced by the `artifact-scan` job after the Trivy critical gate, a live container running on `localhost:8081`, live HTTP probes, real MFA-backed role logins, application log sanitization and OWASP ZAP baseline output.
 
 The expanded local runtime probe run on 2026-06-15 produced 101 probes: 101
 passed, 0 failed and 0 skipped. The absent public `/login.html` page is treated
@@ -24,8 +22,7 @@ cover admin reauthentication for staging restore.
 
 ## Runtime tests executed in CI
 
-The `dast-scan` job runs a focused Maven test set before packaging the
-application:
+The `dast-scan` job runs a focused Maven test set before loading and starting the scanned Docker image:
 
 - `RuntimeSecurityEventLoggingTest`
 - `ErrorHandlingSecurityTest`

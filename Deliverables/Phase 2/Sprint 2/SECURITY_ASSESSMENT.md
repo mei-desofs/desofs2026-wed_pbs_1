@@ -161,7 +161,7 @@ Evidencia: `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`,
 | Upload hardening | Implementado | MIME/magic bytes, scanner local EICAR, quarantine e path checks. |
 | Auditoria/alertas | Implementado | Logs e alertas com integrity metadata. |
 | Backups | Implementado | Manifestos, hashes, HMAC, verify/restore para staging com reautenticacao e sem exposicao de path interno na resposta. |
-| SCA/SBOM | Implementado | Dependency-Check e CycloneDX. |
+| SCA/SBOM/container | Implementado | Dependency-Check, CycloneDX e Trivy image scan. |
 | SAST | Implementado como evidencia | CodeQL, SpotBugs, SonarCloud. |
 | DAST | Implementado baseline | ZAP baseline e runtime probes; validacao local expandida com 101 probes, 101 passed, 0 failed e 0 skipped. |
 | IAST | Parcial | Evidencia runtime/IAST-like, nao agente completo. |

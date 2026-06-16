@@ -10,7 +10,7 @@ O ficheiro foi criado como cópia estrutural do tracker ASVS da Phase 2 Sprint 1
 
 | Evidencia | Resultado confirmado |
 | --- | --- |
-| Testes Maven | `292` testes, `0` falhas, `0` erros, `0` skipped. |
+| Testes Maven | `299` testes, `0` falhas, `0` erros, `0` skipped. |
 | Runtime probes locais | `101` probes, `101` passed, `0` failed, `0` skipped. |
 | Spring Security | `6.5.11` via Spring Boot `3.5.15`. |
 | SCA CVEs remediados | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003. |
@@ -27,7 +27,7 @@ O XLSX continua a ser a fonte principal para estados, classificações e percent
 | Validacao e API | DTOs e Bean Validation base. | Rejeicao adicional de mass assignment, HPP, headers anormais, content type errado e contratos de erro genericos. |
 | Ficheiros e backups | Upload seguro e backups/evidence packages iniciais. | Quotas acumuladas, HMAC/manifestos, restore com reautenticacao e minimizacao de paths internos. |
 | Browser/frontend | Paginas estaticas funcionais. | CSP reporting, headers modernos, JWT limitado a `sessionStorage` de sessao, ausencia de `localStorage`, DOM clobbering/XSS checks e fallback de browser. |
-| Supply chain | Dependency-Check base. | Spring Security actualizado para `6.5.11`, CVEs triados, suppressions justificadas e SBOM. |
+| Supply chain | Dependency-Check base. | Spring Security actualizado para `6.5.11`, CVEs triados, suppressions justificadas, SBOM CycloneDX separado e Trivy image scan na pipeline. |
 | Runtime evidence | Cobertura runtime limitada. | 101 probes IAST-like/runtime, sem falhas ou skipped na validacao local. |
 | Fora de ambito | Capitulos nao usados tratados com menor detalhe. | OAuth/OIDC e WebRTC mantidos como `Not Applicable` quando nao fazem parte do produto. |
 
@@ -44,7 +44,7 @@ O XLSX continua a ser a fonte principal para estados, classificações e percent
 | Ficheiros/uploads              | Extensão/MIME/magic bytes, tamanho, quota por request/denúncia, nomes gerados, path checks e ZIP Slip em backups/packages.                                                                                                         | Implementado                                                                                               |
 | Erros e logging                | Erros genéricos, correlation id, audit logs, security alerts e sanitização.                                                                                                                                                        | Implementado                                                                                               |
 | Backups/evidência              | ZIPs com hashes, HMAC, manifesto, verificação e restore para staging com reautenticação do admin.                                                                                                                                  | Implementado                                                                                               |
-| SCA/SAST/DAST/runtime          | Dependency-Check, CycloneDX, CodeQL, SpotBugs, SonarCloud, Gitleaks, ZAP baseline e runtime evidence.                                                                                                                              | Implementado como evidência                                                                                |
+| SCA/SAST/DAST/runtime          | Dependency-Check, CycloneDX, Trivy image scan, CodeQL, SpotBugs, SonarCloud, Gitleaks, ZAP baseline e runtime evidence.                                                                                                                              | Implementado como evidência                                                                                |
 | Configuração                   | Secrets por ambiente, PostgreSQL fora de testes, validação de configuração e guia seguro.                                                                                                                                          | Implementado/documentado                                                                                   |
 | Headers/browser security       | CSP restritiva com `report-to`, header `Report-To`, endpoint `/security/csp-report`, HSTS preload, COOP/COEP/CORP, Fetch Metadata/Origin validation, fallback para browsers sem features esperadas e bloqueio de headers anormais. | Implementado                                                                                               |
 | Criptografia                   | [CRYPTOGRAPHIC_INVENTORY.md](CRYPTOGRAPHIC_INVENTORY.md) mapeia BCrypt, SecureRandom, HMAC-SHA-256, SHA-256, JWT, backups e hashes de integridade; `CryptographicInventoryTest` verifica o inventário.                             | Implementado                                                                                               |

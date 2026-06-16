@@ -20,9 +20,8 @@ O job `dast-scan` em `.github/workflows/dev.yml` executa uma validacao runtime
 com varias camadas:
 
 1. Corre testes Maven focados em seguranca runtime.
-2. Empacota a aplicacao Spring Boot.
-3. Arranca GhostReport em `http://localhost:8081` com perfil `dev` e PostgreSQL
-   de CI.
+2. Descarrega a imagem Docker `ghostreport:ci` produzida pelo job `artifact-scan` depois do gate critico Trivy.
+3. Arranca GhostReport em container em `http://localhost:8081` com perfil `dev` e PostgreSQL de CI.
 4. Executa probes HTTP reais com `.github/scripts/runtime_security_probe.py`.
 5. Completa login e MFA dev para `ADMIN`, `ANALYST` e `AUDITOR`.
 6. Testa endpoints publicos, endpoints protegidos e fronteiras RBAC.

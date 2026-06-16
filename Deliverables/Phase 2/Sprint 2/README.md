@@ -17,7 +17,7 @@ O objetivo deste README é servir como índice rápido da entrega para avaliaç�
 * [SECURITY_TESTING.md](SECURITY_TESTING.md) - estratégia de testes, classes JUnit/MockMvc e validação dos controlos de segurança.
 * [SPOTBUGS_TRIAGE.md](SPOTBUGS_TRIAGE.md) - papel de SpotBugs no SAST e regras de triagem.
 
-Validacao factual documentada: 292 testes Maven, 0 falhas, 0 erros e 0 skipped.
+Validacao factual documentada: 299 testes Maven, 0 falhas, 0 erros e 0 skipped.
 
 ## 4. Pipeline DevSecOps
 
@@ -25,7 +25,7 @@ Validacao factual documentada: 292 testes Maven, 0 falhas, 0 erros e 0 skipped.
 
 Workflows principais:
 
-* `.github/workflows/dev.yml` - build/testes, JaCoCo, Gitleaks, SAST, SCA/SBOM, runtime evidence e ZAP baseline.
+* `.github/workflows/dev.yml` - config-validation, build, testes/JaCoCo, Gitleaks, SAST, SCA, SBOM, Trivy image scan, runtime evidence e ZAP baseline.
 * `.github/workflows/pit.yml` - mutation testing PIT em workflow dedicado.
 
 ## 5. SCA, CVEs, DAST e runtime evidence

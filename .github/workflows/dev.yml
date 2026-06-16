@@ -18,10 +18,124 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-test:
-    name: build-test / build-and-test
+  config-validation:
+    name: config-validation / repository-baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        working-directory: ./ghostreport
+
+    steps:
+      - name: Checkout repository content
+        uses: actions/checkout@v6
+
+      - name: Validate required DevSecOps files
+        run: |
+          required_paths=(
+            "pom.xml"
+            "Dockerfile"
+            ".dockerignore"
+            "src/main/resources/application.yaml"
+            "../.gitleaks.toml"
+            "../.github/workflows/dev.yml"
+            "../.github/workflows/pit.yml"
+            "../.github/scripts/runtime_security_probe.py"
+          )
+
+          missing=0
+          for path in "${required_paths[@]}"; do
+            if [ ! -s "$path" ]; then
+              echo "Missing required file: $path"
+              missing=1
+            fi
+          done
+
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+          if ! grep -q "<java.version>17</java.version>" pom.xml; then
+            echo "pom.xml is not aligned with Java 17."
+            exit 1
+          fi
+
+          if ! grep -Eq "eclipse-temurin:17-(jdk|jre)" Dockerfile; then
+            echo "Dockerfile is not aligned with Java 17 runtime/build images."
+            exit 1
+          fi
+
+      - name: Publish config validation summary
+        if: always()
+        run: |
+          {
+            echo "## Configuration Validation"
+            echo ""
+            echo "| Evidence | Result |"
+            echo "| --- | --- |"
+            echo "| Required workflow/script/config files | Checked |"
+            echo "| Maven Java version | Java 17 expected |"
+            echo "| Dockerfile Java base images | Temurin 17 expected |"
+            echo "| Gate mode | Blocking for missing essential files or Java mismatch |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: build / compile-and-package
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [config-validation]
+
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        working-directory: ./ghostreport
+
+    steps:
+      - name: Checkout repository content
+        uses: actions/checkout@v6
+
+      - name: Prepare Java 17 and Maven dependency cache
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: ghostreport/pom.xml
+
+      - name: Compile and package GhostReport without tests
+        run: ./mvnw -DskipTests clean package
+
+      - name: Upload packaged application artifact
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ghostreport-application-jar
+          path: ghostreport/target/ghostreport-0.0.1-SNAPSHOT.jar
+          if-no-files-found: error
+
+      - name: Publish build evidence summary
+        if: always()
+        run: |
+          {
+            echo "## Build"
+            echo ""
+            echo "| Evidence | Artifact |"
+            echo "| --- | --- |"
+            echo "| Packaged Spring Boot JAR | ghostreport-application-jar |"
+            echo "| Gate mode | Blocking for compile/package failures |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  tests:
+    name: tests / automated-tests-and-coverage
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    needs: [config-validation, build]
 
     permissions:
       contents: read
@@ -93,13 +207,14 @@ jobs:
             echo "| Maven verify test results | ci-surefire-test-reports |"
             echo "| JaCoCo report and coverage check | ci-jacoco-coverage-report |"
             echo "| PIT mutation testing | Dedicated pit-mutation-testing workflow |"
-            echo "| Gate mode | Blocking for compile/tests/coverage |"
+            echo "| Gate mode | Blocking for tests/coverage |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   security-secrets:
     name: security-secrets / secrets
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: [config-validation]
 
     permissions:
       contents: read
@@ -161,7 +276,7 @@ jobs:
     name: sast / SonarCloud SAST Scan
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [build-test, security-secrets]
+    needs: [tests, security-secrets]
 
     permissions:
       contents: read
@@ -275,7 +390,7 @@ jobs:
     name: dependency-scanning / Dependency Vulnerability Scanning
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    needs: [build-test, security-secrets]
+    needs: [tests, security-secrets]
 
     permissions:
       contents: read
@@ -298,9 +413,8 @@ jobs:
           cache: maven
           cache-dependency-path: ghostreport/pom.xml
 
-      - name: Run OWASP Dependency-Check SCA in evidence mode
-        run: ./mvnw org.owasp:dependency-check-maven:12.1.0:check -Dformat=ALL -DossindexAnalyzerEnabled=false -DfailOnError=false -DfailBuildOnCVSS=11
-        continue-on-error: true
+      - name: Run OWASP Dependency-Check SCA with critical vulnerability gate
+        run: ./mvnw org.owasp:dependency-check-maven:12.1.0:check -Dformat=ALL -DossindexAnalyzerEnabled=false -DfailOnError=false -DfailBuildOnCVSS=9
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
 
@@ -320,25 +434,12 @@ jobs:
           sarif_file: ghostreport/target/dependency-check-report/dependency-check-report.sarif
           category: owasp-dependency-check
 
-      - name: Generate CycloneDX SBOM
-        run: ./mvnw -DskipTests org.cyclonedx:cyclonedx-maven-plugin:2.9.1:makeAggregateBom
-
       - name: Upload Dependency-Check SCA reports
         uses: actions/upload-artifact@v7
         if: always()
         with:
           name: dependency-check-sca-reports
           path: ghostreport/target/dependency-check-report/**
-          if-no-files-found: warn
-
-      - name: Upload CycloneDX SBOM artifacts
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: sbom-cyclonedx
-          path: |
-            ghostreport/target/bom.json
-            ghostreport/target/bom.xml
           if-no-files-found: warn
 
       - name: Publish dependency scanning evidence summary
@@ -351,15 +452,154 @@ jobs:
             echo "| --- | --- |"
             echo "| Dependency-Check HTML/XML/JSON/SARIF reports | dependency-check-sca-reports |"
             echo "| Dependency-Check SARIF | GitHub Code Scanning when generated |"
-            echo "| CycloneDX JSON/XML SBOM | sbom-cyclonedx |"
-            echo "| Gate mode | Evidence review |"
+            echo "| Gate mode | Blocking for unsuppressed CVSS >= 9 findings; High findings remain triage/evidence |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  sbom:
+    name: sbom / cyclonedx
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [build]
+
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        working-directory: ./ghostreport
+
+    steps:
+      - name: Checkout repository content
+        uses: actions/checkout@v6
+
+      - name: Prepare Java 17 and Maven dependency cache
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: ghostreport/pom.xml
+
+      - name: Generate CycloneDX SBOM
+        run: ./mvnw -DskipTests org.cyclonedx:cyclonedx-maven-plugin:2.9.1:makeAggregateBom
+
+      - name: Upload CycloneDX SBOM artifact
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sbom-cyclonedx
+          path: |
+            ghostreport/target/bom.json
+            ghostreport/target/bom.xml
+          if-no-files-found: warn
+
+      - name: Publish SBOM evidence summary
+        if: always()
+        run: |
+          {
+            echo "## SBOM"
+            echo ""
+            echo "| Evidence | Artifact |"
+            echo "| --- | --- |"
+            echo "| CycloneDX bom.json/bom.xml | sbom-cyclonedx |"
+            echo "| Gate mode | Blocking for SBOM generation failures |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  artifact-scan:
+    name: artifact-scan / trivy-image-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [build, security-secrets]
+
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        working-directory: ./ghostreport
+
+    steps:
+      - name: Checkout repository content
+        uses: actions/checkout@v6
+
+      - name: Build GhostReport Docker image
+        run: docker build --pull -t ghostreport:ci .
+
+      - name: Run Trivy image scan for evidence
+        run: |
+          mkdir -p target/trivy
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD/target/trivy:/reports" \
+            aquasec/trivy:latest \
+            image \
+              --ignore-unfixed \
+              --severity HIGH,CRITICAL \
+              --format json \
+              --output /reports/trivy-image-report.json \
+              ghostreport:ci
+
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD/target/trivy:/reports" \
+            aquasec/trivy:latest \
+            image \
+              --ignore-unfixed \
+              --severity HIGH,CRITICAL \
+              --format table \
+              --output /reports/trivy-image-report.txt \
+              ghostreport:ci
+
+      - name: Enforce Trivy critical vulnerability gate
+        run: |
+          mkdir -p target/trivy
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:latest \
+            image \
+              --ignore-unfixed \
+              --severity CRITICAL \
+              --exit-code 1 \
+              --format table \
+              ghostreport:ci | tee target/trivy/trivy-critical-gate.txt
+
+      - name: Export Docker image for DAST runtime
+        run: docker save ghostreport:ci -o target/ghostreport-image.tar
+
+      - name: Upload Trivy container scan reports
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: container-trivy-scan-reports
+          path: ghostreport/target/trivy/**
+          if-no-files-found: warn
+
+      - name: Upload Docker image artifact for DAST
+        uses: actions/upload-artifact@v7
+        with:
+          name: ghostreport-docker-image
+          path: ghostreport/target/ghostreport-image.tar
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Publish artifact scan evidence summary
+        if: always()
+        run: |
+          {
+            echo "## Artifact and Container Scan"
+            echo ""
+            echo "| Evidence | Artifact |"
+            echo "| --- | --- |"
+            echo "| Trivy HIGH/CRITICAL image reports | container-trivy-scan-reports |"
+            echo "| Docker image used by DAST | ghostreport-docker-image |"
+            echo "| Gate mode | Blocking for fixed unsuppressed CRITICAL image findings; HIGH findings remain triage/evidence |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   dast-scan:
     name: dast-scan / dast-scan
     runs-on: ubuntu-latest
     timeout-minutes: 35
-    needs: [build-test, security-secrets]
+    needs: [tests, security-secrets, artifact-scan]
 
     permissions:
       contents: read
@@ -403,23 +643,42 @@ jobs:
             -Dtest=RuntimeSecurityEventLoggingTest,ErrorHandlingSecurityTest,SecurityHeadersTest,JwtServiceSecurityTest,LoginRateLimitSecurityTest,CsrfSecurityTest,PublicReportFlowIntegrationTest,ReportControllerAttachmentUploadTest,RbacAuthorizationMatrixTest,AdminMfaAuthenticationTest,AuditorAuthorizationTest,AdminBackupControllerSecurityTest,BackupServiceIntegrationTest,ApiValidationContractTest \
             test
 
-      - name: Build GhostReport executable JAR for DAST and runtime security testing
-        run: ./mvnw -DskipTests package
+      - name: Download scanned Docker image artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ghostreport-docker-image
+          path: ghostreport/target
 
-      - name: Start GhostReport on the runner at localhost:8081
+      - name: Load GhostReport Docker image for DAST
+        run: |
+          image_tar="$(find target -name ghostreport-image.tar -print -quit)"
+          if [ -z "$image_tar" ]; then
+            echo "ghostreport-image.tar artifact was not found."
+            exit 1
+          fi
+
+          docker load -i "$image_tar"
+          docker image inspect ghostreport:ci > target/ghostreport-image-inspect.json
+
+      - name: Start scanned GhostReport image on the runner at localhost:8081
         run: |
           mkdir -p target/zap-reports
           mkdir -p target/iast-evidence
           chmod 777 target/zap-reports
-          nohup java \
-            -jar target/ghostreport-0.0.1-SNAPSHOT.jar \
-            --spring.profiles.active=dev \
-            > target/ghostreport-dast-app.log 2>&1 &
-          echo $! > target/ghostreport-dast-app.pid
-        env:
-          DB_URL: jdbc:postgresql://localhost:5432/ghostreport
-          DB_USERNAME: postgres
-          DB_PASSWORD: user
+          chmod 777 target/iast-evidence
+
+          docker rm -f ghostreport-dast-app 2>/dev/null || true
+          docker run -d \
+            --name ghostreport-dast-app \
+            --network host \
+            -e DB_URL=jdbc:postgresql://localhost:5432/ghostreport \
+            -e DB_USERNAME=postgres \
+            -e DB_PASSWORD=user \
+            ghostreport:ci \
+            --spring.profiles.active=dev
+
+          docker logs -f ghostreport-dast-app > target/ghostreport-dast-app.log 2>&1 &
+          echo $! > target/ghostreport-dast-log.pid
 
       - name: Wait until GhostReport is ready for scanning
         run: |
@@ -515,7 +774,7 @@ jobs:
             echo "## Application Runtime"
             echo ""
             echo "Application state: $app_state"
-            echo "Runtime: packaged Spring Boot JAR with dev profile and PostgreSQL service."
+            echo "Runtime: Docker image \`ghostreport:ci\` with dev profile and PostgreSQL service, after Trivy critical vulnerability gate."
             echo ""
             echo "## Security-focused Runtime Tests"
             echo ""
@@ -627,12 +886,15 @@ jobs:
             echo "| --- | --- |"
             echo "| Runtime security-focused tests and IAST-like evidence | iast-runtime-security-evidence |"
             echo "| ZAP HTML/XML/JSON reports and application log | dast-zap-baseline-reports |"
-            echo "| Gate mode | Runtime security tests blocking; ZAP evidence review |"
+            echo "| Runtime image | Scanned Docker image from artifact-scan job |"
+            echo "| Gate mode | Runtime security tests and image startup blocking; ZAP evidence review |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Stop GhostReport background process
+      - name: Stop GhostReport DAST container
         if: always()
         run: |
-          if [ -f target/ghostreport-dast-app.pid ]; then
-            kill "$(cat target/ghostreport-dast-app.pid)" || true
+          if [ -f target/ghostreport-dast-log.pid ]; then
+            kill "$(cat target/ghostreport-dast-log.pid)" || true
           fi
+
+          docker rm -f ghostreport-dast-app 2>/dev/null || true

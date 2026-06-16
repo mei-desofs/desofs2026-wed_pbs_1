@@ -9,7 +9,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-16: 292 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-17: 299 testes, 0 falhas, 0 erros, 0 skipped.
 
 ## 2. Estrategia
 
@@ -119,14 +119,15 @@ A revisao ASVS final adicionou evidencias directas para:
 
 ## 7. Testes de seguranca runtime/pipeline
 
-Na pipeline, alem de `./mvnw verify`, existe job `dast-scan` que:
+Na pipeline, alem de `./mvnw verify`, existe job `dast-scan` que depende do `artifact-scan`:
 
 - corre testes runtime seleccionados;
-- arranca a aplicacao em `localhost:8081`;
+- descarrega a imagem Docker `ghostreport:ci` que passou pelo gate critico Trivy;
+- arranca a aplicacao em container em `localhost:8081`;
 - faz probes HTTP;
 - verifica logs para fuga de dados sensiveis;
 - corre ZAP baseline;
-- publica evidencia.
+- publica evidencia runtime/IAST-like e DAST baseline.
 
 Validacao local do probe expandido, executado contra a aplicacao em
 `http://localhost:8081` com perfil `test` e MFA activo para demonstracao:
