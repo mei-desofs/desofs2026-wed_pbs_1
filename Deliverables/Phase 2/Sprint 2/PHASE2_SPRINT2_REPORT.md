@@ -124,8 +124,6 @@ flowchart TB
     api --> db["PostgreSQL"]
     api --> fs["Filesystem<br/>uploads / evidence / backups"]
     api --> audit["Audit logs<br/>security alerts"]
-    gha["GitHub Actions dev.yml"] --> checks["Maven tests / SAST / SCA / runtime / ZAP"]
-    checks --> artifacts["Artefactos CI<br/>Surefire / JaCoCo / SBOM / ZAP / runtime evidence"]
 ```
 
 ### 5.3 Stack
