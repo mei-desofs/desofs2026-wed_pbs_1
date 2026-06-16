@@ -13,6 +13,7 @@ producao real.
 | --- | --- | --- |
 | Spring Security | Regras centralizadas, filtro JWT, CSP/HSTS/COOP/COEP/CORP, `report-to csp-endpoint`, header `Report-To`, Fetch Metadata/Origin validation e request-boundary filter. | Implementado para a aplicacao. |
 | Autenticacao | BCrypt, JWT e MFA para `ADMIN`, `ANALYST` e `AUDITOR`. | Implementado. |
+| Sessao frontend academica | Depois de MFA valido, o frontend estatico guarda o JWT apenas em `sessionStorage` durante a sessao do browser e envia `Authorization: Bearer <token>` nos pedidos internos; logout limpa a sessao. | Adequado para demo academica; hardening futuro seria cookie HttpOnly SameSite ou IdP/session manager externo. |
 | CSRF | Cookie `XSRF-TOKEN` legivel pelo frontend para envio em `X-XSRF-TOKEN`; `/auth/login` e `/security/csp-report` ficam fora do CSRF por desenho. | Implementado; cookie CSRF nao e token de sessao/autenticacao. |
 | Secrets | Esperados por ambiente/deployment secrets; dev/test secrets sao rejeitados em prod-like. | Implementado; secret manager e futuro. |
 | Base de dados | PostgreSQL em runtime, H2 em testes; prod-like exige `sslmode=verify-ca` ou `sslmode=verify-full`. | Implementado; migracoes formais sao futuro. |

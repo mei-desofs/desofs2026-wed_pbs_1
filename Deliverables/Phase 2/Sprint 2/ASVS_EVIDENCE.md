@@ -13,7 +13,7 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 
 | Evidencia | Resultado confirmado |
 | --- | --- |
-| Testes Maven | `286` testes, `0` falhas, `0` erros, `0` skipped. |
+| Testes Maven | `292` testes, `0` falhas, `0` erros, `0` skipped. |
 | Runtime probes locais | `101` probes, `101` passed, `0` failed, `0` skipped. |
 | Spring Security | `6.5.11` via Spring Boot `3.5.15`. |
 | SCA CVEs remediados | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003. |
@@ -30,7 +30,7 @@ resume apenas as mudancas qualitativas mais relevantes para leitura rapida.
 | Autorizacao | RBAC por grupos principais. | Matriz por endpoint, testes negativos por role e ownership em casos de analista. |
 | Validacao e API | DTOs e Bean Validation base. | Rejeicao adicional de mass assignment, HPP, headers anormais, content type errado e contratos de erro genericos. |
 | Ficheiros e backups | Upload seguro e backups/evidence packages iniciais. | Quotas acumuladas, HMAC/manifestos, restore com reautenticacao e minimizacao de paths internos. |
-| Browser/frontend | Paginas estaticas funcionais. | CSP reporting, headers modernos, ausencia de tokens em storage, DOM clobbering/XSS checks e fallback de browser. |
+| Browser/frontend | Paginas estaticas funcionais. | CSP reporting, headers modernos, JWT limitado a `sessionStorage` de sessao, ausencia de `localStorage`, DOM clobbering/XSS checks e fallback de browser. |
 | Supply chain | Dependency-Check base. | Spring Security actualizado para `6.5.11`, CVEs triados, suppressions justificadas e SBOM. |
 | Runtime evidence | Cobertura runtime limitada. | 101 probes IAST-like/runtime, sem falhas ou skipped na validacao local. |
 | Fora de ambito | Capitulos nao usados tratados com menor detalhe. | OAuth/OIDC e WebRTC mantidos como `Not Applicable` quando nao fazem parte do produto. |
