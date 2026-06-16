@@ -15,13 +15,23 @@ Abrir `http://localhost:8081`.
 Numa base de dados dev nova, usar as contas internas criadas pelo perfil `dev`.
 O login de `ADMIN`, `ANALYST` e `AUDITOR` exige MFA; quando a exposição dev está
 activa, o código é escrito no log da aplicação apenas para demonstração local.
+Com `ghostreport.seed-users.enabled=true`, o perfil `dev/test` mantém estas
+contas demo alinhadas:
+
+| Role | Username | Password |
+|---|---|---|
+| ADMIN | `admin` | `AdminPassword123!` |
+| ANALYST | `analyst` | `AnalystPassword123!` |
+| AUDITOR | `auditor` | `AuditorPassword123!` |
 
 ## Fluxo de demonstração
 
 1. Abrir a página pública.
 2. Submeter uma denúncia anónima.
 3. Guardar o tracking code gerado.
-4. Usar a página de tracking para verificar a denúncia.
+4. Usar a página de tracking para verificar a denúncia; a página pública mostra
+   estado, categoria e contagem de anexos, mas não nomes, IDs, caminhos,
+   previews ou links de download.
 5. Fazer upload de um ficheiro permitido.
 6. Tentar um upload proibido ou nome com padrão de traversal e mostrar rejeição.
 7. Fazer login como admin e completar MFA.
@@ -30,6 +40,20 @@ activa, o código é escrito no log da aplicação apenas para demonstração lo
 10. Fazer login como auditor e mostrar evidência de auditoria/segurança.
 11. Mostrar verificação de backup ou pacote de evidência quando disponível.
 12. Abrir o índice do Sprint 2 e ligar a demo à evidência documental.
+
+## Fluxos internos finais
+
+- `ANALYST`: assumir uma denúncia elegível; o caso passa para `UNDER_REVIEW`.
+  Depois actualizar o estado para `RESOLVED` e confirmar que o estado persiste
+  após actualizar a página. Uma transição directa inválida continua a ser
+  rejeitada.
+- `AUDITOR`: abrir Backups, listar backups existentes, verificar integridade e
+  consultar manifesto. O auditor não deve ter botão nem permissão para criar ou
+  restaurar backups.
+- `ADMIN`: abrir Backups, criar backup, validar, descarregar e, se for
+  demonstrado restore, preencher a password admin no campo dedicado. O restore
+  é validado e extraído apenas para staging controlado; não sobrescreve a base
+  de dados ou uploads live.
 
 ## Evidência a abrir
 

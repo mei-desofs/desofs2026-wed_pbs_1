@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -24,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -150,6 +152,45 @@ class PublicReportFlowIntegrationTest {
         assertFalse(response.contains("trackingCode"));
         assertFalse(response.contains("trackingCodeHash"));
         assertFalse(response.contains("hash"));
+    }
+
+    @Test
+    void verifyWithValidTrackingCodeReturnsAttachmentCountWithoutAttachmentDetails() throws Exception {
+        JsonNode created = objectMapper.readTree(
+                createReport("Attachment minimization", "Public tracking should expose only counts.", "Security")
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString()
+        );
+        MockMultipartFile file = new MockMultipartFile(
+                "files",
+                "internal-evidence.txt",
+                "text/plain",
+                "approved evidence".getBytes()
+        );
+
+        mockMvc.perform(multipart("/reports/{id}/attachments", created.get("id").asLong())
+                        .file(file)
+                        .param("trackingCode", created.get("trackingCode").asText())
+                        .with(csrf()))
+                .andExpect(status().isOk());
+
+        String response = mockMvc.perform(post("/reports/verify")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "trackingCode", created.get("trackingCode").asText()
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.attachmentCount").value(1))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertFalse(response.contains("internal-evidence.txt"));
+        assertFalse(response.contains("mimeType"));
+        assertFalse(response.contains("storagePath"));
+        assertFalse(response.contains("fileReference"));
     }
 
     @Test

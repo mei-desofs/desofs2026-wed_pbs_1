@@ -555,7 +555,7 @@ O projecto segue convencoes leves alinhadas com a estrutura real do codigo:
 | Repositories | Limitados a persistencia Spring Data/JPA. | Revisao de codigo e testes de integracao. |
 | DTOs | Requests/responses evitam expor entidades JPA directamente e reduzem mass assignment. | API tests, review e checklist de seguranca desta seccao. |
 | Validacao | Usar Bean Validation, enums, allowlists e domain primitives quando fizer sentido. | `ApiValidationContractTest`, testes de dominio e security tests. |
-| Frontend | Nao guardar tokens em storage, nao colocar logica sensivel no browser e evitar sinks XSS. | `FrontendXssDataExposureTest` e runtime probes. |
+| Frontend | Guardar JWT apenas em `sessionStorage` durante a sessao academica, nunca em `localStorage`, limpar no logout e evitar sinks XSS. | `FrontendXssDataExposureTest` e runtime probes. |
 | Logs/erros | Nao escrever passwords, JWTs, tracking codes, MFA codes ou secrets; nao devolver stack traces/paths internos. | Runtime log sanitization, `ErrorHandlingSecurityTest` e audit/logging tests. |
 | Endpoints | Novas rotas devem seguir agrupamento por contexto e ter RBAC positivo/negativo. | [AUTHORIZATION_MATRIX.md](AUTHORIZATION_MATRIX.md) e `RbacAuthorizationMatrixTest`. |
 | Dependencias | CVEs devem ser triados e SBOM actualizado. | [SCA_TRIAGE.md](SCA_TRIAGE.md), Dependency-Check e CycloneDX. |

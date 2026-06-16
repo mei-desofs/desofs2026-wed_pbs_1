@@ -99,7 +99,8 @@ Mitigacoes:
 - redaction de logs;
 - erros genericos;
 - frontend sem sinks perigosos;
-- tokens nao persistidos em browser storage;
+- JWT guardado apenas em `sessionStorage` durante a sessao do browser no
+  frontend academico, limpo no logout e nao persistido em `localStorage`;
 - tracking code nao colocado no URL;
 - auditor ve metadados adequados.
 

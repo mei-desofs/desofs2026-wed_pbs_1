@@ -207,7 +207,7 @@ class ReportControllerAttachmentUploadTest {
     }
 
     @Test
-    void publicAttachmentListRequiresMatchingTrackingCodeAndReturnsMetadata() throws Exception {
+    void publicAttachmentListRequiresMatchingTrackingCodeAndReturnsOnlyCount() throws Exception {
         Report report = createReport();
         MockMultipartFile file = new MockMultipartFile(
                 "files",
@@ -231,9 +231,10 @@ class ReportControllerAttachmentUploadTest {
                                 }
                                 """.formatted(TRACKING_CODE)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").exists())
-                .andExpect(jsonPath("$[0].originalName").value("invoice.txt"))
-                .andExpect(jsonPath("$[0].mimeType").value("text/plain"));
+                .andExpect(jsonPath("$.attachmentCount").value(1))
+                .andExpect(jsonPath("$.id").doesNotExist())
+                .andExpect(jsonPath("$.originalName").doesNotExist())
+                .andExpect(jsonPath("$.mimeType").doesNotExist());
 
         mockMvc.perform(post("/reports/{id}/attachments/list", report.getId())
                         .with(csrf())

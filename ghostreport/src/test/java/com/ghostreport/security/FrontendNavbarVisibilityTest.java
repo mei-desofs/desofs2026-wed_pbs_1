@@ -64,4 +64,16 @@ class FrontendNavbarVisibilityTest {
         assertThat(validation).doesNotContain("USER|");
         assertThat(dataInitializer).doesNotContain("UserPassword123");
     }
+
+    @Test
+    void analystStatusUpdateUiPreventsDuplicateAndInvalidSubmittedResolveRequests() throws Exception {
+        String analystJs = Files.readString(STATIC_ROOT.resolve("js/analyst.js"));
+
+        assertThat(analystJs)
+                .contains("statusUpdateInFlight")
+                .contains("setStatusButtonBusy(true)")
+                .contains("selectedCaseStatus === \"SUBMITTED\" && status === \"RESOLVED\"")
+                .contains("Atualiza primeiro o caso para UNDER_REVIEW")
+                .doesNotContain("actionButton(\"Selecionar\", \"selectCase\", { reportId: report.id })");
+    }
 }
