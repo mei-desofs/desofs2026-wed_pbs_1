@@ -25,6 +25,7 @@ constraint e a aplicacao usam apenas `ADMIN`, `ANALYST` e `AUDITOR`.
 | `POST /auth/mfa/verify` | Publico com challenge valido. |
 | `POST /auth/password-reset/request` | Publico com resposta generica. |
 | `POST /auth/password-reset/confirm` | Publico com token valido. |
+| `POST /security/csp-report` | Publico, sem CSRF, para relatorios CSP sanitizados. |
 | `POST /reports/**` publico | Permitido, mas validado por tracking code/rate limit quando aplicavel. |
 | `/admin/**` | `hasRole("ADMIN")`. |
 | `/analyst/**` | `hasAnyRole("ANALYST", "ADMIN")`. |
@@ -42,13 +43,19 @@ constraint e a aplicacao usam apenas `ADMIN`, `ANALYST` e `AUDITOR`.
 | POST | `/auth/password-reset/request` | `PasswordResetRequest` JSON | Publico | Resposta generica para evitar enumeracao. |
 | POST | `/auth/password-reset/confirm` | `PasswordResetConfirmRequest` JSON | Publico | Token valido, nao expirado/reutilizado, password policy. |
 
+## 3.1 Endpoint de security reporting
+
+| Metodo | Endpoint | Request | Acesso | Controlos |
+| --- | --- | --- | --- | --- |
+| POST | `/security/csp-report` | CSP report body | Publico | Ignorado por CSRF para permitir reports do browser; regista alerta sanitizado e resposta generica com correlation id. |
+
 ## 4. Endpoints publicos de denuncia
 
 | Metodo | Endpoint | Request | Acesso | Controlos |
 | --- | --- | --- | --- | --- |
 | POST | `/reports` | `CreateReportRequest` JSON | Publico | Bean Validation, DTO, criacao de tracking code, nao exige identidade. |
 | POST | `/reports/verify` | `VerifyTrackingCodeRequest` JSON | Publico | Rate limit de tracking, formato de codigo, erro controlado. |
-| POST | `/reports/{id}/attachments` | Multipart `files`, `trackingCode` | Publico com tracking code | Rate limit de upload, max files, extensao/MIME/magic bytes, nome gerado, scanner/quarentena. |
+| POST | `/reports/{id}/attachments` | Multipart `files`, `trackingCode` | Publico com tracking code | Rate limit de upload, max files, extensao/MIME/magic bytes, nome gerado, scanner local EICAR/quarentena. |
 | POST | `/reports/{id}/attachments/list` | `VerifyTrackingCodeRequest` JSON | Publico com tracking code | Rate limit e verificacao de posse por tracking code. |
 | POST | `/reports/download` | `DownloadRequest` JSON | Publico com tracking code | Rate limit, attachmentId positivo, tracking code, path canonical. |
 
@@ -130,3 +137,5 @@ constraint e a aplicacao usam apenas `ADMIN`, `ANALYST` e `AUDITOR`.
 - `AdminUserManagementSecurityTest`
 - `AuthenticationSecurityIntegrationTest`
 - `AdminBackupControllerSecurityTest`
+- `SecurityHeadersTest`
+- `SecurityMonitoringServiceTest`
