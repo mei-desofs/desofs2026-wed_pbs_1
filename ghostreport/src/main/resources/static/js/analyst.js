@@ -10,6 +10,7 @@ const {
 let analystAuth = null;
 let analystUsername = null;
 let analystMfaChallengeId = null;
+const ANALYST_ALLOWED_ROLES = ["ANALYST", "ADMIN"];
 
 function clearMessages() {
     ["loginError", "mfaError", "globalResult", "globalError", "caseResult", "caseError"].forEach(id => setText(id, ""));
@@ -66,9 +67,7 @@ function showPage(pageId) {
 }
 
 function authHeaders(extra = {}) {
-    if (!analystAuth) {
-        throw new Error("Sessão inválida. Faz login novamente.");
-    }
+    analystAuth = window.GhostReportAuth.getAuthHeader(ANALYST_ALLOWED_ROLES);
 
     return {
         "Authorization": analystAuth,
@@ -83,10 +82,15 @@ async function safeFetch(url, options = {}) {
     const response = await fetch(url, fetchOptions);
     const authFlowRequest = String(url).includes("/auth/login") || String(url).includes("/auth/mfa/verify");
 
-    if (!authFlowRequest && (response.status === 401 || response.status === 403)) {
+    if (!authFlowRequest && response.status === 401) {
         analystAuth = null;
         analystUsername = null;
-        throw new Error("Sessão expirada ou credenciais inválidas.");
+        window.GhostReportAuth.clearSession();
+        throw new Error("Sessão expirada. Faz login novamente.");
+    }
+
+    if (!authFlowRequest && response.status === 403) {
+        throw new Error("Sem permissões para executar esta ação.");
     }
 
     return response;
@@ -139,6 +143,7 @@ async function login() {
 
         if (loginData.mfaRequired) {
             analystAuth = null;
+            window.GhostReportAuth.clearSession();
             analystUsername = loginData.username;
             analystMfaChallengeId = loginData.mfaChallengeId;
             hideElement("loginSection");
@@ -146,7 +151,8 @@ async function login() {
             return;
         }
 
-        analystAuth = `${loginData.tokenType} ${loginData.token}`;
+        window.GhostReportAuth.setSession(loginData);
+        analystAuth = window.GhostReportAuth.getAuthHeader(ANALYST_ALLOWED_ROLES);
 
         await validateSession();
         analystUsername = loginData.username;
@@ -155,6 +161,7 @@ async function login() {
     } catch (error) {
         analystAuth = null;
         analystUsername = null;
+        window.GhostReportAuth.clearSession();
         setText("loginError", error.message || "Login inválido.");
     }
 }
@@ -180,7 +187,8 @@ async function verifyAnalystMfa() {
             })
         });
         const data = await handleJsonResponse(response);
-        analystAuth = `${data.tokenType} ${data.token}`;
+        window.GhostReportAuth.setSession(data);
+        analystAuth = window.GhostReportAuth.getAuthHeader(ANALYST_ALLOWED_ROLES);
         analystUsername = data.username;
         analystMfaChallengeId = null;
         document.getElementById("mfaCode").value = "";
@@ -189,6 +197,7 @@ async function verifyAnalystMfa() {
         showDashboard();
     } catch (error) {
         analystAuth = null;
+        window.GhostReportAuth.clearSession();
         setText("mfaError", error.message || "Codigo invalido ou expirado.");
     }
 }
@@ -196,15 +205,14 @@ async function verifyAnalystMfa() {
 function cancelAnalystMfa() {
     analystMfaChallengeId = null;
     analystUsername = null;
+    window.GhostReportAuth.clearSession();
     document.getElementById("mfaCode").value = "";
     hideElement("mfaSection");
     showElement("loginSection");
 }
 
 async function logout(reload = true) {
-    if (typeof revokeCurrentToken === "function") {
-        await revokeCurrentToken(analystAuth);
-    }
+    await window.GhostReportAuth.logout(analystAuth);
 
     analystAuth = null;
     analystUsername = null;
@@ -219,6 +227,24 @@ async function logout(reload = true) {
         hideElement("mfaSection");
         showElement("analystLoginPanel");
         showElement("loginSection", "flex");
+    }
+}
+
+async function restoreAnalystSession() {
+    const session = window.GhostReportAuth.getSession(ANALYST_ALLOWED_ROLES);
+    if (!session) {
+        return;
+    }
+
+    try {
+        analystAuth = window.GhostReportAuth.getAuthHeader(ANALYST_ALLOWED_ROLES);
+        analystUsername = session.username;
+        await validateSession();
+        showDashboard();
+    } catch {
+        analystAuth = null;
+        analystUsername = null;
+        window.GhostReportAuth.clearSession();
     }
 }
 
@@ -602,3 +628,9 @@ document.addEventListener("click", event => {
     const action = actions[button.dataset.action];
     if (action) action();
 });
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", restoreAnalystSession);
+} else {
+    restoreAnalystSession();
+}
