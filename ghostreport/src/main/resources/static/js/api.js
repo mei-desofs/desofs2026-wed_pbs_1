@@ -36,6 +36,37 @@ function csrfFetchOptions(options = {}) {
     };
 }
 
+function isUnsafeRequest(options = {}) {
+    const method = (options.method || "GET").toUpperCase();
+    return !["GET", "HEAD", "OPTIONS", "TRACE"].includes(method);
+}
+
+async function ensureCsrfCookie(options = {}) {
+    if (!isUnsafeRequest(options)) {
+        return;
+    }
+
+    const headers = options.headers || {};
+    if (headers[CSRF_HEADER_NAME] || readCookie(CSRF_COOKIE_NAME)) {
+        return;
+    }
+
+    try {
+        await fetch(`${API_BASE}/`, {
+            method: "GET",
+            credentials: "same-origin",
+            cache: "no-store"
+        });
+    } catch {
+        // The unsafe request below will still fail closed if the CSRF cookie cannot be obtained.
+    }
+}
+
+async function csrfFetch(url, options = {}) {
+    await ensureCsrfCookie(options);
+    return fetch(url, csrfFetchOptions(options));
+}
+
 async function handleJsonResponse(response) {
     const contentType = response.headers.get("content-type");
 

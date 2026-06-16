@@ -78,6 +78,24 @@ class AdminBackupControllerSecurityTest {
                         .with(csrf())
                         .header("Authorization", bearerToken("admin", "AdminPassword123!")))
                 .andExpect(status().isOk());
+
+        mockMvc.perform(get("/admin/backups/{filename}/download", filename)
+                        .header("Authorization", bearerToken("admin", "AdminPassword123!")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void backupCreationRequiresAdminTokenAndCsrf() throws Exception {
+        mockMvc.perform(post("/admin/backups")
+                        .with(csrf())
+                        .header("Authorization", bearerToken("auditor", "AuditorPassword123!")))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/admin/backups")
+                        .header("Authorization", bearerToken("admin", "AdminPassword123!")))
+                .andExpect(status().isForbidden());
+
+        createBackupAsAdmin();
     }
 
     @Test

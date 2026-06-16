@@ -76,10 +76,9 @@ function authHeaders(extra = {}) {
 }
 
 async function safeFetch(url, options = {}) {
-    const fetchOptions = typeof csrfFetchOptions === "function"
-        ? csrfFetchOptions(options)
-        : options;
-    const response = await fetch(url, fetchOptions);
+    const response = typeof csrfFetch === "function"
+        ? await csrfFetch(url, options)
+        : await fetch(url, typeof csrfFetchOptions === "function" ? csrfFetchOptions(options) : options);
     const authFlowRequest = String(url).includes("/auth/login") || String(url).includes("/auth/mfa/verify");
 
     if (!authFlowRequest && response.status === 401) {

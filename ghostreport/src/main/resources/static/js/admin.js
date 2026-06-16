@@ -114,10 +114,9 @@ function adminAuthHeaders(extra = {}) {
 }
 
 async function adminSafeFetch(url, options = {}) {
-    const fetchOptions = typeof csrfFetchOptions === "function"
-        ? csrfFetchOptions(options)
-        : options;
-    const response = await fetch(url, fetchOptions);
+    const response = typeof csrfFetch === "function"
+        ? await csrfFetch(url, options)
+        : await fetch(url, typeof csrfFetchOptions === "function" ? csrfFetchOptions(options) : options);
     const authFlowRequest = String(url).includes("/auth/login") || String(url).includes("/auth/mfa/verify");
 
     if (!authFlowRequest && response.status === 401) {
@@ -688,12 +687,22 @@ async function restoreBackup(filename) {
     clearAdminMessages();
 
     try {
+        const passwordInput = document.getElementById("backupRestorePassword");
+        const password = passwordInput ? passwordInput.value : "";
+        if (!password) {
+            setText("backupError", "Introduz a password atual de administrador para executar restore em staging.");
+            return;
+        }
+
         const response = await adminSafeFetch(`${getApiBase()}/admin/backups/${encodeURIComponent(filename)}/restore`, {
             method: "POST",
-            headers: adminAuthHeaders()
+            headers: adminAuthHeaders({
+                "X-Reauth-Password": password
+            })
         });
 
         const data = await adminHandleJsonResponse(response);
+        passwordInput.value = "";
         setText("backupResult", `${data.filename} validado e extraído para staging.`);
     } catch (error) {
         setText("backupError", error.message);
