@@ -166,6 +166,25 @@ Evidencia: `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`,
 | IAST | Parcial | Evidencia runtime/IAST-like, nao agente completo. |
 | Instalacao segura | Documentado | Secrets, perfis, PostgreSQL, checklist. |
 
+## 4.1 Avaliacao por cenario demonstravel
+
+Esta tabela resume cenarios que aparecem em testes automatizados, runtime probes
+ou documentos de evidencia desta Sprint 2. Nao substitui a matriz completa de
+endpoints; serve como guia rapido para apresentacao oral.
+
+| Fluxo | Cenario | Controlo esperado | Resultado/Evidencia |
+| --- | --- | --- | --- |
+| Denuncia anonima | Submissao sem login | Permitida e gera tracking code sem criar conta de reporter. | Pass: `PublicReportFlowIntegrationTest` e runtime probe `POST /reports`. |
+| Tracking code | Codigo invalido ou repetido | Erro controlado e evidencia de anti-enumeracao/rate limit. | Pass: `TrackingCodeEnumerationTest` e probes `POST /reports/verify`. |
+| Login interno | Password valida de role interna | Inicia MFA e nao emite JWT final antes do codigo. | Pass: `AdminMfaAuthenticationTest` e probes de `ADMIN`, `ANALYST`, `AUDITOR`. |
+| MFA | Challenge reutilizado | Rejeitado apos uso ou invalidacao. | Pass: runtime probes de reutilizacao MFA por role. |
+| RBAC admin | `ANALYST` tenta `/admin/users` | Resposta `403`. | Pass: `RbacAuthorizationMatrixTest` e runtime probe. |
+| RBAC auditor | `ANALYST` tenta `/audit/logs` | Resposta `403`. | Pass: runtime probe e testes de auditoria/autorizacao. |
+| Upload | Extensao proibida, MIME incoerente ou traversal | Pedido rejeitado sem path interno. | Pass: `ReportControllerAttachmentUploadTest`, `FileStorageServiceTest` e runtime probes. |
+| Backups | Filename com path traversal | Rejeicao controlada; restore destrutivo nao executado no probe. | Pass: `AdminBackupControllerSecurityTest`, `BackupServiceIntegrationTest` e probes de verify/restore invalido. |
+| Headers/browser | Paginas publicas | CSP/HSTS/COOP/COEP/CORP e ausencia de tokens/tracking code em HTML publico. | Pass: `SecurityHeadersTest`, `FrontendXssDataExposureTest` e probes publicos. |
+| Logs/erros | Erro ou alerta de seguranca | Sem passwords, bearer tokens, tracking codes, paths internos ou stack traces. | Pass: `ErrorHandlingSecurityTest`, `AnonymousDataLoggingTest` e runtime log sanitization. |
+
 ## 5. Riscos residuais
 
 | Risco | Impacto | Mitigacao futura |
