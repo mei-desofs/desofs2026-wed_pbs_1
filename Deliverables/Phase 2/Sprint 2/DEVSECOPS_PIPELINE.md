@@ -492,10 +492,10 @@ estejam configurados no GitHub Actions.
 O fluxo de revisao pretendido no GhostReport e branch-based: as alteracoes sao
 isoladas em branches, revistas por pull request e validadas por workflows antes
 de serem integradas. A evidencia local do repositorio confirma merges de PRs,
-branches `feature/*`, `fix/*`, `docs/*`, `security/*`/`ci-*`, o template
-`.github/pull_request_template.md`, Dependabot e os workflows `dev.yml` e
-`pit.yml`. A metadata detalhada de aprovacoes/reviewers deve ser confirmada na
-interface GitHub, porque nao fica totalmente disponivel no clone local.
+branches `feature/*`, `fix/*`, `docs/*`, `security/*`/`ci-*`, Dependabot e os
+workflows `dev.yml` e `pit.yml`. A metadata detalhada de aprovacoes/reviewers
+deve ser confirmada na interface GitHub, porque nao fica totalmente disponivel
+no clone local.
 
 O code review nao e apenas leitura manual. Ele combina revisao humana, testes,
 analise estatica, analise de dependencias, runtime evidence, ZAP baseline,
@@ -508,16 +508,15 @@ Fluxo de revisao:
 3. Correr testes locais relevantes; para backend, o minimo recomendado e
    `cd ghostreport; .\mvnw.cmd test`.
 4. Abrir pull request com resumo, motivo e impacto de seguranca.
-5. Preencher a checklist do template de PR quando aplicavel.
-6. Validar a run de `dev.yml`: build/testes/JaCoCo, Gitleaks, SAST,
+5. Validar a run de `dev.yml`: build/testes/JaCoCo, Gitleaks, SAST,
    Dependency-Check, SBOM, runtime evidence e ZAP baseline.
-7. Executar ou rever `pit.yml` quando a alteracao toca codigo/testes Java e o
+6. Executar ou rever `pit.yml` quando a alteracao toca codigo/testes Java e o
    custo temporal se justifica.
-8. Triar findings: corrigir, aceitar com justificacao, suprimir com prazo de
+7. Triar findings: corrigir, aceitar com justificacao, suprimir com prazo de
    revisao ou documentar limitacao.
-9. Actualizar testes, matriz de autorizacao, ASVS ou anexos quando uma claim de
+8. Actualizar testes, matriz de autorizacao, ASVS ou anexos quando uma claim de
    seguranca muda.
-10. Integrar apenas quando os checks e riscos confirmados forem aceitaveis.
+9. Integrar apenas quando os checks e riscos confirmados forem aceitaveis.
 
 ### Code review responsibilities
 
@@ -554,7 +553,7 @@ O projecto segue convencoes leves alinhadas com a estrutura real do codigo:
 | Controllers | Recebem HTTP, aplicam validacao inicial/DTOs e devolvem respostas; nao devem concentrar regras de negocio. | Code review, MockMvc e testes de controller/security. |
 | Services | Centralizam regras de negocio, ownership, workflow, filesystem seguro e decisoes sensiveis. | Testes unitarios/integracao em `service` e `security`. |
 | Repositories | Limitados a persistencia Spring Data/JPA. | Revisao de codigo e testes de integracao. |
-| DTOs | Requests/responses evitam expor entidades JPA directamente e reduzem mass assignment. | API tests, review e checklist do PR. |
+| DTOs | Requests/responses evitam expor entidades JPA directamente e reduzem mass assignment. | API tests, review e checklist de seguranca desta seccao. |
 | Validacao | Usar Bean Validation, enums, allowlists e domain primitives quando fizer sentido. | `ApiValidationContractTest`, testes de dominio e security tests. |
 | Frontend | Nao guardar tokens em storage, nao colocar logica sensivel no browser e evitar sinks XSS. | `FrontendXssDataExposureTest` e runtime probes. |
 | Logs/erros | Nao escrever passwords, JWTs, tracking codes, MFA codes ou secrets; nao devolver stack traces/paths internos. | Runtime log sanitization, `ErrorHandlingSecurityTest` e audit/logging tests. |
@@ -640,7 +639,6 @@ Tabela de decisao operacional:
 | Merge PR `#51` de `docs/finalize-phase2-sprint2-documentation` | Finalizacao Sprint 2, MFA, PIT/runtime e coverage. | Maven, PIT, DAST/runtime e docs. | Resultado exacto dos checks deve ser consultado no run GitHub. |
 | Merge PR `#50` de `fix/spring-security-dependency-alerts` | Remediacao CVEs Spring Security via BOM. | SCA, dependency tree e testes. | Aprovacoes formais nao sao visiveis localmente. |
 | Merge PR `#48` de `feat/project-final-review` | Revisao final, MFA/admin e documentacao. | Testes, docs e security review. | Metadata de reviewer nao fica preservada no log local. |
-| `.github/pull_request_template.md` | Checklist de seguranca para PRs. | DTOs, validacao, erros/logs, dependencies, workflows e ASVS. | O preenchimento de cada PR deve ser verificado no GitHub. |
 | `.github/dependabot.yml` | PRs semanais para Maven e GitHub Actions. | Dependency review, SCA e workflows. | Dependabot nao substitui triagem humana. |
 
 Local repository evidence confirms branch-based development, automated security

@@ -392,8 +392,7 @@ deve confirmar que a alteracao continua alinhada com o modelo de seguranca do
 GhostReport.
 
 A evidencia local mostra merges de pull requests, branches tematicas
-`feature/*`, `fix/*` e `docs/*`, o template
-`.github/pull_request_template.md`, Dependabot e workflows GitHub Actions. A
+`feature/*`, `fix/*` e `docs/*`, Dependabot e workflows GitHub Actions. A
 metadata detalhada de aprovacoes/reviewers deve ser confirmada na interface
 GitHub, porque o clone local nao preserva todos esses dados.
 
