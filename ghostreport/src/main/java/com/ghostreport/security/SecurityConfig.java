@@ -320,25 +320,37 @@ public class SecurityConfig {
             Enumeration<String> names = request.getHeaderNames();
             while (names != null && names.hasMoreElements()) {
                 String name = names.nextElement();
-                if (containsControlCharacters(name)) {
+                if (isUnsafeHeaderName(request, name) || hasUnsafeHeaderValue(request, name)) {
                     return true;
-                }
-                if (isHttp2OrHttp3(request) && CONNECTION_SPECIFIC_HEADERS.contains(name.toLowerCase())) {
-                    return true;
-                }
-                Enumeration<String> values = request.getHeaders(name);
-                while (values != null && values.hasMoreElements()) {
-                    String value = values.nextElement();
-                    if (containsControlCharacters(value) || value.length() > MAX_HEADER_VALUE_LENGTH) {
-                        return true;
-                    }
-                    if (HttpHeaders.AUTHORIZATION.equalsIgnoreCase(name)
-                            && value.length() > MAX_AUTHORIZATION_HEADER_LENGTH) {
-                        return true;
-                    }
                 }
             }
             return false;
+        }
+
+        private boolean isUnsafeHeaderName(HttpServletRequest request, String name) {
+            return containsControlCharacters(name)
+                    || (isHttp2OrHttp3(request) && CONNECTION_SPECIFIC_HEADERS.contains(name.toLowerCase()));
+        }
+
+        private boolean hasUnsafeHeaderValue(HttpServletRequest request, String name) {
+            Enumeration<String> values = request.getHeaders(name);
+            while (values != null && values.hasMoreElements()) {
+                if (isUnsafeHeaderValue(name, values.nextElement())) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private boolean isUnsafeHeaderValue(String name, String value) {
+            return containsControlCharacters(value)
+                    || value.length() > MAX_HEADER_VALUE_LENGTH
+                    || isOversizedAuthorizationHeader(name, value);
+        }
+
+        private boolean isOversizedAuthorizationHeader(String name, String value) {
+            return HttpHeaders.AUTHORIZATION.equalsIgnoreCase(name)
+                    && value.length() > MAX_AUTHORIZATION_HEADER_LENGTH;
         }
 
         private boolean isHttp2OrHttp3(HttpServletRequest request) {
