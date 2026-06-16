@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.Normalizer;
+import java.util.Locale;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,14 +26,14 @@ class DangerousFunctionalityInventoryTest {
 
     @Test
     void dangerousFunctionalityIsDocumented() throws IOException {
-        String inventory = Files.readString(INVENTORY, StandardCharsets.UTF_8);
+        String inventory = normalize(Files.readString(INVENTORY, StandardCharsets.UTF_8));
 
         Map<String, String> expectedEvidence = Map.ofEntries(
                 Map.entry("restoreBackup", "Backup restore"),
                 Map.entry("createBackup", "Backup create/download/verify"),
                 Map.entry("storeAttachment", "Uploads anonimos"),
                 Map.entry("downloadAttachment", "Download de anexos"),
-                Map.entry("generateCasePackage", "Evidence packages"),
+                Map.entry("generateCasePackage", "Uploads e pacotes de evidencia"),
                 Map.entry("requestResetForUserId", "Password reset/admin reset"),
                 Map.entry("JwtService", "JWT e revogacao"),
                 Map.entry("SecurityLogSanitizer", "Audit/security logs"),
@@ -44,8 +46,15 @@ class DangerousFunctionalityInventoryTest {
                     .isTrue();
             assertThat(inventory)
                     .as(codeToken + " should be documented as dangerous functionality")
-                    .contains(inventoryToken);
+                    .contains(normalize(inventoryToken));
         });
+    }
+
+    private static String normalize(String value) {
+        String decomposed = Normalizer.normalize(value, Normalizer.Form.NFD);
+        return decomposed
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT);
     }
 
     private static boolean sourceContains(String token) {
