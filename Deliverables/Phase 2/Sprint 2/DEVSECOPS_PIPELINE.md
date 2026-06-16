@@ -12,12 +12,93 @@ corre ZAP baseline e publica artefactos.
 | Workflow | Triggers | Objectivo |
 | --- | --- | --- |
 | `.github/workflows/dev.yml` | `push` para `main`/`develop`, `pull_request` para `main`/`develop`, `workflow_dispatch` | Pipeline principal de build, testes e seguranca. |
-| `.github/workflows/pit.yml` | `workflow_dispatch`, PRs para `main` quando mudam `ghostreport/pom.xml`, `ghostreport/src/**` ou o proprio workflow, e `push` para `main` com os mesmos paths | Mutation testing completo com PIT. |
+| `.github/workflows/pit.yml` | `workflow_dispatch`, PRs para `main` quando mudam `ghostreport/pom.xml`, `ghostreport/src/main/**`, `ghostreport/src/test/**` ou o proprio workflow, e `push` para `main` com os mesmos paths | Mutation testing completo com PIT. |
 
 O workflow principal usa `concurrency` para cancelar execucoes anteriores da
 mesma ref, evitando consumir runner em builds obsoletas.
 
-## 3. Fluxo completo developer -> merge
+`.github/dependabot.yml` tambem existe, mas nao e um workflow de CI. Ele abre
+actualizacoes semanais para Maven e GitHub Actions; esses PRs disparam os
+workflows acima de acordo com os seus triggers e paths.
+
+## 3. Como o GitHub Actions executa os jobs
+
+Os workflows reais do repositorio usam GitHub-hosted runners. Todos os jobs em
+`.github/workflows/dev.yml` e `.github/workflows/pit.yml` declaram
+`runs-on: ubuntu-latest`; nao ha `self-hosted` runner configurado. Cada job
+corre numa VM Linux efemera criada pelo GitHub para aquela execucao e descartada
+no fim do job.
+
+Consequencias praticas:
+
+- cada job arranca isolado, mesmo quando pertence ao mesmo workflow;
+- os ficheiros criados em `ghostreport/target` existem apenas na copia
+  temporaria do runner;
+- jobs nao partilham ficheiros automaticamente entre si;
+- ficheiros que precisam sobreviver ao job devem ser publicados como
+  artefactos com `actions/upload-artifact`;
+- dependencias podem ser aceleradas por cache, mas a cache nao e evidencia e
+  nao deve guardar secrets.
+
+O primeiro passo tecnico relevante de cada job e o checkout:
+`actions/checkout@v6` copia o repositorio para o workspace temporario do runner.
+A partir dai os comandos correm sobre essa copia. No job `sast`, o checkout usa
+`fetch-depth: 0` para disponibilizar o historico necessario a analises como
+SonarCloud; nos restantes jobs e usado o checkout padrao.
+
+Os jobs Maven configuram Java com `actions/setup-java@v5`, distribuicao
+`temurin`, `java-version: 17` e `cache: maven`. O Maven Wrapper do projecto
+aponta para Maven `3.9.14` em
+`ghostreport/.mvn/wrapper/maven-wrapper.properties`, por isso `./mvnw` garante
+uma versao Maven consistente no runner. A cache Maven reduz tempo de download de
+dependencias, mas nao deve alterar o resultado da build: o `pom.xml`, o wrapper
+e os comandos executados continuam a definir o comportamento.
+
+Servicos auxiliares tambem vivem apenas durante o job. `build-test` e
+`dast-scan` criam um servico `postgres:16` associado ao job, exposto em
+`localhost:5432`, com base de dados `ghostreport`, utilizador `postgres` e
+password de teste `user`. Este PostgreSQL e usado por testes e runtime scan, e
+os dados desaparecem quando o job termina. `security-secrets`, `sast`,
+`dependency-scanning` e `pit` nao declaram servicos; quando testes correm sem
+esse servico, o perfil de teste usa H2 em memoria
+(`application-test.yaml`/`@ActiveProfiles("test")`). O runtime do `dast-scan`
+usa perfil `dev`, que aponta para PostgreSQL atraves de `DB_URL`.
+
+```mermaid
+flowchart TD
+    A["Push / Pull Request / workflow_dispatch"] --> B["GitHub Actions cria runner ubuntu-latest efemero"]
+    B --> C["actions/checkout copia o repositorio"]
+    C --> D["Setup Java 17 + cache Maven quando necessario"]
+
+    D --> E["build-test"]
+    C --> F["security-secrets"]
+    D --> G["sast"]
+    D --> H["dependency-scanning"]
+    D --> I["dast-scan"]
+    D --> J["pit.yml: pit quando acionado"]
+
+    E --> E1["Maven verify + Surefire + JaCoCo"]
+    F --> F1["Gitleaks"]
+    G --> G1["CodeQL init/analyze + SpotBugs + SonarCloud"]
+    H --> H1["Dependency-Check + CycloneDX SBOM"]
+    I --> I1["App em localhost + runtime probes + ZAP"]
+    J --> J1["PIT mutation testing"]
+
+    E1 --> K["Upload de artefactos"]
+    F1 --> K
+    G1 --> K
+    H1 --> K
+    I1 --> K
+    J1 --> K
+
+    K --> L["Runner descartado"]
+    K --> M["Equipa reve evidencias e findings"]
+    M --> N{"Findings criticos confirmados?"}
+    N -->|Sim| O["Corrigir antes de merge"]
+    N -->|Nao| P["Code review + merge quando aceitavel"]
+```
+
+## 4. Fluxo completo developer -> merge
 
 O fluxo esperado da equipa e:
 
@@ -65,7 +146,7 @@ flowchart LR
     M --> N["Merge quando aceitavel"]
 ```
 
-## 4. Quando corre e em que branches
+## 5. Quando corre e em que branches
 
 | Evento | Branches/paths | Resultado esperado |
 | --- | --- | --- |
@@ -77,20 +158,25 @@ flowchart LR
 Branches de documentacao continuam a disparar `dev.yml` quando abrem PR para as
 branches alvo, mas PIT so corre se os paths configurados forem alterados.
 
-## 5. Checks bloqueantes e findings aceitaveis
+## 6. Checks bloqueantes e findings aceitaveis
 
 | Area | Modo no repositorio | Decisao de merge |
 | --- | --- | --- |
 | Maven build/testes/JaCoCo | `./mvnw verify` no job `build-test` | Bloqueante: falha deve ser corrigida. |
 | Gitleaks | Job termina com exit code da ferramenta | Bloqueante para leaks confirmados. Falso positivo deve ser justificado/remediado via configuracao. |
-| SonarCloud | Falha se `SONAR_TOKEN` ausente ou analise falhar | Bloqueante quando se espera SonarCloud na entrega; se token nao estiver configurado, documentar limitacao operacional. |
-| CodeQL | Upload para GitHub Code Scanning | Findings confirmados de alta severidade devem ser corrigidos antes de merge. |
-| SpotBugs | Evidencia SAST em artefacto | Corrigir bugs confirmados; falso positivo documentado em triagem. |
+| SonarCloud | Falha se `SONAR_TOKEN` ausente ou analise falhar | Bloqueante no estado actual do workflow; se o token nao estiver configurado, a run deve ser tratada como limitacao operacional, nao como evidencia SonarCloud concluida. |
+| CodeQL | `init` antes de SonarCloud e `analyze` depois de SonarCloud | Findings confirmados de alta severidade devem ser corrigidos antes de merge. Se SonarCloud falhar antes, o `analyze` nao chega a executar nessa run. |
+| SpotBugs | Gera evidencia SAST no job `sast` | Falha tecnica do comando bloqueia o job; findings confirmados devem ser corrigidos ou documentados em triagem. |
 | Dependency-Check | Evidence mode com `failBuildOnCVSS=11` e `continue-on-error` | Nao bloqueia automaticamente por CVSS; vulnerabilidades reais devem ser corrigidas ou justificadas em [SCA_TRIAGE.md](SCA_TRIAGE.md). |
 | CycloneDX SBOM | Gera `bom.json`/`bom.xml` | Bloqueia apenas se a geracao tecnica falhar e a evidencia for necessaria. |
 | Runtime tests no `dast-scan` | Maven tests seleccionados | Bloqueante para controlos runtime. |
 | ZAP baseline | `continue-on-error` com `-I` | Evidencia/review; findings sao triados, nao bloqueiam automaticamente. |
-| PIT | Workflow separado | Indicador de qualidade de testes; falha tecnica deve ser revista, mas nao substitui o gate rapido de PR. |
+| PIT | Workflow separado sem `continue-on-error` | Bloqueia a propria run quando falha, se o workflow for acionado; nao substitui o gate rapido de PR do `dev.yml`. |
+
+O repositorio nao contem configuracao de branch protection. Portanto, a partir
+dos ficheiros so e possivel afirmar quais jobs falham tecnicamente; se esses
+checks bloqueiam merge automaticamente depende da configuracao do GitHub no
+repositorio remoto.
 
 Interpretacao pratica:
 
@@ -101,13 +187,24 @@ Interpretacao pratica:
 - ausencia de secret operacional, como `SONAR_TOKEN`, deve ser tratada como
   limitacao de ambiente, nao como claim de seguranca implementado.
 
-## 6. Job `build-test`
+## 7. Job `build-test`
 
-Automacoes:
+Ambiente tecnico:
+
+- workflow: `.github/workflows/dev.yml`;
+- runner: `ubuntu-latest`;
+- timeout: 35 minutos;
+- working directory dos comandos: `./ghostreport`;
+- servico auxiliar: container `postgres:16` em `localhost:5432`;
+- Java: Temurin 17 com cache Maven;
+- Maven: `./mvnw`, usando o Maven Wrapper do projecto.
+
+Execucao interna:
 
 - checkout;
 - configuracao Java 17 com cache Maven;
-- `./mvnw verify`;
+- `./mvnw verify` com `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` apontados para o
+  PostgreSQL efemero do job;
 - upload de Surefire reports;
 - upload de JaCoCo;
 - publicacao de sumario no GitHub Step Summary.
@@ -119,9 +216,21 @@ Valor de seguranca:
 - gera artefactos revistos pelo professor/equipa;
 - JaCoCo evita que novas areas fiquem sem cobertura minima.
 
-## 7. Job `security-secrets`
+Gate: bloqueante para compilacao, testes e regras JaCoCo, porque nao usa
+`continue-on-error`.
 
-Automacoes:
+## 8. Job `security-secrets`
+
+Ambiente tecnico:
+
+- workflow: `.github/workflows/dev.yml`;
+- runner: `ubuntu-latest`;
+- timeout: 10 minutos;
+- working directory dos comandos: `./ghostreport`;
+- nao configura Java porque a ferramenta corre em Docker;
+- nao usa servico de base de dados.
+
+Execucao interna:
 
 - corre Gitleaks em Docker;
 - usa `.gitleaks.toml`;
@@ -134,14 +243,29 @@ Mitigacao STRIDE:
 - reduz Information Disclosure por secrets commitados;
 - ajuda a detectar tokens/passwords/keys antes de merge.
 
-## 8. Job `sast`
+Gate: bloqueante para leaks confirmados, porque o script termina com o exit code
+do Gitleaks. O relatorio e redigido com `--redact`.
 
-Automacoes:
+## 9. Job `sast`
+
+Ambiente tecnico:
+
+- workflow: `.github/workflows/dev.yml`;
+- runner: `ubuntu-latest`;
+- timeout: 30 minutos;
+- depende de `build-test` e `security-secrets`;
+- working directory dos comandos: `./ghostreport`;
+- Java: Temurin 17 com cache Maven;
+- cache adicional: `~/.sonar/cache` com `actions/cache@v5`;
+- permissions incluem `security-events: write` para CodeQL/Code Scanning.
+
+Execucao interna:
 
 - inicializa CodeQL para Java;
 - compila o projecto para analise;
 - corre SpotBugs;
-- corre SonarCloud quando `SONAR_TOKEN` existe;
+- corre SonarCloud usando `SONAR_TOKEN` e variaveis de projecto/organizacao
+  quando configuradas;
 - executa CodeQL analyze;
 - publica `sast-reports`.
 
@@ -149,12 +273,32 @@ Notas importantes:
 
 - CodeQL envia resultados para GitHub Code Scanning;
 - SpotBugs gera XML/site como evidencia;
-- SonarCloud depende de secret configurado;
+- SonarCloud depende do secret `SONAR_TOKEN`;
+- `SONAR_PROJECT_KEY` e `SONAR_ORGANIZATION` sao lidos de GitHub Actions vars,
+  com valores default no script;
+- se `SONAR_TOKEN` estiver ausente, o script escreve
+  `target/sast-evidence/sonarcloud-summary.txt` e falha o job antes do passo
+  `Run CodeQL analysis`;
 - SAST e evidencia complementar, nao prova ausencia de vulnerabilidades.
 
-## 9. Job `dependency-scanning`
+Gate: bloqueante para falhas tecnicas do job SAST. Findings SAST devem ser
+triados; findings confirmados de severidade alta/critica devem ser corrigidos
+antes de merge.
 
-Automacoes:
+## 10. Job `dependency-scanning`
+
+Ambiente tecnico:
+
+- workflow: `.github/workflows/dev.yml`;
+- runner: `ubuntu-latest`;
+- timeout: 25 minutos;
+- depende de `build-test` e `security-secrets`;
+- working directory dos comandos: `./ghostreport`;
+- Java: Temurin 17 com cache Maven;
+- sem servico de base de dados;
+- permissions incluem `security-events: write` para upload SARIF.
+
+Execucao interna:
 
 - OWASP Dependency-Check `12.1.0`;
 - formatos HTML/XML/JSON/SARIF;
@@ -169,13 +313,31 @@ Evidencia recente:
 - Spring Boot BOM `3.5.15` resolve Spring Security `6.5.11`;
 - SBOM permite listar componentes e suportar triagem futura.
 
-## 10. Job `dast-scan`
+Gate: o passo Dependency-Check usa `continue-on-error: true` e
+`failBuildOnCVSS=11`, por isso vulnerabilidades detectadas funcionam como
+evidencia de triagem e nao como gate automatico por CVSS. Falhas tecnicas
+posteriores, como impossibilidade de gerar SBOM, podem falhar o job.
 
-Automacoes:
+## 11. Job `dast-scan`
+
+Ambiente tecnico:
+
+- workflow: `.github/workflows/dev.yml`;
+- runner: `ubuntu-latest`;
+- timeout: 35 minutos;
+- depende de `build-test` e `security-secrets`;
+- working directory dos comandos: `./ghostreport`;
+- servico auxiliar: container `postgres:16` em `localhost:5432`;
+- Java: Temurin 17 com cache Maven;
+- runtime: JAR Spring Boot iniciado em `http://localhost:8081` com perfil
+  `dev`;
+- OWASP ZAP corre em container Docker com `--network host`.
+
+Execucao interna:
 
 - corre testes runtime de seguranca seleccionados;
 - empacota a aplicacao;
-- arranca GhostReport em `localhost:8081`;
+- arranca GhostReport em `localhost:8081` usando o PostgreSQL efemero do job;
 - espera readiness;
 - exercita paginas publicas, reports, tracking code, uploads, download/listagem
   de anexos, login/MFA/logout/password reset, endpoints admin, analyst e auditor,
@@ -216,9 +378,26 @@ Artefactos documentados na entrega:
 - [runtime-endpoints.md](runtime-endpoints.md)
 - [runtime-log-sanitization.md](runtime-log-sanitization.md)
 
-## 11. Workflow `pit-mutation-testing`
+Gate: os testes runtime, build do JAR, arranque da app e readiness sao
+bloqueantes. O passo ZAP usa `continue-on-error: true` e `-I`, por isso funciona
+como evidencia DAST baseline/passiva; findings ZAP precisam de triagem humana.
 
-Automacoes:
+## 12. Workflow `pit-mutation-testing`
+
+Ambiente tecnico:
+
+- workflow: `.github/workflows/pit.yml`;
+- job: `pit`;
+- runner: `ubuntu-latest`;
+- timeout: 90 minutos;
+- triggers: `workflow_dispatch`, PRs para `main` e pushes para `main` quando
+  mudam `ghostreport/pom.xml`, `ghostreport/src/main/**`,
+  `ghostreport/src/test/**` ou `.github/workflows/pit.yml`;
+- working directory dos comandos: `./ghostreport`;
+- Java: Temurin 17 com cache Maven;
+- sem servico de base de dados.
+
+Execucao interna:
 
 - prepara Java 17 e cache Maven;
 - compila testes;
@@ -231,7 +410,16 @@ Automacoes:
 PIT fica separado porque e mais lento. Serve para avaliar qualidade dos testes e
 nao para bloquear todos os commits rapidamente.
 
-## 12. Artefactos esperados
+Gate: sem `continue-on-error`; falha se nao encontrar classes alvo, se o PIT
+falhar ou se `target/pit-reports/index.html` nao for gerado. O artefacto usa
+`if-no-files-found: error`.
+
+## 13. Artefactos esperados
+
+Artefactos de GitHub Actions sao ficheiros copiados do runner para o run do
+workflow, para revisao posterior. Eles sao diferentes dos ficheiros temporarios
+do workspace: sem upload por `actions/upload-artifact`, relatorios gerados no
+runner desaparecem quando a VM efemera e descartada.
 
 | Artefacto | Origem | Uso |
 | --- | --- | --- |
@@ -246,11 +434,49 @@ nao para bloquear todos os commits rapidamente.
 | `dast-zap-baseline-reports` | `dast-scan` | ZAP HTML/XML/JSON e logs. |
 | `pit-mutation-testing-report` | `pit.yml` | Mutation testing. |
 
-Os artefactos ficam associados ao run de GitHub Actions. Artefactos temporarios
-gerados em `target/` nao devem ser commitados no repositorio; a documentacao da
-entrega referencia o tipo de evidencia e, quando util, inclui resumos Markdown.
+Os workflows nao definem `retention-days`, por isso a retencao concreta segue a
+configuracao default do GitHub/repo/organizacao. Nao se deve assumir que os
+artefactos ficam guardados para sempre.
 
-## 13. Relacao com STRIDE
+Artefactos temporarios gerados em `target/` nao devem ser commitados no
+repositorio; a documentacao da entrega referencia o tipo de evidencia e, quando
+util, inclui resumos Markdown.
+
+## 14. Cache, artefactos, secrets e variaveis
+
+Cache e artefactos nao resolvem o mesmo problema:
+
+- cache Maven (`actions/setup-java` com `cache: maven`) acelera builds ao
+  reaproveitar dependencias descarregadas;
+- cache Sonar (`actions/cache` em `~/.sonar/cache`) acelera o job `sast`;
+- artefactos guardam evidencias como Surefire, JaCoCo, Dependency-Check, SBOM,
+  SpotBugs, ZAP, logs runtime e PIT;
+- nenhum deles deve ser usado para guardar secrets.
+
+Secrets e variaveis vistos nos workflows:
+
+| Nome | Tipo | Onde aparece | Uso |
+| --- | --- | --- | --- |
+| `SONAR_TOKEN` | GitHub Actions secret | `sast` | Autenticar SonarCloud. |
+| `SONAR_PROJECT_KEY` | GitHub Actions variable | `sast` | Project key SonarCloud, com default no script. |
+| `SONAR_ORGANIZATION` | GitHub Actions variable | `sast` | Organizacao SonarCloud, com default no script. |
+| `NVD_API_KEY` | GitHub Actions secret | `dependency-scanning` | Passado ao Dependency-Check quando configurado. |
+| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | variaveis de ambiente do job | `build-test`, `dast-scan` | Credenciais de teste para PostgreSQL efemero do job. |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | variaveis do servico | `build-test`, `dast-scan` | Configuracao do container `postgres:16`. |
+
+`POSTGRES_PASSWORD: user` e `DB_PASSWORD: user` sao credenciais de teste dentro
+do runner efemero, nao GitHub Actions secrets. Secrets reais sao injectados no
+runner apenas durante o job que os declara e nao devem ser impressos nos logs,
+incluidos no SBOM nem guardados em artefactos. O Gitleaks procura secrets
+commitados no repositorio; isso e diferente de usar secrets de runtime
+injectados pelo GitHub Actions.
+
+O job `dast-scan` tambem procura nos logs padroes sensiveis, incluindo nomes
+como `JWT_SECRET` e `BACKUP_HMAC_SECRET`. Essa verificacao indica apenas que o
+workflow procura fugas desses padroes em logs; nao significa que esses secrets
+estejam configurados no GitHub Actions.
+
+## 15. Relacao com STRIDE
 
 | STRIDE | Pipeline/automacao |
 | --- | --- |
@@ -261,7 +487,7 @@ entrega referencia o tipo de evidencia e, quando util, inclui resumos Markdown.
 | Denial of Service | Rate limiter tests, upload limits, ZAP baseline como sinal passivo. |
 | Elevation of Privilege | RBAC/ownership tests no build; CodeQL/SpotBugs como apoio. |
 
-## 14. Governacao e code review
+## 16. Governacao e code review
 
 As antigas notas separadas de branch protection, code review e coding standards
 foram consolidadas aqui:
@@ -295,9 +521,9 @@ Critérios de triagem:
 | `Non-Storable Content` | Aceite informacional | `no-store` e mantido para endpoints/paginas sensiveis. |
 | `Session Management Response Identified` (`XSRF-TOKEN`) | Aceite informacional | O cookie identifica proteccao CSRF, nao uma sessao autenticada. |
 
-## 15. Limitacoes da pipeline
+## 17. Limitacoes da pipeline
 
-- Branch protection e configuracao do GitHub, nao totalmente provavel por ficheiros.
+- Branch protection e configuracao do GitHub nao sao totalmente comprovaveis por ficheiros.
 - SonarCloud depende de `SONAR_TOKEN`.
 - ZAP baseline nao e DAST autenticado completo.
 - IAST e runtime/academic substitute, nao agent-based.
