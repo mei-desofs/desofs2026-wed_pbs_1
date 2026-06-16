@@ -14,6 +14,9 @@ ou telemetria source-to-sink. A formulacao correcta e:
 runtime security testing / evidencia academica IAST-like
 ```
 
+Isto significa explicitamente: not full IAST, not agent-based IAST, no JVM
+agent, no taint tracking and no source-to-sink telemetry.
+
 ## O que foi feito
 
 O job `dast-scan` em `.github/workflows/dev.yml` executa uma validacao runtime
@@ -102,7 +105,7 @@ Detalhe complementar: [runtime-log-sanitization.md](runtime-log-sanitization.md)
 
 | Artefacto | Origem | Uso |
 | --- | --- | --- |
-| `target/iast-evidence/iast-runtime-evidence.md` | Workflow `dast-scan` | Sumario runtime gerado pela CI. |
+| `target/iast-evidence/iast-runtime-evidence.md` | Workflow `dast-scan` | Sumario runtime gerado pela CI; espelhado em [iast-runtime-evidence.md](iast-runtime-evidence.md). |
 | `target/iast-evidence/runtime-endpoints.md` | Probe Python | Tabela de endpoints exercitados. |
 | `target/iast-evidence/runtime-log-sanitization.md` | Check de logs | Resultado da procura por padroes sensiveis. |
 | `target/iast-evidence/runtime-probe-summary.json` | Probe Python | Sumario JSON redigido. |

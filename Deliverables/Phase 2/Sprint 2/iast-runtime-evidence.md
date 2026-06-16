@@ -11,6 +11,9 @@ sensor or source-to-sink telemetry. The correct claim is:
 
 > IAST-like academic runtime security evidence / runtime security testing evidence.
 
+This is not full IAST and not agent-based IAST. It does not attach a JVM agent,
+perform taint tracking or collect source-to-sink telemetry.
+
 The evidence combines automated Spring Boot security tests, a packaged
 application running on `localhost:8081`, live HTTP probes, real MFA-backed role
 logins, application log sanitization and OWASP ZAP baseline output.
@@ -71,7 +74,8 @@ application:
 
 ## Limitations
 
-- No full IAST agent is attached.
+- No full IAST or agent-based IAST is present.
+- No JVM agent, taint tracking or source-to-sink telemetry is present.
 - ZAP is baseline/passive and unauthenticated.
 - Authenticated ZAP contexts for admin/analyst/auditor are future work.
 - The live MFA probe relies on dev-profile MFA code exposure in CI logs; this is

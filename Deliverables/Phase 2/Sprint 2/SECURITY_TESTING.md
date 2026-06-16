@@ -2,14 +2,29 @@
 
 ## 1. Resultado local
 
-Comando executado na linha actual:
+Comando de validacao esperado:
 
 ```powershell
 cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 286 testes, 0 falhas, 0 erros, 0 skipped.
+Ultimo resultado documentado com sucesso, confirmado em 2026-06-15:
+
+| Campo Surefire/Maven | Valor |
+| --- | --- |
+| Total tests | 286 |
+| Failures | 0 |
+| Errors | 0 |
+| Skipped | 0 |
+
+Tentativa de revalidacao local em 2026-06-16: o comando acima parou antes da
+execucao dos testes porque o ambiente local expunha Java `1.8.0_491` como JRE e
+nao tinha `javac`/JDK disponivel. O Maven reportou: `No compiler is provided in
+this environment. Perhaps you are running on a JRE rather than a JDK?`
+
+Como essa tentativa nao produziu relatorios Surefire nem totais de testes, os
+numeros acima nao foram substituidos nesta revisao.
 
 ## 2. Estrategia
 

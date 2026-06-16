@@ -24,7 +24,18 @@ O job `sast` em `.github/workflows/dev.yml` corre:
 - SpotBugs em modo de evidência;
 - SonarCloud quando o token necessário está configurado.
 
-O artefacto `sast-reports` inclui XML/site output do SpotBugs quando gerado.
+O artefacto `sast-reports` inclui XML/site output do SpotBugs quando gerado. O
+workflow publica, quando existirem:
+
+- `ghostreport/target/spotbugsXml.xml`;
+- `ghostreport/target/*spotbugs*.xml`;
+- `ghostreport/target/site/spotbugs*`;
+- `ghostreport/target/sast-evidence/**`.
+
+Esta revisao documental de 2026-06-16 nao executou SpotBugs localmente, porque
+o ambiente local tinha apenas JRE Java 8 e nao disponibilizava JDK/`javac`.
+Findings actuais devem ser lidos no artefacto `sast-reports`, no Step Summary
+do job `sast` e, quando aplicavel, em GitHub Code Scanning/SonarCloud.
 
 ## Regras de triagem
 

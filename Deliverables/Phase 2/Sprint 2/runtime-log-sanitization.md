@@ -4,6 +4,10 @@ The `dast-scan` workflow writes application logs to
 `target/ghostreport-dast-app.log` and generates
 `target/iast-evidence/runtime-log-sanitization.md`.
 
+This is runtime log pattern checking for IAST-like academic evidence. It is not
+full IAST, not agent-based IAST, not JVM-agent telemetry, not taint tracking and
+not source-to-sink telemetry.
+
 The runtime probe also reads dev MFA codes from this log to complete
 admin/analyst/auditor MFA in CI. That read is intentionally limited to the dev
 profile and is used only to prove the end-to-end MFA flow in an academic

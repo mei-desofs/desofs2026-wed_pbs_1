@@ -107,7 +107,8 @@ O fluxo esperado da equipa e:
    seguranca muda.
 3. Corre localmente os testes relevantes; para backend, o minimo e
    `cd ghostreport; .\mvnw.cmd test`.
-4. Abre pull request para `main` ou `develop` usando o template do repositorio.
+4. Abre pull request para `main` ou `develop` com resumo, risco e evidencia
+   relevante. A branch `main` actual nao contem `.github/pull_request_template.md`.
 5. O workflow `dev.yml` arranca automaticamente para o PR.
 6. `build-test` executa `./mvnw verify`, testes e JaCoCo.
 7. `security-secrets` executa Gitleaks contra o repositorio.
@@ -307,11 +308,15 @@ Execucao interna:
 - artefactos `dependency-check-sca-reports` e `sbom-cyclonedx`;
 - sumario no Step Summary.
 
-Evidencia recente:
+Evidencia local recente:
 
-- alertas Spring Security `6.5.10` foram corrigidos;
+- a arvore Maven actual ja nao resolve Spring Security `6.5.10`;
 - Spring Boot BOM `3.5.15` resolve Spring Security `6.5.11`;
 - SBOM permite listar componentes e suportar triagem futura.
+
+O estado remoto exacto de GitHub Code Scanning/Dependabot Alerts deve ser
+confirmado na interface GitHub. O clone local confirma a arvore Maven e os
+ficheiros de workflow, mas nao substitui a metadata de alertas remotos.
 
 Gate: o passo Dependency-Check usa `continue-on-error: true` e
 `failBuildOnCVSS=11`, por isso vulnerabilidades detectadas funcionam como
@@ -493,9 +498,9 @@ O fluxo de revisao pretendido no GhostReport e branch-based: as alteracoes sao
 isoladas em branches, revistas por pull request e validadas por workflows antes
 de serem integradas. A evidencia local do repositorio confirma merges de PRs,
 branches `feature/*`, `fix/*`, `docs/*`, `security/*`/`ci-*`, Dependabot e os
-workflows `dev.yml` e `pit.yml`. A metadata detalhada de aprovacoes/reviewers
-deve ser confirmada na interface GitHub, porque nao fica totalmente disponivel
-no clone local.
+workflows `dev.yml` e `pit.yml`.
+
+GitHub pull request approval metadata must be checked in the GitHub interface because it is not fully available from the local repository clone.
 
 O code review nao e apenas leitura manual. Ele combina revisao humana, testes,
 analise estatica, analise de dependencias, runtime evidence, ZAP baseline,
@@ -634,6 +639,7 @@ Tabela de decisao operacional:
 
 | Evidencia local | Objectivo | Checks relevantes | Limite da evidencia |
 | --- | --- | --- | --- |
+| Merge PR `#54` de `docs/evaluate-documentation-visual-improvements` | Remocao de template PR nao usado e melhorias de documentacao. | Docs e navegacao de evidencia. | Aprovacoes/reviewers devem ser vistos no GitHub. |
 | Merge PR `#53` de `fix/asvs-final-l1-l2-l3-hardening` | Hardening ASVS e SecurityConfig. | Build/testes, docs ASVS e triagem ZAP. | Aprovacoes/reviewers devem ser vistos no GitHub. |
 | Merge PR `#52` de `docs/complete-sprint2-documentation` | Consolidacao de documentacao Sprint 2 e evidencia runtime/SCA/ASVS. | Docs, runtime probes, SCA e ASVS. | Metadata detalhada de review nao esta no clone local. |
 | Merge PR `#51` de `docs/finalize-phase2-sprint2-documentation` | Finalizacao Sprint 2, MFA, PIT/runtime e coverage. | Maven, PIT, DAST/runtime e docs. | Resultado exacto dos checks deve ser consultado no run GitHub. |
@@ -642,9 +648,8 @@ Tabela de decisao operacional:
 | `.github/dependabot.yml` | PRs semanais para Maven e GitHub Actions. | Dependency review, SCA e workflows. | Dependabot nao substitui triagem humana. |
 
 Local repository evidence confirms branch-based development, automated security
-workflows and documented triage gates. GitHub pull request approval metadata
-must be checked in the GitHub interface because it is not fully available from
-the local repository clone.
+workflows and documented triage gates. The table above is repository evidence,
+not a substitute for PR approval metadata in GitHub.
 
 ### Relationship with ASVS
 
@@ -668,5 +673,7 @@ funciona como resumo explicativo.
 - Branch protection e configuracao do GitHub nao sao totalmente comprovaveis por ficheiros.
 - SonarCloud depende de `SONAR_TOKEN`.
 - ZAP baseline nao e DAST autenticado completo.
-- IAST e runtime/academic substitute, nao agent-based.
+- IAST-like e runtime security testing academico; nao e full IAST,
+  agent-based IAST, JVM-agent telemetry, taint tracking ou source-to-sink
+  telemetry.
 - PIT pode ser demorado e por isso fica separado.

@@ -5,6 +5,10 @@ This file documents the intended shape of the generated CI artifact
 HTTP statuses can vary per run, so the CI artifact remains the run-specific
 source.
 
+These are runtime security probes used as IAST-like academic evidence. They are
+not full IAST, not agent-based IAST, not taint tracking and not source-to-sink
+telemetry.
+
 The expanded local validation on 2026-06-15 produced:
 
 | Metric | Value |
