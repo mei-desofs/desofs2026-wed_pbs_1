@@ -191,7 +191,7 @@ class BusinessLogicWorkflowSecurityTest {
                 .andExpect(status().isForbidden());
 
         assertThat(reportRepository.findById(reportId).orElseThrow().getStatus())
-                .isEqualTo(ReportStatus.SUBMITTED);
+                .isEqualTo(ReportStatus.UNDER_REVIEW);
     }
 
     @Test
