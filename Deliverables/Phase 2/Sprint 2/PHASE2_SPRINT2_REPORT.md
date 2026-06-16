@@ -52,6 +52,19 @@ Foram reforcados MFA para todas as roles internas, pipeline DevSecOps,
 SCA/SAST/DAST, evidencia runtime/IAST-like, instalacao segura, avaliacao de
 configuracao, documentacao ASVS e revisao final.
 
+Resumo da evolucao:
+
+| Area | Sprint 1 | Sprint 2 |
+| --- | --- | --- |
+| Autenticacao interna | Login JWT base para utilizadores internos. | Password + MFA antes da emissao de JWT para `ADMIN`, `ANALYST` e `AUDITOR`. |
+| RBAC | Regras base por role. | Matriz completa por endpoint, testes negativos e ownership em fluxos de analista. |
+| Denuncias anonimas | Submissao e tracking code implementados. | Tracking, anexos, downloads e enumeracao exercitados por testes e runtime probes. |
+| Uploads/backups | Controlos de filesystem implementados. | Quotas, manifestos, HMAC, restore com reautenticacao e minimizacao de respostas reforcados. |
+| SCA/SBOM | Dependency-Check base. | CVEs Spring Security triados/remediados, suppressions justificadas e SBOM CycloneDX. |
+| Runtime evidence | Evidencia inicial limitada. | 101 probes runtime/IAST-like: 101 passed, 0 failed, 0 skipped. |
+| Testes | Suite de seguranca base. | 286 testes Maven confirmados, incluindo ASVS hardening e cenarios negativos. |
+| ASVS | Tracker Sprint 1 como base. | XLSX Sprint 2 copiado estruturalmente e actualizado com evidencia factual. |
+
 ## 3. Objectivos da Sprint 2
 
 Os objectivos concretos da Sprint 2 foram:
@@ -90,7 +103,23 @@ Os objectivos concretos da Sprint 2 foram:
 | Security | Spring Security, JWT filter, RBAC, MFA, CSRF, headers e rate limiting. |
 | Storage | PostgreSQL para dados; filesystem para anexos, evidencias e backups. |
 
-### 5.2 Stack
+### 5.2 Topologia logica
+
+```mermaid
+flowchart TB
+    reporter["Denunciante anonimo"] --> publicUi["Frontend publico<br/>index/submit/track"]
+    internal["ADMIN / ANALYST / AUDITOR"] --> login["Login + MFA"]
+    login --> jwt["JWT interno"]
+    publicUi --> api["Spring Boot API"]
+    jwt --> api
+    api --> db["PostgreSQL"]
+    api --> fs["Filesystem<br/>uploads / evidence / backups"]
+    api --> audit["Audit logs<br/>security alerts"]
+    gha["GitHub Actions dev.yml"] --> checks["Maven tests / SAST / SCA / runtime / ZAP"]
+    checks --> artifacts["Artefactos CI<br/>Surefire / JaCoCo / SBOM / ZAP / runtime evidence"]
+```
+
+### 5.3 Stack
 
 | Area | Tecnologia |
 | --- | --- |
@@ -362,6 +391,11 @@ requests e validacao automatica. O objectivo nao e apenas rever estilo: cada PR
 deve confirmar que a alteracao continua alinhada com o modelo de seguranca do
 GhostReport.
 
+A evidencia local mostra merges de pull requests, branches tematicas
+`feature/*`, `fix/*` e `docs/*`, Dependabot e workflows GitHub Actions. A
+metadata detalhada de aprovacoes/reviewers deve ser confirmada na interface
+GitHub, porque o clone local nao preserva todos esses dados.
+
 Fluxo esperado:
 
 1. O developer cria uma branch com ambito claro.
@@ -387,6 +421,14 @@ Critérios usados na revisao:
 | Testes | Testes unitarios/integracao actualizados; JaCoCo e PIT usados como evidencia de qualidade. |
 | Scanners | CodeQL, SpotBugs, SonarCloud, Gitleaks, ZAP e Dependency-Check avaliados de acordo com severidade e explorabilidade. |
 | Documentacao | Claims de seguranca actualizados em `PHASE2_SPRINT2_REPORT.md`, anexos e ASVS quando mudam. |
+
+As convencoes de codigo e organizacao documentadas para a equipa sao leves e
+baseadas no repositorio real: controllers para entrada HTTP, services para
+regras/ownership, repositories para persistencia, DTOs para requests/responses,
+testes `*Test`/`*IntegrationTest`, anexos principais em `UPPER_SNAKE_CASE.md` e
+artefactos runtime em `kebab-case.md`. Novos endpoints devem seguir o
+agrupamento `/auth/**`, `/reports/**`, `/admin/**`, `/analyst/**` ou `/audit/**`
+e ser adicionados a [AUTHORIZATION_MATRIX.md](AUTHORIZATION_MATRIX.md).
 
 Os checks mais bloqueantes no codigo actual sao build/testes/JaCoCo, falhas de
 Gitleaks confirmadas e falhas tecnicas dos jobs necessarios para gerar

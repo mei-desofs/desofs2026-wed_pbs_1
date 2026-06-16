@@ -19,6 +19,22 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 | SCA CVEs remediados | CVE-2026-40988, CVE-2026-41694, CVE-2026-41003. |
 | Suppressions SCA | CVE-2025-15104 e CVE-2025-7962 documentados como nao aplicaveis/falso positivo para os componentes usados. |
 
+## Evolucao Sprint 1 -> Sprint 2
+
+O XLSX continua a ser a fonte principal para estados e percentagens. Esta tabela
+resume apenas as mudancas qualitativas mais relevantes para leitura rapida.
+
+| Area ASVS | Sprint 1 | Sprint 2 |
+| --- | --- | --- |
+| Autenticacao e sessoes | Login/JWT base e primeiros controlos de sessao. | MFA obrigatorio para roles internas, revogacao, inactive user checks e MFA de uso unico reforcados. |
+| Autorizacao | RBAC por grupos principais. | Matriz por endpoint, testes negativos por role e ownership em casos de analista. |
+| Validacao e API | DTOs e Bean Validation base. | Rejeicao adicional de mass assignment, HPP, headers anormais, content type errado e contratos de erro genericos. |
+| Ficheiros e backups | Upload seguro e backups/evidence packages iniciais. | Quotas acumuladas, HMAC/manifestos, restore com reautenticacao e minimizacao de paths internos. |
+| Browser/frontend | Paginas estaticas funcionais. | CSP reporting, headers modernos, ausencia de tokens em storage, DOM clobbering/XSS checks e fallback de browser. |
+| Supply chain | Dependency-Check base. | Spring Security actualizado para `6.5.11`, CVEs triados, suppressions justificadas e SBOM. |
+| Runtime evidence | Cobertura runtime limitada. | 101 probes IAST-like/runtime, sem falhas ou skipped na validacao local. |
+| Fora de ambito | Capitulos nao usados tratados com menor detalhe. | OAuth/OIDC e WebRTC mantidos como `Not Applicable` quando nao fazem parte do produto. |
+
 ## Mapa de evidencia
 
 | Area ASVS | Evidencia GhostReport | Estado |
