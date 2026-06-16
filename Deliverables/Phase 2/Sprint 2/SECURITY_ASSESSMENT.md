@@ -206,29 +206,3 @@ foram identificadas, mitigacoes foram implementadas, testes validam comportament
 esperado e a pipeline produz evidencia. As limitacoes restantes sao claras e
 maioritariamente operacionais.
 
-## 7. Revisao critica final
-
-Pontos fortes preservados da revisao final:
-
-- dominio claro: denuncia anonima, analise interna e evidencia de auditoria;
-- modelo de roles pequeno e facil de rever: `ADMIN`, `ANALYST`, `AUDITOR` e
-  denunciante anonimo;
-- separacao entre fluxos publicos e APIs internas protegidas;
-- mitigacoes concretas para uploads, path traversal, ZIP Slip, backups e
-  pacotes de evidencia;
-- auditoria, alertas e integridade adicionam rastreabilidade alem de CRUD;
-- pipeline com build/testes, SCA, SAST, DAST baseline, SBOM e secrets scan.
-
-Claims que devem continuar delimitados:
-
-| Claim | Limite correcto |
-| --- | --- |
-| MFA | Implementado para roles internas; canal real de producao ainda e futuro. |
-| DAST | ZAP baseline e probes runtime; nao e pentest autenticado completo. |
-| IAST | Evidencia runtime/IAST-like; sem agente IAST completo. |
-| Producao | Ha guia prod-like, mas faltam controlos operacionais externos. |
-| ASVS | Tracker Sprint 2 em XLSX actualizado; Markdown e resumo explicativo. |
-
-Com esta consolidacao, `FINAL_PROJECT_REVIEW.md` deixou de ser necessario como
-ficheiro solto: o seu conteudo util fica distribuido entre este documento e o
-relatorio principal [PHASE2_SPRINT2_REPORT.md](PHASE2_SPRINT2_REPORT.md).
