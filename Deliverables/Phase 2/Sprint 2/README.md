@@ -17,7 +17,7 @@ O objetivo deste README é servir como índice rápido da entrega para avaliaç�
 * [SECURITY_TESTING.md](SECURITY_TESTING.md) - estratégia de testes, classes JUnit/MockMvc e validação dos controlos de segurança.
 * [SPOTBUGS_TRIAGE.md](SPOTBUGS_TRIAGE.md) - papel de SpotBugs no SAST e regras de triagem.
 
-Validacao factual documentada: 292 testes Maven, 0 falhas, 0 erros e 0 skipped.
+Validacao factual documentada: 299 testes Maven, 0 falhas, 0 erros e 0 skipped.
 
 ## 4. Pipeline DevSecOps
 
@@ -46,3 +46,14 @@ Validação runtime expandida confirmada localmente: 101 probes, 101 passed, 0 f
 * [SECURE_INSTALLATION.md](SECURE_INSTALLATION.md) - instalação segura, perfis, secrets, base de dados, TLS/proxy e storage.
 * [CRYPTOGRAPHIC_INVENTORY.md](CRYPTOGRAPHIC_INVENTORY.md) - inventário dos usos criptográficos, material de chave/segredo e política de alteração.
 * [DANGEROUS_FUNCTIONALITY.md](DANGEROUS_FUNCTIONALITY.md) - inventário de operações sensíveis/perigosas e respetivas mitigações/testes.
+
+## 7. Evidencia visual
+
+As imagens em [imagens/](imagens/) são anexos visuais para apoio à apresentação. Não substituem os relatórios, testes ou artefactos gerados pela pipeline; servem para tornar a leitura rápida mais clara:
+
+* [imagens/asvs.png](imagens/asvs.png) - snapshot do resumo ASVS por capítulo e nível.
+* [imagens/asvs2.png](imagens/asvs2.png) - gráfico visual da evolução/cobertura ASVS.
+* [imagens/dependency_check.png](imagens/dependency_check.png) - resumo do Dependency-Check.
+* [imagens/jacoco.png](imagens/jacoco.png) - resumo de cobertura JaCoCo.
+* [imagens/pl.png](imagens/pl.png) - evidência visual de pull request/checks.
+* [imagens/zap.png](imagens/zap.png) - resumo do ZAP baseline.

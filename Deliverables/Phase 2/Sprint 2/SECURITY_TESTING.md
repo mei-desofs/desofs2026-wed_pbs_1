@@ -9,7 +9,13 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-16: 292 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-16: 299 testes, 0 falhas, 0 erros, 0 skipped.
+
+### Evidencia visual JaCoCo
+
+O relatório JaCoCo é gerado pela build Maven e pela pipeline como artefacto de cobertura. O screenshot seguinte é um apoio visual ao resumo de cobertura, não substituindo o relatório HTML gerado em `target/site/jacoco/`.
+
+![Resumo JaCoCo](imagens/jacoco.png)
 
 ## 2. Estrategia
 
@@ -163,6 +169,10 @@ JSON malformado, content type errado, Authorization malformado, JWT invalido,
 role errada e token ausente.
 
 ## 7.1 Triagem ZAP baseline
+
+O screenshot seguinte resume uma execução do ZAP baseline contra `http://localhost:8081`. A triagem textual abaixo continua a ser a fonte principal para a decisão de aceitar/corrigir findings.
+
+![Resumo ZAP baseline](imagens/zap.png)
 
 | Finding | Estado | Justificacao |
 | --- | --- | --- |

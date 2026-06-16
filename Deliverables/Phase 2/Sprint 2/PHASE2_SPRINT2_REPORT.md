@@ -71,7 +71,7 @@ Resumo da evolução:
 | Uploads/backups | Controlos de filesystem implementados. | Quotas, manifestos, HMAC, restore com reautenticacao e minimizacao de respostas reforcados. |
 | SCA/SBOM | Dependency-Check base. | CVEs Spring Security triados/remediados, suppressions justificadas e SBOM CycloneDX. |
 | Runtime evidence | Evidencia inicial limitada. | 101 probes runtime/IAST-like: 101 passed, 0 failed, 0 skipped. |
-| Testes | Suite de seguranca base. | 292 testes Maven confirmados, incluindo ASVS hardening e cenarios negativos. |
+| Testes | Suite de seguranca base. | 299 testes Maven confirmados, incluindo ASVS hardening e cenarios negativos. |
 | ASVS | Tracker Sprint 1 como base. | XLSX Sprint 2 copiado estruturalmente e actualizado com evidencia factual. |
 
 ## 3. Objetivos da Sprint 2
@@ -519,7 +519,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-16: 292 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-16: 299 testes, 0 falhas, 0 erros, 0 skipped.
 
 **Categorias cobertas:**
 
