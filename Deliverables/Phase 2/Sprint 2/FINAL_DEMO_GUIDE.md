@@ -15,13 +15,23 @@ Abrir `http://localhost:8081`.
 Numa base de dados dev nova, usar as contas internas criadas pelo perfil `dev`.
 O login de `ADMIN`, `ANALYST` e `AUDITOR` exige MFA; quando a exposição dev está
 activa, o código é escrito no log da aplicação apenas para demonstração local.
+Com `ghostreport.seed-users.enabled=true`, o perfil `dev/test` mantém estas
+contas demo alinhadas:
+
+| Role | Username | Password |
+|---|---|---|
+| ADMIN | `admin` | `AdminPassword123!` |
+| ANALYST | `analyst` | `AnalystPassword123!` |
+| AUDITOR | `auditor` | `AuditorPassword123!` |
 
 ## Fluxo de demonstração
 
 1. Abrir a página pública.
 2. Submeter uma denúncia anónima.
 3. Guardar o tracking code gerado.
-4. Usar a página de tracking para verificar a denúncia.
+4. Usar a página de tracking para verificar a denúncia; a página pública mostra
+   estado, categoria e contagem de anexos, mas não nomes, IDs, caminhos,
+   previews ou links de download.
 5. Fazer upload de um ficheiro permitido.
 6. Tentar um upload proibido ou nome com padrão de traversal e mostrar rejeição.
 7. Fazer login como admin e completar MFA.

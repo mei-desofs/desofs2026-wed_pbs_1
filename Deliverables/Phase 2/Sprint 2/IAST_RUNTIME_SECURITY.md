@@ -71,7 +71,7 @@ A evidencia live inclui:
 | Frontend publico | `GET /`, `/index.html`, `/submit.html`, `/track.html`, `/admin.html`, `/analyst.html`, `/auditor.html`. |
 | Auth/MFA | Login invalido, brute force, login valido das tres roles, MFA invalido/valido/reutilizado, logout e password reset. |
 | Denuncia anonima | `POST /reports` valido, invalido, com caracteres perigosos e tentativa de mass assignment. |
-| Tracking/download | `POST /reports/verify`, `POST /reports/{id}/attachments/list` e `POST /reports/download`. |
+| Tracking/download | `POST /reports/verify`, `POST /reports/{id}/attachments/list` como resumo count-only e `POST /reports/download`. |
 | Uploads | upload permitido, extensao proibida, assinatura/conteudo suspeito e filename com traversal. |
 | Admin | painel, users, audit logs, security alerts, backups, user lifecycle, role invalida e filename invalido. |
 | Analyst | painel, reports, my-cases, assign, status/priority/notes, case-review, attachments e case-package. |
