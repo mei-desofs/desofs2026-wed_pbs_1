@@ -240,10 +240,11 @@ class AnalystCaseOwnershipTest {
     @WithMockUser(username = "other_analyst", roles = "ANALYST")
     void ownershipViolationCreatesAuditLogAndSecurityAlert() throws Exception {
         Attachment attachment = createAttachment(ownerReport);
+        Long attachmentId = attachment.getId();
 
         assertThrows(
                 ResponseStatusException.class,
-                () -> reportService.downloadAttachment(attachment.getId())
+                () -> reportService.downloadAttachment(attachmentId)
         );
 
         assertThat(auditLogRepository.findAll())

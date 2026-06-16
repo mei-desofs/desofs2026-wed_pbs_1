@@ -29,6 +29,7 @@ import static com.ghostreport.validation.ValidationConstants.upper;
 public class CaseReviewService {
 
     private static final Logger logger = LoggerFactory.getLogger(CaseReviewService.class);
+    private static final String AUDIT_TARGET_REPORT = "REPORT";
 
     private final CaseReviewRepository caseReviewRepository;
     private final ReportRepository reportRepository;
@@ -95,7 +96,7 @@ public class CaseReviewService {
 
         auditLogService.log(
                 "REPORT_ASSIGNED",
-                "REPORT",
+                AUDIT_TARGET_REPORT,
                 reportId,
                 "Assigned to analyst username " + analyst.getUsername()
         );
@@ -157,7 +158,7 @@ public class CaseReviewService {
 
         auditLogService.log(
                 "REPORT_ASSIGNED",
-                "REPORT",
+                AUDIT_TARGET_REPORT,
                 reportId,
                 "Assigned to authenticated analyst"
         );
@@ -192,7 +193,7 @@ public class CaseReviewService {
 
         auditLogService.log(
                 "CASE_PRIORITY_UPDATED",
-                "REPORT",
+                AUDIT_TARGET_REPORT,
                 reportId,
                 "Priority updated to " + saved.getPriority()
         );
@@ -220,7 +221,7 @@ public class CaseReviewService {
 
         auditLogService.log(
                 "CASE_NOTES_UPDATED",
-                "REPORT",
+                AUDIT_TARGET_REPORT,
                 reportId,
                 "Internal notes updated"
         );
