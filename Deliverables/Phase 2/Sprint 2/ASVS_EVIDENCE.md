@@ -21,8 +21,10 @@ e apenas o resumo explicativo da evidencia; nao substitui o XLSX.
 
 ## Evolucao Sprint 1 -> Sprint 2
 
-O XLSX continua a ser a fonte principal para estados e percentagens. Esta tabela
-resume apenas as mudancas qualitativas mais relevantes para leitura rapida.
+O XLSX continua a ser a fonte principal para estados, classificacoes e
+percentagens. Esta tabela resume apenas as mudancas qualitativas mais
+relevantes para leitura rapida; nao introduz percentagens adicionais fora do
+tracker.
 
 | Area ASVS | Sprint 1 | Sprint 2 |
 | --- | --- | --- |
@@ -41,7 +43,7 @@ resume apenas as mudancas qualitativas mais relevantes para leitura rapida.
 | --- | --- | --- |
 | Arquitectura e threat modelling | Relatorio Phase 1, DDD, trust boundaries e relatorio Sprint 2. | Implementado/documentado |
 | Autenticacao | BCrypt, login interno, JWT, bloqueio de utilizadores inactivos e logout/revogacao. | Implementado |
-| MFA | Desafio MFA antes de JWT para `ADMIN`, `ANALYST` e `AUDITOR`, uso unico, TTL e bloqueio do challenge apos tentativas invalidas. | Implementado; canal de producao e futuro |
+| MFA | Desafio MFA antes de JWT para `ADMIN`, `ANALYST` e `AUDITOR`, uso unico, TTL e bloqueio do challenge apos tentativas invalidas. | Implementado; canal real de producao fica como controlo operacional futuro |
 | Autorizacao | Regras de rota em `SecurityConfig`, RBAC e ownership nos servicos. | Implementado |
 | Denunciante anonimo/tracking | Sem conta de reporter; tracking code controla verificacao/listagem/download. | Implementado |
 | Validacao | DTOs, Bean Validation, enums/allowlists, tracking code e contratos API. | Implementado |
@@ -52,9 +54,9 @@ resume apenas as mudancas qualitativas mais relevantes para leitura rapida.
 | Configuracao | Secrets por ambiente, PostgreSQL fora de testes, validacao de configuracao e guia seguro. | Implementado/documentado |
 | Headers/browser security | CSP restritiva com `report-to`, header `Report-To`, endpoint `/security/csp-report`, HSTS preload, COOP/COEP/CORP, Fetch Metadata/Origin validation, fallback para browsers sem features esperadas e bloqueio de headers anormais. | Implementado |
 | Criptografia | [CRYPTOGRAPHIC_INVENTORY.md](CRYPTOGRAPHIC_INVENTORY.md) mapeia BCrypt, SecureRandom, HMAC-SHA-256, SHA-256, JWT, backups e hashes de integridade; `CryptographicInventoryTest` verifica o inventario. | Implementado |
-| Dangerous functionality | [DANGEROUS_FUNCTIONALITY.md](DANGEROUS_FUNCTIONALITY.md) mapeia restore, backups, uploads, packages, password reset, JWT/logging/crypto e e verificado por teste. | Implementado |
-| Comunicacao segura | Perfil prod-like com modo TLS explicito, TLS 1.2/1.3, cifras modernas e PostgreSQL com `sslmode=verify-ca`/`verify-full`. | Implementado/configurado; certificado publico e operacional |
-| L2 aplicavel | Rate limit de submissao de denuncias, malware scanner local, JWT audience, MFA one-time, no-store, resource limits e logging estruturado. | Reavaliado no XLSX |
+| Dangerous functionality | [DANGEROUS_FUNCTIONALITY.md](DANGEROUS_FUNCTIONALITY.md) mapeia restore, backups, uploads, packages, password reset, JWT/logging/crypto e tem verificacao por teste. | Implementado |
+| Comunicacao segura | Perfil prod-like com modo TLS explicito, TLS 1.2/1.3, cifras modernas e PostgreSQL com `sslmode=verify-ca`/`verify-full`. | Implementado/configurado; certificado publico operacional fica fora do ambiente academico |
+| L2 aplicavel | Rate limit de submissao de denuncias, malware scanner local, JWT audience, MFA one-time, no-store, resource limits e logging estruturado. | Reavaliado no XLSX, com controlos parciais mantidos como `In Progress` quando dependem de operacao externa |
 
 ## Melhorias de codigo apos revisao L1/L2
 

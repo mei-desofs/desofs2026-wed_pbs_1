@@ -12,8 +12,13 @@ automatizacao DevSecOps e evidencia tecnica verificavel.
 Este documento e o relatorio principal da Phase 2 Sprint 2. Ao contrario de um
 sumario curto, pretende explicar o sistema final de ponta a ponta: requisitos,
 arquitectura, roles, endpoints, pipeline, automacoes, testes, STRIDE,
-mitigacoes, SCA/SAST/DAST/IAST-like, configuracao segura, evidencias ASVS,
-limitacoes e trabalho futuro.
+mitigacoes, SCA/SAST/DAST, evidencia runtime/IAST-like, configuracao segura,
+rastreabilidade ASVS, limitacoes e trabalho futuro.
+
+A narrativa deve ser lida como evidencia de um prototipo academico com
+hardening prod-like. O projecto nao e apresentado como producao empresarial
+completa. Do mesmo modo, a evidencia runtime e IAST-like/academic substitute,
+nao um IAST agent-based completo com taint tracking.
 
 Os documentos complementares desta pasta funcionam como anexos tecnicos:
 
@@ -26,8 +31,12 @@ Os documentos complementares desta pasta funcionam como anexos tecnicos:
 - [SECURE_INSTALLATION.md](SECURE_INSTALLATION.md)
 - [SECURITY_CONFIGURATION_ASSESSMENT.md](SECURITY_CONFIGURATION_ASSESSMENT.md)
 - [SECURITY_ASSESSMENT.md](SECURITY_ASSESSMENT.md)
+- [ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx](ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx)
 - [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md)
-- [FINAL_DEMO_GUIDE.md](FINAL_DEMO_GUIDE.md)
+
+Para ASVS, o ficheiro XLSX e a fonte principal de estados e percentagens. O
+ficheiro Markdown de evidencia ASVS e apenas um resumo explicativo e apontador
+para documentos de suporte.
 
 ## 2. Relacao com Phase 1 e Sprint 1
 
@@ -61,7 +70,7 @@ Resumo da evolucao:
 | Denuncias anonimas | Submissao e tracking code implementados. | Tracking, anexos, downloads e enumeracao exercitados por testes e runtime probes. |
 | Uploads/backups | Controlos de filesystem implementados. | Quotas, manifestos, HMAC, restore com reautenticacao e minimizacao de respostas reforcados. |
 | SCA/SBOM | Dependency-Check base. | CVEs Spring Security triados/remediados, suppressions justificadas e SBOM CycloneDX. |
-| Runtime evidence | Evidencia inicial limitada. | 101 probes runtime/IAST-like: 101 passed, 0 failed, 0 skipped. |
+| Runtime evidence | Evidencia inicial limitada. | 101 probes runtime/IAST-like: 101 passed, 0 failed, 0 skipped; sem afirmar IAST agent-based completo. |
 | Testes | Suite de seguranca base. | 286 testes Maven confirmados, incluindo ASVS hardening e cenarios negativos. |
 | ASVS | Tracker Sprint 1 como base. | XLSX Sprint 2 copiado estruturalmente e actualizado com evidencia factual. |
 
@@ -75,7 +84,7 @@ Os objectivos concretos da Sprint 2 foram:
 | Reforcar autenticacao | MFA antes da emissao de JWT para `ADMIN`, `ANALYST` e `AUDITOR`. |
 | Validar autorizacao | Matriz de endpoints e testes RBAC/ownership. |
 | Produzir evidencia DevSecOps | Workflows com build, testes, SCA, SAST, DAST, SBOM, secrets scan e PIT. |
-| Documentar seguranca runtime | Evidencia IAST-like sem afirmar IAST agent-based. |
+| Documentar seguranca runtime | Evidencia runtime/IAST-like sem afirmar IAST agent-based completo. |
 | Corrigir dependencias vulneraveis | Spring Security `6.5.10` substituido por `6.5.11` via Spring Boot BOM. |
 | Organizar entrega final | Pasta Sprint 2 limpa, com relatorio principal e anexos uteis. |
 
