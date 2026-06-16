@@ -16,9 +16,13 @@
 | `DB_USERNAME` | Utilizador da BD | Privilegios minimos no schema. |
 | `DB_PASSWORD` | Password da BD | Guardar em secrets/ambiente. |
 | `JWT_SECRET` | Assinatura JWT | Pelo menos 32 caracteres; rodar se exposto. |
+| `JWT_ACTIVE_KEY_ID` | Identificador da chave JWT activa | Usado no header `kid`; default existe, mas deve ser definido conscientemente em ambientes partilhados. |
+| `JWT_PREVIOUS_SECRETS` | Aceitacao temporaria de segredos JWT anteriores | Formato `kid:secret`, separado por virgulas, apenas durante rotacao manual. |
 | `BACKUP_HMAC_SECRET` | Integridade de manifestos de backup | Guardar como secret. |
-| `BACKUP_HMAC_KEY_ID` | Identificador da chave de backup | Usar em rotacao manual. |
+| `BACKUP_HMAC_KEY_ID` | Identificador da chave de backup no manifesto | Nao implementa multi-key automatico; rotacao mantendo backups antigos exige procedimento manual. |
 | `GHOSTREPORT_MFA_EXPOSE_CODE` | Exposicao dev-only de MFA em logs | Desligado fora de desenvolvimento local. |
+| `GHOSTREPORT_MFA_REQUIRED_ROLES` | Roles que exigem MFA | Default `ADMIN,ANALYST,AUDITOR`; manter activo para roles internas. |
+| `PASSWORD_RESET_EXPOSE_TOKEN` | Exposicao dev/test de reset token | Deve ficar `false` fora de demonstracao local. |
 | `GHOSTREPORT_TRANSPORT_TLS_MODE` | Modo de TLS | `direct` ou `reverse-proxy` em prod-like. |
 | `GHOSTREPORT_TRUSTED_PROXY_ENABLED` | Confirma reverse proxy confiavel | `true` quando `GHOSTREPORT_TRANSPORT_TLS_MODE=reverse-proxy`. |
 | `SERVER_FORWARD_HEADERS_STRATEGY` | Tratamento de forwarded headers | `framework` ou `native` atras de reverse proxy confiavel. |
@@ -28,6 +32,7 @@
 | `DB_POOL_MAX_SIZE`, `DB_POOL_MIN_IDLE` | Pool Hikari | Limites positivos obrigatorios em prod-like. |
 | `SERVER_MAX_CONNECTIONS`, `SERVER_TOMCAT_THREADS_MAX` | Recursos Tomcat | Limites positivos obrigatorios em prod-like. |
 | `RATE_LIMIT_REPORT_MAX_ATTEMPTS`, `RATE_LIMIT_REPORT_WINDOW_SECONDS` | Submissao publica anonima | Controla abuso de `POST /reports`. |
+| `APP_UPLOAD_MAX_FILES_PER_REQUEST`, `APP_UPLOAD_MAX_FILES_PER_REPORT` | Limites de anexos | Controla abuso de upload por pedido e por denuncia. |
 
 ## Execucao local
 
@@ -46,6 +51,7 @@ Na raiz do repositorio:
 ```powershell
 $env:DB_PASSWORD="<password-local-da-base-de-dados>"
 $env:JWT_SECRET="<segredo-aleatorio-com-pelo-menos-32-caracteres>"
+$env:BACKUP_HMAC_SECRET="<segredo-hmac-backup-com-pelo-menos-32-caracteres>"
 docker compose up --build
 ```
 
@@ -97,7 +103,9 @@ O inventario dos usos criptograficos esta em
 - `ghostreport.jwt.active-key-id` identifica a chave JWT activa e
   `ghostreport.jwt.previous-secrets` permite aceitar segredos anteriores em
   formato `kid:secret` durante rotacao;
-- `BACKUP_HMAC_KEY_ID` identifica a chave HMAC usada em manifestos de backup;
+- `BACKUP_HMAC_KEY_ID` identifica a chave HMAC usada em manifestos de backup,
+  mas o codigo actual valida backups com a chave configurada no momento; manter
+  backups antigos verificaveis durante uma rotacao exige procedimento manual;
 - novos usos de `Mac`, `MessageDigest`, `SecureRandom`, `Cipher`,
   `Signature`, `BCryptPasswordEncoder` ou `PasswordEncoder` devem actualizar o
   inventario e os testes relacionados.
@@ -142,6 +150,9 @@ Uploads, pacotes de evidencia e backups usam filesystem. Deployment deve:
 | Logs centralizados/SIEM | Hardening futuro. |
 | Flyway/Liquibase | Hardening futuro. |
 | Rate limiting externo | Hardening futuro em multi-no. |
+| Canal MFA real | Hardening futuro fora de dev/test. |
+| Scanner malware externo | Hardening futuro; o scanner local cobre EICAR/teste. |
+| Encriptacao/retencao externa de backups | Hardening futuro. |
 
 ## Credenciais dev
 

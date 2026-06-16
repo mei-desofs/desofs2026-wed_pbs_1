@@ -17,7 +17,7 @@ implementados, controlos parcialmente dependentes de operacao e trabalho futuro.
 | Login interno | brute force, spoofing, inactive users | Rate limiting, BCrypt, MFA, audit log, inactive block. |
 | JWT | token tampering, replay, role spoofing | Assinatura, issuer/audience/kid, expiracao, revogacao, role match. |
 | Tracking code | enumeracao, acesso indevido | Formato, rate limiting, erros genericos, nao colocar em URL. |
-| Uploads | malware, path traversal, content spoofing | Allowlist, MIME/magic bytes, scanner, nomes gerados, quarentena. |
+| Uploads | malware de teste, path traversal, content spoofing | Allowlist, MIME/magic bytes, scanner local EICAR, nomes gerados, quarentena para rejeicoes. |
 | Analyst workflows | EoP, IDOR, alteracao indevida | RBAC, ownership, workflow validation, optimistic locking. |
 | Auditoria | repudiation/tampering | correlationId, integrityHash, DTOs sem segredos. |
 | Backups/packages | tampering, ZIP Slip, path traversal, uso indevido de restore | HMAC/hash manifests, canonical path checks, verify before restore, reautenticacao admin e respostas sem paths internos. |
@@ -157,7 +157,7 @@ Evidencia: `RbacAuthorizationMatrixTest`, `AnalystCaseOwnershipTest`,
 | RBAC | Implementado | Spring Security + testes. |
 | Ownership | Implementado | Analistas limitados a casos elegiveis/atribuidos. |
 | Validacao input | Implementado | DTOs, Bean Validation, allowlists. |
-| Upload hardening | Implementado | MIME/magic bytes/scanner/path checks. |
+| Upload hardening | Implementado | MIME/magic bytes, scanner local EICAR, quarantine e path checks. |
 | Auditoria/alertas | Implementado | Logs e alertas com integrity metadata. |
 | Backups | Implementado | Manifestos, hashes, HMAC, verify/restore para staging com reautenticacao e sem exposicao de path interno na resposta. |
 | SCA/SBOM | Implementado | Dependency-Check e CycloneDX. |
@@ -196,6 +196,8 @@ endpoints; serve como guia rapido para apresentacao oral.
 | ZAP nao autenticado | Cobertura DAST incompleta | Contextos autenticados por role. |
 | Sem IAST agent-based | Menos visibilidade runtime interna | Integrar ferramenta IAST. |
 | Sem secret manager externo | Gestao manual de secrets | Vault/cloud secret manager. |
+| Backups sem encriptacao/retencao externa | ZIPs protegidos por integridade, mas nao por confidencialidade aplicacional nem politica externa de retencao | Encriptacao/retencao em storage externo ou processo operacional dedicado. |
+| Malware scanning local limitado | Scanner actual cobre assinatura EICAR/local; nao substitui AV/sandbox empresarial | Integrar scanner externo/servico de analise em producao. |
 
 ## 6. Conclusao
 
