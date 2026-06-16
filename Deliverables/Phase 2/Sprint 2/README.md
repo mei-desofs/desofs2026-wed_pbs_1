@@ -55,5 +55,6 @@ As imagens em [imagens/](imagens/) são anexos visuais para apoio à apresentaç
 * [imagens/asvs2.png](imagens/asvs2.png) - gráfico visual da evolução/cobertura ASVS.
 * [imagens/dependency_check.png](imagens/dependency_check.png) - resumo do Dependency-Check.
 * [imagens/jacoco.png](imagens/jacoco.png) - resumo de cobertura JaCoCo.
+* [imagens/pit.png](imagens/pit.png) - resumo PIT de mutation testing e test strength.
 * [imagens/pl.png](imagens/pl.png) - evidência visual de pull request/checks.
 * [imagens/zap.png](imagens/zap.png) - resumo do ZAP baseline.

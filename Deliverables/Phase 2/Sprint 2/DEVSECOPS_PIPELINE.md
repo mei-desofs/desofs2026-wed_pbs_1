@@ -341,6 +341,12 @@ Não houve probes skipped na validação local. `GET /login.html` é tratado com
 
 O PIT fica separado porque é mais lento. Serve para avaliar a qualidade dos testes e não para bloquear rapidamente todos os commits.
 
+### Evidencia visual PIT
+
+O screenshot seguinte mostra o resumo HTML gerado pelo PIT para a execucao de mutation testing. Nesta evidência, o projeto apresenta 74 classes analisadas, 87% de line coverage, 73% de mutation coverage e 82% de test strength. Estes valores complementam o JaCoCo: enquanto a cobertura de linhas indica que partes do código foram executadas pelos testes, o PIT introduz mutações artificiais no código e verifica se a suite consegue detetar alterações de comportamento. Assim, o relatório ajuda a identificar zonas onde os testes passam por executar código, mas ainda podem não validar suficientemente as regras de negócio ou controlos de segurança.
+
+![Resumo PIT mutation testing](imagens/pit.png)
+
 **Gate:** sem `continue-on-error`; falha se não encontrar classes alvo, se o PIT falhar ou se `target/pit-reports/index.html` não for gerado. O artefacto usa `if-no-files-found: error`.
 
 ## 13. Artefactos esperados
