@@ -41,6 +41,20 @@ contas demo alinhadas:
 11. Mostrar verificação de backup ou pacote de evidência quando disponível.
 12. Abrir o índice do Sprint 2 e ligar a demo à evidência documental.
 
+## Fluxos internos finais
+
+- `ANALYST`: assumir uma denúncia elegível; o caso passa para `UNDER_REVIEW`.
+  Depois actualizar o estado para `RESOLVED` e confirmar que o estado persiste
+  após actualizar a página. Uma transição directa inválida continua a ser
+  rejeitada.
+- `AUDITOR`: abrir Backups, listar backups existentes, verificar integridade e
+  consultar manifesto. O auditor não deve ter botão nem permissão para criar ou
+  restaurar backups.
+- `ADMIN`: abrir Backups, criar backup, validar, descarregar e, se for
+  demonstrado restore, preencher a password admin no campo dedicado. O restore
+  é validado e extraído apenas para staging controlado; não sobrescreve a base
+  de dados ou uploads live.
+
 ## Evidência a abrir
 
 - [PHASE2_SPRINT2_REPORT.md](PHASE2_SPRINT2_REPORT.md)
