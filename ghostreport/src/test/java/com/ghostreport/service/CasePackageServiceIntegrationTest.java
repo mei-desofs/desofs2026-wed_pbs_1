@@ -67,7 +67,10 @@ class CasePackageServiceIntegrationTest {
 
         Path packagePath = expectedPackagePath(report.getId());
 
-        assertEquals(packagePath.toString(), response.packagePath());
+        assertEquals(report.getId(), response.reportId());
+        assertEquals(ReportStatus.RESOLVED.name(), response.status());
+        assertTrue(response.generatedFileCount() >= 3);
+        assertFalse(response.toString().contains(packagePath.toString()));
         assertCasePackageFilesExist(packagePath, true);
     }
 
@@ -99,7 +102,10 @@ class CasePackageServiceIntegrationTest {
 
         Path packagePath = expectedPackagePath(report.getId());
 
-        assertEquals(packagePath.toString(), response.packagePath());
+        assertEquals(report.getId(), response.reportId());
+        assertEquals(ReportStatus.REJECTED.name(), response.status());
+        assertTrue(response.generatedFileCount() >= 3);
+        assertFalse(response.toString().contains(packagePath.toString()));
         assertCasePackageFilesExist(packagePath, false);
     }
 

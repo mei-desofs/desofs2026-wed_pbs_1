@@ -12,11 +12,13 @@ renomeacoes ou reorganizacao agressiva.
 
 - [ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx](ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx) - tracker ASVS principal da Sprint 2 em Excel, copiado estruturalmente do tracker Sprint 1 e actualizado com a evidencia factual do projecto.
 - [ASVS_EVIDENCE.md](ASVS_EVIDENCE.md) - resumo explicativo do tracker ASVS e links para a evidencia de suporte.
+- [DANGEROUS_FUNCTIONALITY.md](DANGEROUS_FUNCTIONALITY.md) - inventario de operacoes sensiveis/perigosas e respetivas mitigacoes/testes.
 
 ## Anexos tecnicos
 
 - [AUTHORIZATION_MATRIX.md](AUTHORIZATION_MATRIX.md) - matriz de acesso por role, endpoint e controlo adicional.
 - [DEVSECOPS_PIPELINE.md](DEVSECOPS_PIPELINE.md) - fluxo CI/CD, code review, gates, artefactos e ferramentas de seguranca.
+- [CRYPTOGRAPHIC_INVENTORY.md](CRYPTOGRAPHIC_INVENTORY.md) - inventario dos usos criptograficos, material de chave/segredo e politica de alteracao.
 - [IAST_RUNTIME_SECURITY.md](IAST_RUNTIME_SECURITY.md) - documento principal de seguranca runtime e evidencia IAST-like.
 - [SCA_TRIAGE.md](SCA_TRIAGE.md) - triagem SCA, CVEs Spring Security, suppressions e SBOM.
 - [SECURE_INSTALLATION.md](SECURE_INSTALLATION.md) - instalacao segura, perfis, secrets, base de dados e storage.
@@ -43,6 +45,7 @@ por cada run do workflow.
 
 - `PHASE2_SPRINT2_REPORT.md` e a fonte narrativa principal.
 - `ASVS_5.0_Tracker_Phase_2_Sprint_2.xlsx` e a fonte ASVS principal.
+- `CRYPTOGRAPHIC_INVENTORY.md` suporta os controlos ASVS de inventario e gestao criptografica.
 - `DEVSECOPS_PIPELINE.md` e a fonte principal para pipeline, code review e artefactos.
 - `IAST_RUNTIME_SECURITY.md` e a fonte principal para IAST/runtime; os restantes ficheiros runtime sao anexos de evidencia.
 - A revisao final antiga foi incorporada em [PHASE2_SPRINT2_REPORT.md](PHASE2_SPRINT2_REPORT.md) e [SECURITY_ASSESSMENT.md](SECURITY_ASSESSMENT.md), para evitar um ficheiro solto redundante.

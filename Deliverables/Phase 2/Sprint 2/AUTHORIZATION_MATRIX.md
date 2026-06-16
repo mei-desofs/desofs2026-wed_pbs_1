@@ -91,6 +91,7 @@ constraint e a aplicacao usam apenas `ADMIN`, `ANALYST` e `AUDITOR`.
 | PATCH | `/admin/users/{id}/activate` | `ADMIN` | Activar utilizador. | Audit log. |
 | PATCH | `/admin/users/{id}/deactivate` | `ADMIN` | Desactivar utilizador. | Proteccao ultimo admin activo. |
 | DELETE | `/admin/users/{id}` | `ADMIN` | Remocao logica. | Desactivacao em vez de delete fisico. |
+| POST | `/admin/users/{id}/password-reset` | `ADMIN` | Iniciar reset de password. | Admin nao escolhe nem ve a nova password. |
 | GET | `/admin/audit-logs` | `ADMIN` | Consultar logs. | DTO com integrity hash. |
 | GET | `/admin/security-alerts` | `ADMIN` | Consultar alertas. | DTO com integrity hash. |
 
@@ -102,7 +103,7 @@ constraint e a aplicacao usam apenas `ADMIN`, `ANALYST` e `AUDITOR`.
 | GET | `/admin/backups` | `ADMIN` | Listar backups. | Apenas ficheiros validos no directorio base. |
 | GET | `/admin/backups/{filename}/download` | `ADMIN` | Descarregar backup. | Content-Disposition seguro e path canonical. |
 | POST | `/admin/backups/{filename}/verify` | `ADMIN` | Verificar backup. | Detecta tampering/manifest mismatch. |
-| POST | `/admin/backups/{filename}/restore` | `ADMIN` | Repor backup. | Validacao antes de restore. |
+| POST | `/admin/backups/{filename}/restore` | `ADMIN` | Repor backup para staging. | Validacao antes de restore, CSRF, JWT admin e reautenticacao por `X-Reauth-Password`; resposta sem path interno. |
 
 ## 9. Matriz resumida por role
 

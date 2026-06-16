@@ -184,7 +184,8 @@ Validacao local expandida do probe em 2026-06-15:
 
 Nao houve probes skipped na validacao local. `GET /login.html` e tratado como
 controlo de exposicao quando responde `401/404`, e o restore destrutivo de
-backup continua fora do probe runtime. O workflow publica o JSON
+backup continua fora do probe runtime porque exige reautenticacao e e coberto
+por testes automatizados. O workflow publica o JSON
 `runtime-probe-summary.json` para confirmar estes numeros por run.
 
 Artefactos documentados na entrega:
@@ -262,6 +263,15 @@ Critérios de triagem:
 | Falso positivo SCA/SAST | Documentar componente, regra/CVE, motivo e data de revisao. |
 | ZAP baseline informativo | Avaliar impacto; corrigir se expuser controlos reais ou documentar como hardening futuro. |
 | Evidencia incompleta por ambiente | Repetir workflow ou documentar limitação operacional sem transformar em claim. |
+
+### Triagem ZAP actual
+
+| Finding ZAP | Estado | Decisao tecnica |
+| --- | --- | --- |
+| `CSP: Notices` | Corrigido | `SecurityConfig` usa `report-to csp-endpoint` e header `Report-To` em vez de depender de `report-uri`. |
+| `Cookie No HttpOnly Flag` (`XSRF-TOKEN`) | Aceite | O frontend precisa ler o cookie para enviar `X-XSRF-TOKEN`; nao e cookie de sessao/JWT e fica com `SameSite=Lax`. |
+| `Non-Storable Content` | Aceite informacional | `no-store` e mantido para endpoints/paginas sensiveis. |
+| `Session Management Response Identified` (`XSRF-TOKEN`) | Aceite informacional | O cookie identifica proteccao CSRF, nao uma sessao autenticada. |
 
 ## 15. Limitacoes da pipeline
 

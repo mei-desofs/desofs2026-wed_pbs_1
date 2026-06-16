@@ -22,8 +22,8 @@ The expanded local validation on 2026-06-15 produced:
 No probes were skipped in the validated local run. `GET /login.html` is treated
 as an exposure check: `401/404` confirms there is no standalone public login
 page. Destructive backup restore remains outside the runtime probe; safe restore
-filename/path traversal validation is exercised, and restore staging remains
-covered by automated tests.
+filename/path traversal validation is exercised, and restore staging with admin
+reauthentication remains covered by automated tests.
 
 ## Generated artifact format
 

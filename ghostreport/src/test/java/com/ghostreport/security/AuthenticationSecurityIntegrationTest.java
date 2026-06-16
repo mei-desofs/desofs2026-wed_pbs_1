@@ -170,11 +170,7 @@ class AuthenticationSecurityIntegrationTest {
         User admin = createUser("password_admin", UserRole.ADMIN, true);
         String bearer = bearerToken(admin.getUsername(), PASSWORD, "10.10.3.1");
         String[] invalidPasswords = {
-                "Short1!",
-                "lowercase123!",
-                "UPPERCASE123!",
-                "NoNumbersHere!",
-                "NoSymbolsHere123"
+                "Short1!"
         };
 
         for (int index = 0; index < invalidPasswords.length; index++) {
@@ -191,7 +187,7 @@ class AuthenticationSecurityIntegrationTest {
                         .with(csrf())
                         .header("Authorization", bearer)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createUserBody("valid_user", "StrongPassword123!")))
+                        .content(createUserBody("valid_user", "long lowercase password")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.username").value("valid_user"))
                 .andExpect(jsonPath("$.active").value(true))

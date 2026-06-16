@@ -253,13 +253,14 @@ Os endpoints principais estao agrupados abaixo.
 | PATCH | `/admin/users/{id}/activate` | `ADMIN` | Activar utilizador. |
 | PATCH | `/admin/users/{id}/deactivate` | `ADMIN` | Desactivar utilizador. |
 | DELETE | `/admin/users/{id}` | `ADMIN` | Remocao logica por desactivacao. |
+| POST | `/admin/users/{id}/password-reset` | `ADMIN` | Iniciar reset sem escolher password. |
 | GET | `/admin/audit-logs` | `ADMIN` | Consultar logs. |
 | GET | `/admin/security-alerts` | `ADMIN` | Consultar alertas. |
 | POST | `/admin/backups` | `ADMIN` | Criar backup. |
 | GET | `/admin/backups` | `ADMIN` | Listar backups. |
 | GET | `/admin/backups/{filename}/download` | `ADMIN` | Descarregar backup. |
 | POST | `/admin/backups/{filename}/verify` | `ADMIN` | Verificar backup. |
-| POST | `/admin/backups/{filename}/restore` | `ADMIN` | Repor backup validado. |
+| POST | `/admin/backups/{filename}/restore` | `ADMIN` | Repor backup validado para staging, com reautenticacao. |
 
 ## 10. Validacao, uploads e seguranca de input
 
@@ -270,17 +271,26 @@ As validacoes principais incluem:
 - formato de tracking code;
 - status e priority por enum/allowlist;
 - roles apenas `ADMIN`, `ANALYST`, `AUDITOR`;
-- password policy no servico, incluindo comprimento, complexidade, passwords
-  comprometidas, reutilizacao e palavras contextuais;
+- password policy no servico, incluindo comprimento, passwords
+  comprometidas, reutilizacao e palavras contextuais, sem impor classes
+  obrigatorias de caracteres;
 - `attachmentId` positivo e tracking code valido em downloads;
 - content type esperado em endpoints JSON;
 - rejeicao de `TRACE`, headers com caracteres de controlo e `Authorization`
   excessivamente grande antes de chegar aos controllers;
+- rejeicao de headers connection-specific em pedidos HTTP/2/HTTP/3 antes de
+  chegar aos controllers;
 - rejeicao de parametros escalares duplicados para mitigar HTTP parameter
   pollution fora de multipart;
 - validacao Fetch Metadata/Origin para bloquear pedidos unsafe cross-site;
-- CSP `report-uri /security/csp-report` para receber relatorios de violacao
-  do browser sem expor tokens ou tracking codes em respostas.
+- CSP `report-to csp-endpoint` com header `Report-To` para receber relatorios
+  de violacao do browser sem expor tokens ou tracking codes em respostas.
+- fallback frontend para browsers que nao suportem features esperadas como
+  `fetch`, `crypto.getRandomValues`, `TextEncoder` e APIs DOM seguras.
+- bloqueio explicito de caminhos `/.git` e `/.svn` para impedir exposicao de
+  metadados de controlo de versao.
+- reset de password iniciado por administrador sem permitir que o administrador
+  escolha ou veja a nova password do utilizador.
 
 Uploads sao uma superficie critica. Mitigacoes:
 
@@ -452,6 +462,15 @@ DAST e feito por OWASP ZAP baseline contra `http://localhost:8081` apos a
 aplicacao arrancar em CI. O scan e baseline/passivo, nao substitui um teste de
 penetracao autenticado.
 
+Triagem ZAP actual:
+
+| Finding | Decisao | Justificacao |
+| --- | --- | --- |
+| `CSP: Notices` | Corrigido no codigo | A CSP passou de `report-uri` para `report-to csp-endpoint` e o header `Report-To` aponta para `/security/csp-report`. |
+| `Cookie No HttpOnly Flag` em `XSRF-TOKEN` | Aceite/justificado | O frontend le `XSRF-TOKEN` via JavaScript para enviar `X-XSRF-TOKEN`; nao e JWT nem cookie de sessao autenticada. |
+| `Non-Storable Content` | Aceite informacional | `Cache-Control: no-store` e intencional em respostas sensiveis e nao deve ser removido para silenciar ZAP. |
+| `Session Management Response Identified` em `XSRF-TOKEN` | Aceite informacional | O cookie e apenas token CSRF, nao concede acesso sozinho e nao transporta autenticacao. |
+
 ### IAST-like
 
 Nao existe agente IAST completo. A evidencia IAST-like combina:
@@ -495,7 +514,8 @@ A validacao local expandida do probe confirmou 101 probes: 101 passed, 0 failed
 e 0 skipped. `GET /login.html` e tratado como controlo de exposicao: `401/404`
 confirma que nao existe pagina publica separada. O restore destrutivo de backup
 continua fora do probe runtime; a evidencia executa validacao segura de
-filename/path traversal e os testes automatizados cobrem restore para staging.
+filename/path traversal e os testes automatizados cobrem restore para staging
+com reautenticacao do admin.
 
 JWT expirado, backups, ZIP Slip e tamanho maximo de upload sao cobertos pela
 seleccao de testes Maven executada no mesmo job `dast-scan`.
@@ -509,7 +529,7 @@ cd ghostreport
 .\mvnw.cmd test
 ```
 
-Resultado confirmado em 2026-06-15: 272 testes, 0 falhas, 0 erros, 0 skipped.
+Resultado confirmado em 2026-06-15: 286 testes, 0 falhas, 0 erros, 0 skipped.
 
 Categorias cobertas:
 
@@ -518,7 +538,7 @@ Categorias cobertas:
 - autenticacao, JWT, MFA e password reset;
 - RBAC e endpoint matrix;
 - CSRF e security headers;
-- CSP/HSTS/COOP/COEP/CORP, CSP reporting, Fetch Metadata e request-boundary checks;
+- CSP/HSTS/COOP/COEP/CORP, CSP reporting, Fetch Metadata, fallback de browser e request-boundary checks;
 - uploads, MIME, magic bytes, malware/quarantine e traversal;
 - quotas de anexos por pedido e por denuncia;
 - tracking code e enumeracao;
@@ -527,8 +547,13 @@ Categorias cobertas:
 - analista ownership e workflow de casos;
 - auditor read-only;
 - admin user lifecycle;
-- backups, restore e integridade;
-- frontend: XSS sinks, scripts inline, tokens em storage, tracking code em URL, navs escondidas.
+- backups, restore com reautenticacao, integridade e minimizacao de paths internos;
+- frontend: DOM clobbering, XSS sinks, scripts inline, tokens em storage,
+  tracking code em URL, navs escondidas.
+- inventario criptografico: rastreabilidade de BCrypt, SecureRandom,
+  HMAC-SHA-256, SHA-256, JWT e backups.
+- inventario de dangerous functionality: restore, uploads, packages, password
+  reset, JWT/logging/crypto e respetivos testes.
 
 Resumo detalhado: [SECURITY_TESTING.md](SECURITY_TESTING.md).
 
@@ -578,8 +603,17 @@ real: CSP violation reporting, HSTS preload, validacao de utilizador activo em
 JWT, comparacao constante de assinatura JWT, superficie estatica limitada,
 no-store em endpoints sensiveis, quota acumulada de uploads, defesa contra HTTP
 parameter pollution, teste de `SecureRandom` sob carga, algoritmos
-criptograficos aprovados e reclassificacao de CSV/spreadsheet injection como
-nao aplicavel por ausencia de exports CSV/XLSX/ODS.
+criptograficos aprovados, parsing consistente, fallback para browsers sem
+features de seguranca esperadas, rejeicao de headers connection-specific em
+HTTP/2/HTTP/3 e reclassificacao de CSV/spreadsheet injection como nao
+aplicavel por ausencia de exports CSV/XLSX/ODS.
+Depois da revisao adicional nesta branch, o tracker tambem passou a reflectir
+passwords sem regras de composicao obrigatoria (`V6.2.5`), bloqueio de
+metadados `.git`/`.svn` (`V13.4.1`) e inventario criptografico verificavel
+(`V11.1.1`, `V11.1.3`, `V11.1.4`).
+Nova revisao adicional adicionou reset de password iniciado por admin sem
+definicao de password (`V6.4.6`) e teste contra DOM clobbering no frontend
+(`V3.2.3`).
 
 Os capitulos fora do desenho implementado, como OAuth/OIDC e WebRTC, continuam
 marcados como `Not Applicable` no tracker em vez de `Compliant`.

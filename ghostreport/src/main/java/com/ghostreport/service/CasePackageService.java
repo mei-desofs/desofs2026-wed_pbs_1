@@ -147,13 +147,8 @@ public class CasePackageService {
             return new CasePackageResponse(
                     reportId,
                     status.name(),
-                    packagePath.toString(),
-                    List.of(
-                            "case_summary.txt",
-                            "evidence_manifest.json",
-                            "integrity_hashes.txt",
-                            "attachments/"
-                    )
+                    3 + attachments.size(),
+                    "Case package generated"
             );
 
         } catch (Exception e) {

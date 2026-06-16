@@ -41,9 +41,14 @@ class SecurityHeadersTest {
                 .andExpect(header().string("Content-Security-Policy", containsString("base-uri 'none'")))
                 .andExpect(header().string("Content-Security-Policy", containsString("form-action 'self'")))
                 .andExpect(header().string("Content-Security-Policy", containsString("upgrade-insecure-requests")))
-                .andExpect(header().string("Content-Security-Policy", containsString("report-uri /security/csp-report")))
+                .andExpect(header().string("Content-Security-Policy", containsString("report-to csp-endpoint")))
+                .andExpect(header().string("Content-Security-Policy", not(containsString("report-uri"))))
                 .andExpect(header().string("Content-Security-Policy", not(containsString("unsafe-inline"))))
                 .andExpect(header().string("Content-Security-Policy", not(containsString("unsafe-eval"))))
+                .andExpect(header().string(
+                        "Report-To",
+                        "{\"group\":\"csp-endpoint\",\"max_age\":10886400,\"endpoints\":[{\"url\":\"/security/csp-report\"}]}"
+                ))
                 .andExpect(header().string("Permissions-Policy", containsString("geolocation=()")))
                 .andExpect(header().string("Cross-Origin-Opener-Policy", "same-origin"))
                 .andExpect(header().string("Cross-Origin-Resource-Policy", "same-origin"))
@@ -109,5 +114,28 @@ class SecurityHeadersTest {
         mockMvc.perform(get("/admin/panel?role=ADMIN&role=AUDITOR"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Ambiguous request parameters"));
+    }
+
+    @Test
+    void http2ConnectionSpecificHeadersAreRejected() throws Exception {
+        mockMvc.perform(get("/admin/panel")
+                        .with(request -> {
+                            request.setProtocol("HTTP/2.0");
+                            return request;
+                        })
+                        .header("Transfer-Encoding", "chunked"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Invalid request headers"));
+    }
+
+    @Test
+    void sourceControlMetadataPathsAreNotExposed() throws Exception {
+        mockMvc.perform(get("/.git/config"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Not found"));
+
+        mockMvc.perform(get("/.svn/entries"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Not found"));
     }
 }

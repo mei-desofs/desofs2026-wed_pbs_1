@@ -36,7 +36,8 @@ passed, 0 failed e 0 skipped. `GET /login.html` e tratado como controlo de
 exposicao: `401/404` confirma que nao existe pagina publica separada de login.
 O restore destrutivo de backup nao e executado pelo probe; em vez disso, o
 probe exercita validacao segura de filename/path traversal para o endpoint de
-restore.
+restore, enquanto os testes automatizados cobrem restore para staging com
+reautenticacao do admin.
 
 ## Testes runtime executados
 
@@ -132,7 +133,7 @@ documentados como hardening futuro.
 - Nao existe taint tracking nem correlacao automatica source-to-sink.
 - ZAP baseline e nao autenticado.
 - O probe runtime nao executa restore destrutivo de backup; a validacao de
-  restore para staging fica coberta por testes automatizados.
+  restore para staging com reautenticacao fica coberta por testes automatizados.
 - A probe de MFA usa codigo exposto em logs apenas no perfil `dev`; em producao,
   `ghostreport.mfa.expose-code` deve ficar `false`.
 - Pattern scanning de logs nao equivale a DLP formal.

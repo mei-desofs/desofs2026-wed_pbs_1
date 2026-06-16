@@ -23,6 +23,8 @@ class FrontendXssDataExposureTest {
     private static final Pattern PERSISTENT_BROWSER_STORAGE = Pattern.compile("\\b(?:localStorage|sessionStorage)\\b");
     private static final Pattern TRACKING_CODE_QUERY = Pattern.compile(
             "(?:/track\\.html\\?|[?&](?:code|trackingCode)=|URLSearchParams\\s*\\(|trackingCode[^\\n;]*window\\.location|window\\.location[^\\n;]*trackingCode)");
+    private static final Pattern FORM_CONTROL_NAME = Pattern.compile("(?is)<(?:form|input|button|select|textarea)\\b[^>]*\\sname\\s*=");
+    private static final Pattern HTML_ID = Pattern.compile("\\bid\\s*=\\s*\"([A-Za-z_$][\\w$-]*)\"");
 
     @Test
     void frontendDoesNotUseDangerousHtmlParsingSinks() throws IOException {
@@ -99,6 +101,53 @@ class FrontendXssDataExposureTest {
 
         assertThat(offenders)
                 .as("CSP without unsafe-inline requires external scripts and addEventListener/data-action handlers")
+                .isEmpty();
+    }
+
+    @Test
+    void pagesLoadBrowserSecuritySupportCheck() throws IOException {
+        Map<Path, String> sources = readStaticFiles(".html");
+
+        assertThat(sources)
+                .as("All static HTML pages should load the browser security feature fallback")
+                .allSatisfy((path, html) -> assertThat(html)
+                        .as(relativeStaticPath(path))
+                        .contains("<script src=\"/js/security-support.js\"></script>"));
+
+        String supportScript = Files.readString(staticRoot().resolve("js/security-support.js"), StandardCharsets.UTF_8);
+        assertThat(supportScript)
+                .contains("crypto.getRandomValues")
+                .contains("fetch")
+                .contains("disableInteractiveControls")
+                .doesNotContain("innerHTML");
+    }
+
+    @Test
+    void frontendAvoidsDomClobberingPatterns() throws IOException {
+        Map<Path, String> htmlSources = readStaticFiles(".html");
+        Map<Path, String> jsSources = readStaticFiles(".js");
+
+        List<String> namedControls = htmlSources.entrySet().stream()
+                .filter(entry -> FORM_CONTROL_NAME.matcher(entry.getValue()).find())
+                .map(entry -> relativeStaticPath(entry.getKey()))
+                .toList();
+        List<String> ids = htmlSources.values().stream()
+                .flatMap(html -> HTML_ID.matcher(html).results().map(match -> match.group(1)))
+                .filter(id -> !"title".equals(id))
+                .distinct()
+                .toList();
+        Pattern documentIdAccess = Pattern.compile("\\bdocument\\.(" +
+                ids.stream().map(Pattern::quote).collect(Collectors.joining("|")) + ")\\b");
+        List<String> documentIdAccessOffenders = jsSources.entrySet().stream()
+                .filter(entry -> documentIdAccess.matcher(entry.getValue()).find())
+                .map(entry -> relativeStaticPath(entry.getKey()))
+                .toList();
+
+        assertThat(namedControls)
+                .as("Form controls should avoid name attributes that can clobber document/window properties")
+                .isEmpty();
+        assertThat(documentIdAccessOffenders)
+                .as("Frontend should use explicit DOM lookup APIs instead of document.<id/name> property access")
                 .isEmpty();
     }
 

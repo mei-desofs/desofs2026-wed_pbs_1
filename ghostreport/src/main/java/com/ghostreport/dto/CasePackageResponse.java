@@ -1,14 +1,9 @@
 package com.ghostreport.dto;
 
-import java.util.List;
-
 public record CasePackageResponse(
         Long reportId,
         String status,
-        String packagePath,
-        List<String> generatedFiles
+        int generatedFileCount,
+        String message
 ) {
-    public CasePackageResponse {
-        generatedFiles = generatedFiles == null ? List.of() : List.copyOf(generatedFiles);
-    }
 }

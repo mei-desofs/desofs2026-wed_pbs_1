@@ -42,7 +42,6 @@ class PasswordPolicyServiceTest {
                     "NULL, Password is required",
                     "'   ', Password is required",
                     "Short1!, Password length is invalid",
-                    "lowercaseonly123!, Password complexity is invalid",
                     "P@ssW0rd1234!, Password is compromised"
             }
     )
@@ -116,6 +115,20 @@ class PasswordPolicyServiceTest {
 
         assertDoesNotThrow(
                 () -> service.validateNewPassword(user, NEW_PASSWORD)
+        );
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "lowercaseonlypassword",
+            "UPPERCASEONLYPASSWORD",
+            "1234567890123456",
+            "************",
+            "'pass phrase with spaces'"
+    })
+    void acceptsPasswordsWithoutCompositionRequirements(String password) {
+        assertDoesNotThrow(
+                () -> service.validateNewPassword(null, password)
         );
     }
 

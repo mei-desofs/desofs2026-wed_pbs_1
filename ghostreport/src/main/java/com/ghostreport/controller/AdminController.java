@@ -2,10 +2,12 @@ package com.ghostreport.controller;
 
 import com.ghostreport.dto.CreateUserRequest;
 import com.ghostreport.dto.AuditLogResponse;
+import com.ghostreport.dto.PasswordResetRequestResponse;
 import com.ghostreport.dto.SecurityAlertResponse;
 import com.ghostreport.dto.UpdateUserRequest;
 import com.ghostreport.dto.UserResponse;
 import com.ghostreport.repository.AuditLogRepository;
+import com.ghostreport.service.PasswordResetService;
 import com.ghostreport.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -19,11 +21,18 @@ import java.util.List;
 public class AdminController {
 
     private final UserService userService;
+    private final PasswordResetService passwordResetService;
     private final SecurityAlertRepository securityAlertRepository;
     private final AuditLogRepository auditLogRepository;
 
-    public AdminController(UserService userService, SecurityAlertRepository securityAlertRepository, AuditLogRepository auditLogRepository) {
+    public AdminController(
+            UserService userService,
+            PasswordResetService passwordResetService,
+            SecurityAlertRepository securityAlertRepository,
+            AuditLogRepository auditLogRepository
+    ) {
         this.userService = userService;
+        this.passwordResetService = passwordResetService;
         this.securityAlertRepository = securityAlertRepository;
         this.auditLogRepository = auditLogRepository;
     }
@@ -105,5 +114,14 @@ public class AdminController {
     @DeleteMapping("/users/{id}")
     public UserResponse removeUser(@PathVariable Long id) {
         return userService.setActive(id, false);
+    }
+
+    @PostMapping(
+            value = "/users/{id}/password-reset",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public PasswordResetRequestResponse initiatePasswordReset(@PathVariable Long id) {
+        return passwordResetService.requestResetForUserId(id);
     }
 }
