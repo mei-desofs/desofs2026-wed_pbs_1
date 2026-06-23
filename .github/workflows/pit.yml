@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: Checkout repository content
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Prepare Java 17 with Maven cache
         uses: actions/setup-java@v5
